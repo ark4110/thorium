@@ -44,7 +44,7 @@ namespace subject
     float diffuse_reflectance;
     float absorbance; ///< Коэффициент поглощения (rus.)
     float transmittance; ///< The ratio of the light energy falling on a body to that transmitted through it. Коэффициент пропускания (rus.)
-    float emissivity; ///< Степень черноты (rus.)
+    float emissivity; ///< Effectiveness in emitting energy as thermal radiation. Степень черноты (rus.)
   };
 
   optical_properties_t black_material();

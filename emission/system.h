@@ -46,18 +46,17 @@ namespace emission
     /**
       @brief Ray caster task contains calculation output.
       @detail Rays are packed face-by-face in order. Frontside rays are first, then backside rays.
+      @detail Amount of emmited rays and its calculation method depends on particular emission system.
       @detail Result may be allocated in case of failure.
       @note Will be overwritten during calculate.
-      @note Actual rays amount can differ from requested n_rays count.
+      @note Actual rays count can differ from requested n_rays count.
       @todo Use realloc() if rays is not null.
       */
     ray_caster::task_t* rays; 
   };
 
   /**
-   * @brief Form factors calculator type.
-   *
-   * Represents base calculator type with virtual methods table.
+   * @brief Emission system.   
    */
   struct system_t
   {
