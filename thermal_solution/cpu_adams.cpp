@@ -172,8 +172,10 @@ namespace cpu_adams
       }
 
       Tresult[m] = Tn[m] + task->time_delta * sum;
+      if (Tresult[m] < 0)
+        Tresult[m] = 0;
     }
-
+    
     float* Tnext = get_step_temperatures(system, n + 1);
     memcpy(Tnext, Tresult, sizeof(float) * n_meshes);
     task->n_step = ++system->n_step;
