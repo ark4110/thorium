@@ -52,9 +52,12 @@ namespace heat_source_equation
     {
       const heat_source_t& source = params.sources[i];
       if (source.power > 0)
-        task->absorption[source.mesh_idx] += source.power;
+        task->absorption[source.mesh_idx] += source.power;      
       else
-        task->emission[source.mesh_idx] += -source.power;
+      {
+        if (task->temperatures[source.mesh_idx] > 0)
+          task->emission[source.mesh_idx] += -source.power;
+      }
     }
 
     return THERMAL_EQUATION_OK;
