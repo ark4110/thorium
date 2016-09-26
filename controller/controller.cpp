@@ -34,7 +34,7 @@
 
 void PrintUsage()
 {
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <step count [100]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda)[cpu]> <binary output [0]>" << std::endl;
+  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <step count [100]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda)[zgrid_cpu]> <binary output [0]>" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   const char* result_name = "-";
   int n_rays = 1000 * 1000;
   int n_steps = 100;
-  int type = RAY_CASTER_NAIVE_CPU;
+  int type = RAY_CASTER_ZGRID_CPU;
   bool binary_output = false;
 
   for (int i = 1; i < argc; ++i)
@@ -86,6 +86,10 @@ int main(int argc, char* argv[])
         type = RAY_CASTER_NAIVE_CPU;
       else if (strcmp("naive_cuda", argv[i]) == 0)
         type = RAY_CASTER_NAIVE_CUDA;
+      else if (strcmp("zgrid_cpu", argv[i]) == 0)
+        type = RAY_CASTER_ZGRID_CPU;
+      else if (strcmp("zgrid_cuda", argv[i]) == 0)
+        type = RAY_CASTER_ZGRID_CUDA;
       else
         return -RAY_CASTER_NOT_SUPPORTED;
 
