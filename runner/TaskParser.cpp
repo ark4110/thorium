@@ -76,6 +76,8 @@ int TaskParser::onLine(string line) {
             curStep = stof(match.str(1), NULL);
             return 0;
         }
+
+        std::cerr << "Invalid line '" << line << "'" << std::endl;
     default:
         return -1;
     }
