@@ -95,6 +95,7 @@ namespace obj_export
     {
       fprintf(out, "tmprt %f\n", *f);
     }
+    
     fprintf(out, "\n");
     fflush(out);
     return 0;
