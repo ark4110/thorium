@@ -1,3 +1,5 @@
+mtllib confetti_2k.mtl
+
 v 3.306495 -6.608858 12.954315
 v 4.158167 -6.369496 14.114641
 v 4.051829 -7.187418 13.560921
@@ -5998,22 +6000,6 @@ v 2.761649 -16.774599 -9.225451
 v 13.094362 12.439936 5.295683
 v 11.293749 12.974763 4.720456
 v 11.876933 13.669950 5.603242
-
-newmtl black_body
-shell.density 1.000000
-shell.heat_capacity 20
-shell.thermal_conductivity 1.000000
-shell.thickness 1.000000
-front.specular_reflectance 0.000000
-front.diffuse_reflectance 0.000000
-front.absorbance 1.000000
-front.transmittance 0.000000
-front.emissivity 1.000000
-rear.specular_reflectance 0.000000
-rear.diffuse_reflectance 0.000000
-rear.absorbance 1.000000
-rear.transmittance 0.000000
-rear.emissivity 1.000000
 
 g mesh_0
 usemtl black_body
