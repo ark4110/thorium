@@ -703,14 +703,11 @@ namespace zgrid_cuda_ray_caster
     if (i < n_rays)
     {
       ray_t ray = rays[i];
-
       callback_param_t param = { faces, grid, ray, FLT_MAX, -1 };
       grid_traverse(grid, ray, &param);
+      indices[i] = param.hit_face;
       if (param.hit_face != -1)
-      {
-        indices[i] = param.hit_face;
         points[i] = param.hit_point;
-      }
     }
   }
 
