@@ -91,8 +91,6 @@ namespace malley_cpu
     return EMISSION_OK;
   }
 
-  
-
   int calculate_n_rays(malley_emission::task_t* task, int n_faces)
   {
     int result = 0;
@@ -139,12 +137,15 @@ namespace malley_cpu
   }
 
   /// @brief Creates task with n_rays random generated rays.
-  ray_caster::task_t* make_caster_task(cpu_system_t* system, malley_emission::task_t* task)
+  void make_caster_task(cpu_system_t* system, malley_emission::task_t* task)
   { 
     int n_real_rays = calculate_n_rays(task, system->scene->n_faces);
     if (n_real_rays == 0)
-      return 0;
-    ray_caster::task_t* ray_caster_task = ray_caster::task_create(n_real_rays);
+      return;
+    
+    int n_input_rays = task->rays ? task->rays->n_tasks : 0;
+    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + n_real_rays);
+    ray_caster::task_t* ray_caster_task = task->rays;
     ray_caster::scene_t* scene = system->scene;
     const float* weights = task->weights;
     int n_ray = 0;
@@ -164,7 +165,7 @@ namespace malley_cpu
       for (int j = 0; j != face_rays && n_ray < n_real_rays; ++j, ++n_ray)
       {
         // Take reference to ray being generated
-        ray_caster::ray_t& ray = ray_caster_task->ray[n_ray];
+        ray_caster::ray_t& ray = ray_caster_task->ray[n_input_rays + n_ray];
 
         // Randomly generated ray's origin on the face
         math::vec3 origin = pick_face_point(system, face);
@@ -184,8 +185,6 @@ namespace malley_cpu
         ray = { origin + relative_dist * 0.0001f, origin + relative_dist };
       }
     }
-    
-    return ray_caster_task;
   }
 
   /**
@@ -194,13 +193,7 @@ namespace malley_cpu
    */
   int calculate(cpu_system_t* system, malley_emission::task_t* task)
   {
-    if (task->rays)
-    {
-      // @todo Provide realloc
-      ray_caster::task_free(task->rays);
-      task->rays = 0;
-    }
-    task->rays = make_caster_task(system, task);
+    make_caster_task(system, task);
     if (task->rays == 0)
       return EMISSION_OK;
     int r = 0;

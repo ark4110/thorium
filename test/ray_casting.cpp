@@ -15,7 +15,7 @@
 // along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gtest/gtest.h"
-
+#include "test_scene.h"
 #include "ray_caster/system.h"
 #include "math/operations.h"
 #include "math/triangle.h"
@@ -47,65 +47,6 @@ public:
  
   system_t* System;
 };
-
-scene_t* MakeEmptyScene()
-{
-  return scene_create();
-}
-
-face_t make_floor_face1()
-{
-  vec3 a = { 0.f, 0.f, 0.f };
-  vec3 b = { 1.f, 0.f, 0.f };
-  vec3 c = { 0.f, 1.f, 0.f };
-
-  return make_face(a, b, c);
-}
-
-face_t make_floor_face2()
-{
-  vec3 a = { 1.f, 0.f, 0.f };
-  vec3 b = { 0.f, 1.f, 0.f };
-  vec3 c = { 1.f, 1.f, 0.f };
-
-  return make_face(a, b, c);
-}
-
-face_t make_stack_face()
-{
-  vec3 a = { 0.f, 0.f, -1.f };
-  vec3 b = { 1.f, 0.f, -1.f };
-  vec3 c = { 0.f, 1.f, -1.f };
-
-  return make_face(a, b, c);
-}
-
-scene_t* MakeSceneFromFaces(int n_faces, face_t* faces)
-{
-  scene_t* s = scene_create();
-  *s = { /*.n_faces =*/ n_faces, /*.faces =*/ faces };
-  return s;
-}
-
-scene_t* MakeFloorScene()
-{
-  int n_faces = 2;
-  face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
-  faces[0] = make_floor_face1();
-  faces[1] = make_floor_face2();
-
-  return MakeSceneFromFaces(n_faces, faces);
-}
-
-scene_t* MakeStackScene()
-{
-  int n_faces = 2;
-  face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
-  faces[0] = make_floor_face1();
-  faces[1] = make_stack_face();
-
-  return MakeSceneFromFaces(n_faces, faces);
-}
 
 typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA> > RayCasterTypes;
 TYPED_TEST_CASE(RayCaster, RayCasterTypes);

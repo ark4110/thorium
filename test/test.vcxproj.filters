@@ -15,5 +15,10 @@
     <ClCompile Include="heat_source.cpp" />
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="math_ray.cpp" />
+    <ClCompile Include="emission.cpp" />
+    <ClCompile Include="test_scene.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="test_scene.h" />
   </ItemGroup>
 </Project>

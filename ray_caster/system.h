@@ -57,6 +57,10 @@ namespace ray_caster
 
   /// @brief Allocates memory for task with n_rays rays.
   task_t* task_create(int n_rays);
+  task_t* task_realloc(task_t* task, int n_rays);
+
+  /// @brief Reset task rays to zero.
+  task_t* task_reset(task_t* task);
 
   /// @brief Frees memory for task.
   void task_free(task_t* task);

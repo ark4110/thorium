@@ -101,6 +101,8 @@ namespace parallel_rays_cpu
     system->emission_task.direction = source.direction;
     system->emission_task.radius = radius;
 
+    task_reset(system->emission_task.rays);
+
     int r = 0;
     if ((r = emission::system_calculate(system->emission_calculator, &system->emission_task)) < 0)
       return r;
@@ -123,9 +125,6 @@ namespace parallel_rays_cpu
         task->absorption[mesh_idx] += (side < 0 ? material.front.absorbance : material.rear.absorbance) * ray_power;
       }
     }
-
-    ray_caster::task_free(system->emission_task.rays);
-    system->emission_task.rays = 0;
 
     return THERMAL_EQUATION_OK;
   }

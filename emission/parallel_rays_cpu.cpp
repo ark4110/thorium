@@ -55,7 +55,7 @@ namespace parallel_rays_emission_cpu
     system->TPGenR = std::mt19937(1);
     system->TPGenTheta = std::mt19937(2);
     system->Distr_R = std::uniform_real_distribution<float>(0, 1);
-    system->Distr_Theta = std::uniform_real_distribution<float>(0, 2 * M_PI);
+    system->Distr_Theta = std::uniform_real_distribution<float>(0, 2 * (float)M_PI);
     return EMISSION_OK;
   }
 
@@ -85,11 +85,14 @@ namespace parallel_rays_emission_cpu
   }
 
  /// @brief Creates task with n_rays of random generated rays.
-  ray_caster::task_t* make_caster_task(cpu_system_t* system, task_t* task)
+  void make_caster_task(cpu_system_t* system, task_t* task)
   {
     math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), task->direction);
     
-    ray_caster::task_t* ray_caster_task = ray_caster::task_create(task->n_rays);
+    int n_input_rays = task->rays ? task->rays->n_tasks : 0;
+    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + task->n_rays);
+
+    ray_caster::task_t* ray_caster_task = task->rays;
     for (int r = 0; r != task->n_rays; ++r)
     {
       float radius = task->radius * sqrtf(system->Distr_R(system->TPGenR));
@@ -99,10 +102,8 @@ namespace parallel_rays_emission_cpu
       math::vec3 origin = rotation * math::make_vec3(x, y, -task->distance) + task->center;
       math::vec3 direction = origin + task->direction * 0.1f;
 
-      ray_caster_task->ray[r] = { origin, direction };
+      ray_caster_task->ray[n_input_rays + r] = { origin, direction };
     }
-
-    return ray_caster_task;
   }
 
   int calculate(cpu_system_t* system, task_t* task)
@@ -113,7 +114,7 @@ namespace parallel_rays_emission_cpu
       ray_caster::task_free(task->rays);
       task->rays = 0;
     }
-    task->rays = make_caster_task(system, task);
+    make_caster_task(system, task);
     int r = 0;
     if ((r = ray_caster::system_cast(system->ray_caster, task->rays)) < 0)
       return r;

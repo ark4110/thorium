@@ -51,6 +51,26 @@ namespace ray_caster
     return task;
   }
 
+  task_t* task_realloc(task_t* task, int n_rays)
+  {
+    if (!task)
+      return task_create(n_rays);
+
+    task->n_tasks = n_rays;
+    task->ray = (math::ray_t*)realloc(task->ray, n_rays * sizeof(math::ray_t));
+    task->hit_face = (face_t**)realloc(task->hit_face, n_rays * sizeof(ray_caster::face_t*));
+    task->hit_point = (math::vec3*)realloc(task->hit_point, n_rays * sizeof(math::vec3));
+
+    return task;
+  }
+
+  task_t* task_reset(task_t* task)
+  {
+    if (task)
+      task->n_tasks = 0;
+    return task;
+  }
+
   void task_free(task_t* task)
   {
     if (task)

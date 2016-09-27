@@ -132,6 +132,7 @@ namespace radiance_equation
   int calculate(cpu_system_t* system, thermal_equation::task_t* task)
   {
     calculate_weights(system->scene, system->face_areas, task->temperatures, system->emission_task);
+    task_reset(system->emission_task->rays);
 
     int r = 0;
     if ((r = emission::system_calculate(system->emission_calculator, system->emission_task)) < 0)
@@ -182,9 +183,6 @@ namespace radiance_equation
         }
       }
     }
-
-    ray_caster::task_free(emission_task->rays);
-    emission_task->rays = 0;
 
     return THERMAL_EQUATION_OK;
   }

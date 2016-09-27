@@ -21,6 +21,7 @@ link_directories("../lib")
 set(SOURCE_FILES
   adams_solution.cpp
   conductive_solution.cpp
+  emission.cpp
   export.cpp
   form_factors.cpp
   grid.cpp
@@ -32,6 +33,7 @@ set(SOURCE_FILES
   mesh_graph.cpp
   radiance_solution.cpp
   ray_casting.cpp
+  test_scene.cpp
   triangle_math.cpp
     )
 
