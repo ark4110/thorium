@@ -9,6 +9,8 @@ set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 
 set(SOURCE_FILES
+    cpu_system.h
+    cpu_system.cpp
     system.h
     system.cpp
     )

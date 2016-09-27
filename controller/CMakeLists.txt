@@ -21,5 +21,5 @@ set(SOURCE_FILES
 
 add_executable(controller ${SOURCE_FILES})
 
-target_link_libraries(controller ray_caster cuda_ray_caster import_export thermal_equation thermal_solution form_factors cpu_form_factors subject emission math)
+target_link_libraries(controller ray_caster cuda_ray_caster import_export thermal_equation thermal_solution form_factors subject emission math)
 target_link_libraries(controller ${CUDA_LIBRARIES})
