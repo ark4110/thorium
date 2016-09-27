@@ -23,7 +23,7 @@
 
 namespace csv_export
 {
-  int export_csv(const char* filename, form_factors::scene_t* scene, form_factors::task_t* task)
+  int export_csv(const char* filename, subject::scene_t* scene, form_factors::task_t* task)
   {
     std::ofstream out(filename);
     if (!out.is_open())

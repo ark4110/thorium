@@ -43,6 +43,32 @@ namespace testing
     return s;
   }
 
+  subject::scene_t* ToSubjectScene(ray_caster::scene_t* rcs)
+  {
+    subject::scene_t* ss = subject::scene_create();
+    ss->faces = rcs->faces;
+    ss->n_faces = rcs->n_faces;
+
+    rcs->faces = 0;
+    scene_free(rcs);
+
+    return ss;
+  }
+
+  void AddMaterial(subject::scene_t* scene, subject::material_t material)
+  {
+    scene->materials = (subject::material_t*)realloc(scene->materials, (1 + scene->n_materials) * sizeof(subject::material_t));
+    scene->materials[scene->n_materials] = material;
+    ++scene->n_materials;
+  }
+
+  void AddMesh(subject::scene_t* scene, subject::mesh_t mesh)
+  {
+    scene->meshes = (subject::mesh_t*)realloc(scene->meshes, (1 + scene->n_meshes) * sizeof(subject::mesh_t));
+    scene->meshes[scene->n_meshes] = mesh;
+    ++scene->n_meshes;
+  }
+
   ray_caster::scene_t* MakeFloorScene()
   {
     int n_faces = 2;

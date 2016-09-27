@@ -26,7 +26,32 @@
 
 namespace emission
 {
-  system_t* system_create(int type, ray_caster::system_t* ray_caster)
+  task_t* task_create()
+  {
+    task_t* task = (task_t*)calloc(1, sizeof(task_t));
+    return task;
+  }
+
+  void task_free(task_t* task)
+  {
+    if (task)
+    {
+      task_free(task->rays);
+      free(task->power);
+    }
+
+    free(task);
+  }
+
+  int task_grow(task_t* task, int n_rays)
+  {
+    int n_input_rays = task->rays ? task->rays->n_tasks : 0;    
+    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + n_rays);
+    task->power = (float*)realloc(task->power, (n_input_rays + n_rays) * sizeof(float));
+    return n_input_rays;
+  }
+
+  system_t* system_create(int type, const params_t* params)
   {
     system_t* system = 0;
     switch (type)
@@ -43,7 +68,7 @@ namespace emission
       return 0;
     }
 
-    system_init(system, ray_caster);
+    system_init(system, params);
 
     return system;
   }
@@ -54,9 +79,9 @@ namespace emission
     free(system);
   }
 
-  int system_init(system_t* system, ray_caster::system_t* ray_caster)
+  int system_init(system_t* system, const params_t* params)
   {
-    return system->methods->init(system, ray_caster);
+    return system->methods->init(system, params);
   }
 
   int system_shutdown(system_t* system)
@@ -64,7 +89,7 @@ namespace emission
     return system->methods->shutdown(system);
   }
 
-  int system_set_scene(system_t* system, ray_caster::scene_t* scene)
+  int system_set_scene(system_t* system, subject::scene_t* scene)
   {
     return system->methods->set_scene(system, scene);
   }

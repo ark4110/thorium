@@ -18,8 +18,6 @@ set(SOURCE_FILES
   form_factors.h
   heat_source_cpu.cpp
   heat_source_cpu.h
-  parallel_rays_cpu.cpp
-  parallel_rays_cpu.h
   radiance_cpu.cpp
   radiance_cpu.h
   system.cpp

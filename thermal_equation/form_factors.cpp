@@ -41,7 +41,6 @@ namespace form_factors_equation
 
     // @todo Move form factors calculation of process?
     form_factors::system_t* ff_calculator;
-    form_factors::scene_t ff_scene;
     form_factors::task_t* ff_task;
   };
 
@@ -79,21 +78,12 @@ namespace form_factors_equation
     system->scene = scene;
     
     build_meshes_areas(system->scene, &system->areas);
-
-    system->ff_scene.n_faces = scene->n_faces;
-    system->ff_scene.faces = scene->faces;
-    system->ff_scene.n_meshes = scene->n_meshes;
-    // @todo Use mesh size scene parameter.
-    system->ff_scene.meshes = (form_factors::mesh_t*)scene->meshes;
     
     int r = 0;
-    if ((r = form_factors::system_set_scene(system->ff_calculator, &system->ff_scene)) < 0)
+    if ((r = form_factors::system_set_scene(system->ff_calculator, scene)) < 0)
       return r;
-
-    if ((r = form_factors::system_prepare(system->ff_calculator)) < 0)
-      return r;
-
-    system->ff_task = form_factors::task_create(&system->ff_scene, system->params.n_rays);
+    
+    system->ff_task = form_factors::task_create(scene, system->params.n_rays);
 
     if ((r = form_factors::system_calculate(system->ff_calculator, system->ff_task)) < 0)
       return r;
@@ -142,5 +132,4 @@ namespace form_factors_equation
     s->methods = &methods;
     return s;
   }
-
 }

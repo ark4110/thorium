@@ -27,6 +27,7 @@
 #include "../form_factors/system.h"
 #include "../math/grid.h"
 #include "../math/operations.h"
+#include "../emission/malley_cpu.h"
 #include "../thermal_solution/system.h"
 #include "../thermal_equation/system.h"
 #include "../thermal_equation/radiance_cpu.h"
@@ -159,18 +160,15 @@ int main(int argc, char* argv[])
     int n_faces = 38000;
     int n_rays = 100 * n_faces;
     bool no_cpu = false;
-    bool no_form_factors = true;
     bool no_radiance = false;
 
     float radius = 20;
     
     subject::generator_t* generator = subject::generator_create_spherical();
     // Create systems for CPU and GPU.
-    system_t* cuda_system = system_create(RAY_CASTER_ZGRID_CUDA);
-    system_t* naive_system = system_create(RAY_CASTER_NAIVE_CUDA);
-    system_t* zgrid_system = system_create(RAY_CASTER_ZGRID_CPU);
-    emission::system_t* emitter = emission::system_create(EMISSION_MALLEY_CPU, cuda_system);
-    
+    system_t* cuda_zgrid = system_create(RAY_CASTER_ZGRID_CUDA);
+    system_t* cuda_naive = system_create(RAY_CASTER_NAIVE_CUDA);
+    system_t* cpu_zgrid = system_create(RAY_CASTER_ZGRID_CPU);
 
     // Create random scene for ray caster.
     
@@ -203,9 +201,9 @@ int main(int argc, char* argv[])
     warm_up_scene.n_faces = warm_up_scene.n_faces > 32 ? 32 : warm_up_scene.n_faces;
     task_t warm_up_task = *gpuTask;
     warm_up_task.n_tasks = 1;
-    system_set_scene(cuda_system, &warm_up_scene);
-    system_prepare(cuda_system);
-    system_cast(cuda_system, &warm_up_task);
+    system_set_scene(cuda_zgrid, &warm_up_scene);
+    system_prepare(cuda_zgrid);
+    system_cast(cuda_zgrid, &warm_up_task);
 
     StopWatchInterface *hTimer;
     sdkCreateTimer(&hTimer);
@@ -214,9 +212,9 @@ int main(int argc, char* argv[])
 
     // Run GPU ray casting task.
     printf("Casting scene on GPU using zgrid algorithm...\n");
-    system_set_scene(cuda_system, scene);
-    system_prepare(cuda_system);
-    system_cast(cuda_system, gpuTask);
+    system_set_scene(cuda_zgrid, scene);
+    system_prepare(cuda_zgrid);
+    system_cast(cuda_zgrid, gpuTask);
     sdkStopTimer(&hTimer);
     double gpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
     printf("Done in %fs.\n", gpuTime);
@@ -226,9 +224,9 @@ int main(int argc, char* argv[])
       printf("Casting scene on GPU using naive algorithm...\n");
       sdkResetTimer(&hTimer);
       sdkStartTimer(&hTimer);
-      system_set_scene(naive_system, scene);
-      system_prepare(naive_system);      
-      system_cast(naive_system, naiveTask);
+      system_set_scene(cuda_naive, scene);
+      system_prepare(cuda_naive);      
+      system_cast(cuda_naive, naiveTask);
       sdkStopTimer(&hTimer);
       double naiveTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
       printf("Done in %fs.\n", naiveTime);
@@ -241,9 +239,9 @@ int main(int argc, char* argv[])
       printf("Casting scene on CPU using zgrid algorithm...\n");
       sdkResetTimer(&hTimer);
       sdkStartTimer(&hTimer);
-      system_set_scene(zgrid_system, scene);
-      system_prepare(zgrid_system);
-      system_cast(zgrid_system, zgridTask);
+      system_set_scene(cpu_zgrid, scene);
+      system_prepare(cpu_zgrid);
+      system_cast(cpu_zgrid, zgridTask);
       sdkStopTimer(&hTimer);
       double zgridTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
       printf("Done in %fs.\n", zgridTime);
@@ -254,50 +252,17 @@ int main(int argc, char* argv[])
       printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);
     }
 
-    if (!no_form_factors)
-    {
-      // Run form factors calculation on Cuda's ray caster results.
-      
-      form_factors::system_t* calculator = form_factors::system_create(FORM_FACTORS_CPU, emitter);
-      form_factors::scene_t ff_scene;
-      ff_scene.n_faces = scene->n_faces;
-      ff_scene.faces = scene->faces;
-
-      int n_meshes = scene->n_faces;
-
-      ff_scene.n_meshes = n_meshes;
-      ff_scene.meshes = (form_factors::mesh_t*) malloc(n_meshes * sizeof(form_factors::mesh_t));
-      for (int i = 0; i != n_meshes; ++i)
-      {
-        form_factors::mesh_t& mesh = ff_scene.meshes[i];
-        mesh.first_idx = i;
-        mesh.n_faces = 1;
-      }
-
-      printf("Calculating form factors on CPU...\n");
-      sdkResetTimer(&hTimer);
-      sdkStartTimer(&hTimer);
-
-      // Finally calculate form factors.
-      form_factors::system_set_scene(calculator, &ff_scene);
-      form_factors::system_prepare(calculator);
-      form_factors::task_t* task = form_factors::task_create(&ff_scene, n_rays);
-      form_factors::system_calculate(calculator, task);
-
-      sdkStopTimer(&hTimer);
-      double cpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-      printf("Done in %fs.\n", cpuTime);
-
-      task_free(task);
-      free(ff_scene.meshes);
-    }
-
     if (!no_radiance)
     {
+      malley_cpu::params_t emissionParams;
+      emissionParams.n_rays = n_rays;
+      emission::system_t* emitter = emission::system_create(EMISSION_MALLEY_CPU, &emissionParams);
+
       const int rays_per_face = 100;
       radiance_equation::params_t equationParams;
-      equationParams.emitter = emitter;
-      equationParams.n_rays = rays_per_face * scene->n_faces;
+      equationParams.emitters = &emitter;
+      equationParams.n_emitters = 1;
+      equationParams.ray_caster = cuda_zgrid;
 
       thermal_equation::system_t* equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
 
@@ -369,12 +334,12 @@ int main(int argc, char* argv[])
       thermal_solution::task_free(task);
       thermal_solution::system_free(solution);
       thermal_equation::system_free(equation);
+      emission::system_free(emitter);
     }
-
-    emission::system_free(emitter);
-    system_free(cuda_system);
-    system_free(naive_system);
-    system_free(zgrid_system);
+    
+    system_free(cuda_zgrid);
+    system_free(cuda_naive);
+    system_free(cpu_zgrid);
 
     scene_free(rs);
     scene_free(ss);

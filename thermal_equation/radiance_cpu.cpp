@@ -16,7 +16,6 @@
 
 
 #include "radiance_cpu.h"
-#include "../emission/malley_emission.h"
 #include "../math/triangle.h"
 #include <float.h>
 #include <cmath>
@@ -26,32 +25,25 @@
 
 namespace radiance_equation
 {
-  const float sigma = 5.670400e-8f;
-
-  /// @brief Extended base system_t (C-style polymorphism)
   struct cpu_system_t : thermal_equation::system_t
   {    
     params_t params;
 
     subject::scene_t* scene;
-    float* face_areas;
-    int* face_to_mesh_index;
 
-    // @todo Move form factors calculation of process?
-    emission::system_t* emission_calculator;
-    ray_caster::scene_t emission_scene;
-    malley_emission::task_t* emission_task;
+    emission::task_t* emission_task;
+
+    int* face_to_mesh_index;
   };
 
   /// @brief Initializes system with given ray caster after creation.
   int init(cpu_system_t* system, params_t* params)
   {    
     system->params = *params;
-    system->face_areas = 0;
-    system->face_to_mesh_index = 0;
+
     system->scene = 0;
-    system->emission_calculator = params->emitter;
     system->emission_task = 0;
+    system->face_to_mesh_index = 0;
 
     return THERMAL_EQUATION_OK;
   }
@@ -61,16 +53,11 @@ namespace radiance_equation
   {
     system->scene = 0;
 
-    free(system->face_areas);
-    system->face_areas = 0;
+    emission::task_free(system->emission_task);
+    system->emission_task = 0;
 
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
-
-    system->emission_calculator = 0;
-    // @todo Looks like it is better to move task ownership to base system to avoid such code.
-    malley_emission::task_free(system->emission_task);
-    system->emission_task = 0;
 
     return THERMAL_EQUATION_OK;
   }
@@ -78,109 +65,67 @@ namespace radiance_equation
   int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;
-    system->emission_scene = *(ray_caster::scene_t*)scene; // slicing binary compatible scenes
+    ray_caster::scene_t* ray_caster_scene = (ray_caster::scene_t*)scene; // slicing binary compatible scenes
 
     int r = 0;
-    if ((r = emission::system_set_scene(system->emission_calculator, &system->emission_scene)) < 0)
+    if ((r = system_set_scene(system->params.ray_caster, ray_caster_scene)) < 0)
       return r;
 
-    build_faces_areas(system->scene, &system->face_areas);
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
+    if ((r = system_prepare(system->params.ray_caster)) < 0)
+      return r;
 
-    malley_emission::task_free(system->emission_task);
-    system->emission_task = malley_emission::task_create(system->params.n_rays, scene->n_faces);
+    for (int e = 0; e != system->params.n_emitters; ++e)
+    if ((r = system_set_scene(system->params.emitters[e], scene)) < 0)
+      return r;
+
+    emission::task_free(system->emission_task);
+    system->emission_task = emission::task_create();
+
+    // @todo Move face->mesh index to scene?
+    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
 
     return THERMAL_EQUATION_OK;
   }
 
-  void calculate_weights(const subject::scene_t* scene, const float* face_areas, const float* temperatures, malley_emission::task_t* task)
-  {
-    // Reset to zero. There may be faces not included in meshes.
-    memset(task->weights, 0, scene->n_faces * 2 * sizeof(float));
-
-    float total = 0;
-    for (int m = 0; m != scene->n_meshes; ++m)
-    { 
-      const subject::material_t& material = mesh_material(scene, m);
-      const float T = temperatures[m];
-      const float density = T;
-      const float front_density = density * material.front.emissivity;
-      const float rear_density = density * material.rear.emissivity;
-     
-      const subject::mesh_t& mesh = scene->meshes[m];
-      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
-      {
-        const float front = front_density * face_areas[f];
-        const float rear = rear_density * face_areas[f];
-        total += front + rear;
-        task->weights[f * 2] = front;
-        task->weights[f * 2 + 1] = rear;
-      }
-    }
-
-    task->total_weight = total;
-  }
-
-  int face2mesh(cpu_system_t* system, int face_idx)
-  {
-    return system->face_to_mesh_index[face_idx];
-  }
+  // hit side detection
+  /*math::vec3 normale = math::triangle_normal(*ray_caster_task->hit_face[r]);
+  float side = dot(normale, source.direction);
+  int mesh_idx = face2mesh(system, ray_caster_task->hit_face[r] - system->emission_scene.faces);
+  const subject::material_t& material = mesh_material(system->scene, mesh_idx);
+  task->absorption[mesh_idx] += (side < 0 ? material.front.absorbance : material.rear.absorbance) * ray_power;*/
 
   /**
   *  @brief Calculates thermal flow for a given scene.
   */
   int calculate(cpu_system_t* system, thermal_equation::task_t* task)
   {
-    calculate_weights(system->scene, system->face_areas, task->temperatures, system->emission_task);
+    // Prepare emission task
     task_reset(system->emission_task->rays);
+    system->emission_task->mesh_temperatures = task->temperatures;
+    system->emission_task->mesh_emission = task->emission;
 
     int r = 0;
-    if ((r = emission::system_calculate(system->emission_calculator, system->emission_task)) < 0)
+    for (int e = 0; e != system->params.n_emitters; ++e)
+    {
+      emission::system_t* emitter = system->params.emitters[e];
+      if ((r = system_calculate(emitter, system->emission_task)) < 0)
+        return r;
+    }  
+
+    if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
       return r;
 
-    // now we have nearest intersection face for every ray in task (if intersection was occurred)
-    // calculate form factors between meshes
-    const int n_meshes = system->scene->n_meshes;
-    
-    malley_emission::task_t* emission_task = system->emission_task;
+    const emission::task_t* emission_task = system->emission_task;
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
-
-    if (ray_caster_task == 0)
-      return THERMAL_EQUATION_OK;
-
-    int n_ray = 0;
-    for (int m = 0; m != n_meshes; ++m)
+    const int n_rays = ray_caster_task->n_tasks;
+    for (int r = 0; r != n_rays; ++r)
     {
-      const subject::mesh_t& mesh = system->scene->meshes[m];
-      const subject::material_t& material = mesh_material(system->scene, m);
-      const float T = task->temperatures[m];
-      const float power_density = sigma * (T * T * T * T);
-      const float front_density = power_density * material.front.emissivity;
-      const float rear_density = power_density * material.rear.emissivity;
-
-      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
-      { 
-        const float front_emission = front_density * system->face_areas[f];
-        const float rear_emission = rear_density * system->face_areas[f];
-        task->emission[m] += front_emission + rear_emission;
-
-        const int face_rays_front = emitted_front(emission_task, f);
-        const int face_rays_rear = emitted_rear(emission_task, f);
-
-        const int face_rays = face_rays_front + face_rays_rear;
-        for (int j = 0; j != face_rays && n_ray < ray_caster_task->n_tasks; ++j, ++n_ray)
-        {
-          if (ray_caster_task->hit_face[n_ray])
-          {
-            const int hit_face_idx = ray_caster_task->hit_face[n_ray] - system->emission_scene.faces;
-            const int hit_mesh_idx = face2mesh(system, hit_face_idx);
-
-            // @note Accepting material properties (like absorbance) does not matter. It should handled by emission and ray casting modules.
-            const float ray_power = j < face_rays_front ? (front_emission / face_rays_front) : (rear_emission / face_rays_rear);
-
-            task->absorption[hit_mesh_idx] += ray_power; 
-          }
-        }
+      if (ray_caster_task->hit_face[r])
+      {
+        const int hit_face_idx = ray_caster_task->hit_face[r] - system->scene->faces;
+        const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
+        const float ray_power = emission_task->power[r];
+        task->absorption[hit_mesh_idx] += ray_power;
       }
     }
 

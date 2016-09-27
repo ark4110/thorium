@@ -29,8 +29,10 @@ namespace radiance_equation
 {
   struct params_t
   {
-    emission::system_t* emitter;
-    int n_rays;
+    int n_emitters;
+    emission::system_t** emitters;
+
+    ray_caster::system_t* ray_caster;
   };
 
   thermal_equation::system_t* system_create();

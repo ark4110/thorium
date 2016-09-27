@@ -28,5 +28,5 @@ namespace csv_export
   #define CSV_EXPORT_FILE_ERROR 31
 
   /// @brief Exports calculated form factors of given scene (mesh_i to mesh_j) to csv file.
-  int export_csv(const char* filename, form_factors::scene_t* scene, form_factors::task_t* task);
+  int export_csv(const char* filename, subject::scene_t* scene, form_factors::task_t* task);
 }

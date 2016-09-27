@@ -29,29 +29,6 @@ namespace form_factors
   /// @brief Face (polygon) type
   typedef math::triangle_t face_t;
 
-  /// @brief Mesh type (group of polygons - as offset in whole scene polygons).
-  struct mesh_t
-  {
-    int first_idx;
-    int n_faces;
-    int padding0; // @todo Provide mesh size scene parameter for custom meshes traversal (yet fields structure must be preserved).
-  };
-
-  /// @brief Scene representation.
-  struct scene_t
-  {
-    int n_faces; ///< Total number of polygons.
-    face_t *faces; ///< Polygons array.
-    int n_meshes; ///< Number of meshes.
-    mesh_t* meshes; ///< Meshes array.
-  };
-
-  /// @brief Allocate memory for scene.
-  scene_t* scene_create();
-
-  /// @brief Free memory for scene.
-  void scene_free(scene_t* s);
-
   /**
    * @brief Task representation for given scene (@see task_create).
    *
@@ -65,10 +42,15 @@ namespace form_factors
   };
 
   /// @brief create task for given scene with n_rays rays.
-  task_t* task_create(scene_t* scene, int n_rays);
+  task_t* task_create(subject::scene_t* scene, int n_rays);
 
   /// @brief Free memory for given task
   void task_free(task_t* task);
+
+  struct params_t
+  {
+    ray_caster::system_t* caster;
+  };
 
   /**
    * @brief Form factors calculator type.
@@ -97,16 +79,13 @@ namespace form_factors
     // @todo Add double init/shutdown check in base ray caster system.
 
     /// @brief Initializes system with given ray caster after creation.
-    int(*init)(system_t* system, emission::system_t* emitter);
+    int(*init)(system_t* system, const params_t* params);
 
     /// @brief Shutdowns calculator system prior to free memory.
     int(*shutdown)(system_t* system);
 
     /// @brief Sets loaded scene (polygons in meshes) for calculator and associated ray caster.
-    int(*set_scene)(system_t* system, scene_t* scene);
-
-    /// @brief Prepares calculator prior to calculation.
-    int(*prepare)(system_t* system);
+    int(*set_scene)(system_t* system, subject::scene_t* scene);
 
     /**
      *  @brief Calculates form factors for given system.
@@ -125,15 +104,14 @@ namespace form_factors
    * @note Only CPU calculator type (type = 1) is supported, @see ../cpuFactorsCalculator/.
    * @note init() system on creation.
    */
-  system_t* system_create(int type, emission::system_t* emitter);
+  system_t* system_create(int type, const params_t* params);
 
   /// Here go C-interface wrappers to call system_t's virtual methods.
 
   /// @note shutdown() system on destruction.
   void system_free(system_t* system);
-  int system_init(system_t* system, emission::system_t* emitter);
+  int system_init(system_t* system, const params_t* params);
   int system_shutdown(system_t* system);
-  int system_set_scene(system_t* system, scene_t* scene);
-  int system_prepare(system_t* system);
+  int system_set_scene(system_t* system, subject::scene_t* scene);
   int system_calculate(system_t* system, task_t* task);
 }

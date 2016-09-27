@@ -20,29 +20,12 @@
  */
 
 #include "system.h"
-#include "../cpuFactorsCalculator/cpu_system.h"
+#include "cpu_system.h"
 #include <stdlib.h>
 
 namespace form_factors
-{
-  scene_t* scene_create()
-  {
-    scene_t* s = (scene_t*)malloc(sizeof(scene_t));
-    *s = { 0, 0 };
-    return s;
-  }
-
-  void scene_free(scene_t* scene)
-  {
-    if (scene)
-    {
-      free(scene->faces);
-      free(scene->meshes);
-    }
-    free(scene);
-  }
-
-  system_t* system_create(int type, emission::system_t* emitter)
+{ 
+  system_t* system_create(int type, const params_t* params)
   {
     system_t* system = 0;
     switch (type)
@@ -55,7 +38,7 @@ namespace form_factors
       return 0;
     }
 
-    system_init(system, emitter);
+    system_init(system, params);
 
     return system;
   }
@@ -66,7 +49,7 @@ namespace form_factors
     free(system);
   }
 
-  task_t* task_create(scene_t* scene, int n_rays)
+  task_t* task_create(subject::scene_t* scene, int n_rays)
   {
     task_t* task = (task_t*)malloc(sizeof(task_t));
     task->n_rays = n_rays;
@@ -80,9 +63,9 @@ namespace form_factors
     free(task);
   }
 
-  int system_init(system_t* system, emission::system_t* emitter)
+  int system_init(system_t* system, const params_t* params)
   {
-    return system->methods->init(system, emitter);
+    return system->methods->init(system, params);
   }
 
   int system_shutdown(system_t* system)
@@ -90,14 +73,9 @@ namespace form_factors
     return system->methods->shutdown(system);
   }
 
-  int system_set_scene(system_t* system, scene_t* scene)
+  int system_set_scene(system_t* system, subject::scene_t* scene)
   {
     return system->methods->set_scene(system, scene);
-  }
-
-  int system_prepare(system_t* system)
-  {
-    return system->methods->prepare(system);
   }
 
   int system_calculate(system_t* system, task_t* task)

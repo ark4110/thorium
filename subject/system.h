@@ -74,6 +74,7 @@ namespace subject
   }
 
   /// @brief Scene representation.
+  /// @note Must be binary compatible with ray caster scene.
   struct scene_t
   {
     int n_faces; ///< Total number of polygons.

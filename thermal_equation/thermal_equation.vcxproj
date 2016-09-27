@@ -23,7 +23,6 @@
     <ClCompile Include="factory.cpp" />
     <ClCompile Include="form_factors.cpp" />
     <ClCompile Include="heat_source_cpu.cpp" />
-    <ClCompile Include="parallel_rays_cpu.cpp" />
     <ClCompile Include="radiance_cpu.cpp" />
     <ClCompile Include="system.cpp" />
   </ItemGroup>
@@ -31,7 +30,6 @@
     <ClInclude Include="conductive_cpu.h" />
     <ClInclude Include="form_factors.h" />
     <ClInclude Include="heat_source_cpu.h" />
-    <ClInclude Include="parallel_rays_cpu.h" />
     <ClInclude Include="radiance_cpu.h" />
     <ClInclude Include="system.h" />
   </ItemGroup>
@@ -45,7 +43,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

@@ -25,6 +25,11 @@
 
 namespace malley_cpu
 {
+  struct params_t : emission::params_t
+  {
+    int n_rays;
+  };
+
   /**
  *  @brief Factory method to create CPU emission calculator.
  *  @detail Implement emission calculator using Monte-Carlo algorithm.
@@ -34,4 +39,7 @@ namespace malley_cpu
  *  Emit rays from both sides of face.
  *  */
   emission::system_t* system_create();
+
+  int emitted_front(emission::system_t* system, int face_idx);
+  int emitted_rear(emission::system_t* system, int face_idx);
 }

@@ -16,7 +16,7 @@
 
 #include "gtest/gtest.h"
 #include "test_scene.h"
-#include "emission/malley_emission.h"
+#include "emission/malley_cpu.h"
 #include "math/operations.h"
 #include "math/triangle.h"
 
@@ -31,8 +31,14 @@ public:
   MalleyEmission()
   {
     Caster = ray_caster::system_create(RAY_CASTER_NAIVE_CPU);
-    Emitter = emission::system_create(EMISSION_MALLEY_CPU, Caster);
-    Scene = MakeFloorScene();
+    malley_cpu::params_t params;
+    params.n_rays = 1;
+    Emitter = emission::system_create(EMISSION_MALLEY_CPU, &params);
+    
+    Scene = ToSubjectScene(MakeFloorScene());
+    AddMaterial(Scene, subject::black_body());
+    AddMesh(Scene, { 0, 2, 0 });
+
     system_set_scene(Emitter, Scene);
   }
 
@@ -40,33 +46,34 @@ public:
   {
     system_free(Emitter);
     system_free(Caster);
-    ray_caster::scene_free(Scene);
+    scene_free(Scene);
   }
 
   ray_caster::system_t* Caster;
   emission::system_t* Emitter;
-  ray_caster::scene_t* Scene;
+  subject::scene_t* Scene;
+  subject::material_t Material;
+  subject::mesh_t Mesh;
 };
 
 TEST_F(MalleyEmission, AllocateRaycasterTask)
 { 
-  auto task = malley_emission::task_create(1, 2);
-  task->total_weight = 2.f;
-  task->weights[0] = 1.f;
-  task->weights[1] = 1.f;
-
+  auto task = emission::task_create();
+  float b[2] = { 1000.f, 1000.f };
+  task->mesh_emission = b;
+  task->mesh_temperatures = b;
   system_calculate(Emitter, task);  
-  ASSERT_EQ(2, task->rays->n_tasks);
+  ASSERT_EQ(4, task->rays->n_tasks);
 }
 
 TEST_F(MalleyEmission, ReallocateRaycasterTask)
 {
-  auto task = malley_emission::task_create(1, 2);
-  task->total_weight = 2.f;
-  task->weights[0] = 1.f;
-  task->weights[1] = 1.f;
+  auto task = emission::task_create();
+  float b[2] = { 1000.f, 1000.f };
+  task->mesh_emission = b;
+  task->mesh_temperatures = b;
 
   system_calculate(Emitter, task);
   system_calculate(Emitter, task);
-  ASSERT_EQ(4, task->rays->n_tasks);
+  ASSERT_EQ(8, task->rays->n_tasks);
 }

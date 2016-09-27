@@ -20,7 +20,6 @@
 */
 
 #include "malley_cpu.h"
-#include "malley_emission.h"
 #include "../ray_caster/system.h"
 #include "../math/operations.h"
 #include "../math/triangle.h"
@@ -37,8 +36,12 @@ namespace malley_cpu
   /// @brief Extended base system_t (C-style polymorphism)
   struct cpu_system_t : emission::system_t
   {
-    ray_caster::scene_t* scene;
-    ray_caster::system_t* ray_caster;
+    params_t params;
+    
+    subject::scene_t* scene;
+
+    float* face_areas;
+    float* face_weights;
 
     // Mersenne's twister uniformly distributed [0, 1) generators.
     std::mt19937 TPGenA;
@@ -52,10 +55,13 @@ namespace malley_cpu
   };
 
   /// @brief Initializes system with given ray caster after creation.
-  int init(cpu_system_t* system, ray_caster::system_t* ray_caster)
+  int init(cpu_system_t* system, const malley_cpu::params_t* params)
   {
-    system->scene = 0;
-    system->ray_caster = ray_caster;
+    system->params = *params;
+    
+    system->scene = 0;    
+    system->face_areas = 0;
+    system->face_weights = 0;
 
     system->TPGenA = std::mt19937(1);
     system->TPGenB = std::mt19937(2);
@@ -70,34 +76,97 @@ namespace malley_cpu
   int shutdown(cpu_system_t* system)
   {
     system->scene = 0;
+
+    free(system->face_areas);
+    system->face_areas = 0;
+
+    free(system->face_weights);
+    system->face_weights = 0;
+
     return EMISSION_OK;
   }
 
   /// @brief Sets loaded scene (polygons in meshes) for calculator and associated ray caster.
-  int set_scene(cpu_system_t* system, ray_caster::scene_t* scene)
+  int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     if (scene == 0 || scene->n_faces == 0)
       return -EMISSION_ERROR;
 
-    system->scene = scene;
-    
-    int r = 0;
-    if ((r = ray_caster::system_set_scene(system->ray_caster, system->scene)) < 0)
-      return r;
+    if (scene->n_meshes == 0)
+      return -EMISSION_ERROR;
 
-    if ((r = ray_caster::system_prepare(system->ray_caster)) < 0)
-      return r;
+    if (scene->n_materials == 0)
+      return -EMISSION_ERROR;
+
+    system->scene = scene;
+
+    // Precalculate area of the face because lookup of a single float is cheaper than lookup of the whole face.
+    build_faces_areas(system->scene, &system->face_areas);
+
+    system->face_weights = (float*)realloc(system->face_weights, 2 * scene->n_faces * sizeof(float));
+    memset(system->face_weights, 0, 2 * scene->n_faces * sizeof(float)); // reset all values to zero to avoid arithmetic exceptions in future
 
     return EMISSION_OK;
   }
 
-  int calculate_n_rays(malley_emission::task_t* task, int n_faces)
+  void calculate_weights(cpu_system_t* system, const emission::task_t* task)
   {
+    const float* temperatures = task->mesh_temperatures;
+    const float* face_areas = system->face_areas;
+    subject::scene_t* scene = system->scene;
+
+    // Don't reset weights to zero because we don't care about orphan faces without mesh.
+    float* weights = system->face_weights;
+
+    float total = 0;
+    for (int m = 0; m != scene->n_meshes; ++m)
+    {
+      const subject::material_t& material = mesh_material(scene, m);
+      const float T = temperatures[m];
+      const float density = T; // some empirical distribution function of temperature
+      const float front_density = density * material.front.emissivity;
+      const float rear_density = density * material.rear.emissivity;
+
+      const subject::mesh_t& mesh = scene->meshes[m];
+      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
+      {
+        const float front = front_density * face_areas[f];
+        const float rear = rear_density * face_areas[f];
+        total += front + rear;
+        weights[f * 2] = front;
+        weights[f * 2 + 1] = rear;
+      }
+    }
+
+    float factor = 1.f / total;
+
+    const int n_weights = scene->n_faces * 2; // there are at most 2 * n_faces weights (some may be unused)    
+    for (int f = 0; f != n_weights; ++f) // Using loop over all faces (not mesh-by-mesh) for better performance
+    {
+      weights[f] *= factor;
+    }
+  }
+
+  int emitted_front(cpu_system_t* system, int face_idx)
+  {
+    const float weight = system->face_weights[2 * face_idx];
+    return weight > 0 ? std::max<int>(1, (int)(system->params.n_rays * weight)) : 0;
+  }
+
+  int emitted_rear(cpu_system_t* system, int face_idx)
+  {
+    const float weight = system->face_weights[2 * face_idx + 1];
+    return weight > 0 ? std::max<int>(1, (int)(system->params.n_rays * weight)) : 0;
+  }
+
+  int calculate_n_rays(cpu_system_t* system, emission::task_t* task)
+  {
+    int n_faces = system->scene->n_faces;
     int result = 0;
     for (int f = 0; f != n_faces; ++f)
     {
-      const int face_rays_front = emitted_front(task, f);
-      const int face_rays_rear = emitted_rear(task, f);
+      const int face_rays_front = emitted_front(system, f);
+      const int face_rays_rear = emitted_rear(system, f);
       result += face_rays_front + face_rays_rear;
     }
     return result;
@@ -121,7 +190,7 @@ namespace malley_cpu
 
   /// @brief Creates rotation matrix of z vector towards face's normal.
   math::mat33 pick_face_rotation(const math::face_t& face, math::vec3 z)
-  { 
+  {
     math::vec3 norm = triangle_normal(face);
     return math::rotate_towards(z, norm);
   }
@@ -133,72 +202,91 @@ namespace malley_cpu
     float r = system->Distr_0_1(system->HSGenR);
     float rad = sqrtf(r);
     float phi = system->Distr_0_2PI(system->HSGenTheta);
-    return { rad * cosf(phi), rad * sinf(phi), sqrtf(1 - r) };
+    return{ rad * cosf(phi), rad * sinf(phi), sqrtf(1 - r) };
   }
 
-  /// @brief Creates task with n_rays random generated rays.
-  void make_caster_task(cpu_system_t* system, malley_emission::task_t* task)
-  { 
-    int n_real_rays = calculate_n_rays(task, system->scene->n_faces);
+  const float sigma = 5.670400e-8f;
+
+  int calculate(cpu_system_t* system, emission::task_t* task)
+  {
+    // Calculate total amount of rays to emmit.
+    calculate_weights(system, task);
+    int n_real_rays = calculate_n_rays(system, task);
+
     if (n_real_rays == 0)
-      return;
-    
-    int n_input_rays = task->rays ? task->rays->n_tasks : 0;
-    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + n_real_rays);
+      return EMISSION_OK;
+
+    // Prepare caster rays storage.    
+    int n_input_rays = task_grow(task, n_real_rays);
     ray_caster::task_t* ray_caster_task = task->rays;
-    ray_caster::scene_t* scene = system->scene;
-    const float* weights = task->weights;
+
+    // Just syntactic sugar
+    subject::scene_t* scene = system->scene;
+    const float* weights = system->face_weights;    
+    const int n_meshes = system->scene->n_meshes;
+
     int n_ray = 0;
-    
-    for (int f = 0; f != scene->n_faces; ++f)
+
+    for (int m = 0; m != n_meshes; ++m)
     {
-      const ray_caster::face_t& face = system->scene->faces[f];
+      const subject::mesh_t& mesh = scene->meshes[m];
+      const subject::material_t& material = mesh_material(scene, m);
 
-      // For given face number of rays is proportional to faces front/back weights.
-      const int face_rays_front = emitted_front(task, f);
-      const int face_rays_rear = emitted_rear(task, f);
-      const int face_rays = face_rays_front + face_rays_rear;
+      // Mesh radiance properties.
+      const float T = task->mesh_temperatures[m];
+      const float power_density = sigma * (T * T * T * T);
+      const float front_density = power_density * material.front.emissivity;
+      const float rear_density = power_density * material.rear.emissivity;
 
-      // Store rotation for for given face (from Z axis towards face's normal).
-      math::mat33 rotation = pick_face_rotation(face, math::make_vec3(0, 0, 1));
+      // Emmit rays from each mesh face
+      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
+      { 
+        const float front_emission = front_density * system->face_areas[f];
+        const float rear_emission = rear_density * system->face_areas[f];
 
-      for (int j = 0; j != face_rays && n_ray < n_real_rays; ++j, ++n_ray)
-      {
-        // Take reference to ray being generated
-        ray_caster::ray_t& ray = ray_caster_task->ray[n_input_rays + n_ray];
+        task->mesh_emission[m] += front_emission + rear_emission;
 
-        // Randomly generated ray's origin on the face
-        math::vec3 origin = pick_face_point(system, face);
+        const int n_face_rays_front = emitted_front(system, f);
+        const int n_face_rays_rear = emitted_rear(system, f);
 
-        // Pick direction from cosine-weighted distribution
-        math::vec3 malley = pick_malley_point(system);
+        const ray_caster::face_t& face = scene->faces[f];
 
-        if (j >= face_rays_front) {
-          // One half rays from front side and one half from back
-          malley.z = -malley.z;
+        // Store rotation for a given face (from Z axis towards face's normal).
+        math::mat33 rotation = pick_face_rotation(face, math::make_vec3(0, 0, 1));
+        
+        for (int j = 0; j != n_face_rays_front && n_ray < n_real_rays; ++j, ++n_ray)
+        {
+          const float ray_power = front_emission / n_face_rays_front;
+          task->power[n_input_rays + n_ray] = ray_power;
+
+          // Randomly generated ray's origin on the face
+          math::vec3 origin = pick_face_point(system, face);
+
+          // Pick direction from cosine-weighted distribution
+          math::vec3 malley = pick_malley_point(system);
+
+          // Rotate ray towards face's normal
+          math::vec3 relative_dist = rotation * malley;
+
+          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, origin + relative_dist };
         }
 
-        // Rotate ray towards face's normal
-        math::vec3 relative_dist = rotation * malley;
+        // Duplicate "front" cycle to avoid branches.
+        for (int j = 0; j != n_face_rays_rear && n_ray < n_real_rays; ++j, ++n_ray)
+        {
+          const float ray_power = rear_emission / n_face_rays_rear;
+          task->power[n_input_rays + n_ray] = ray_power;
+          
+          math::vec3 origin = pick_face_point(system, face);
+          math::vec3 malley = pick_malley_point(system);
 
-        // Store by reference
-        ray = { origin + relative_dist * 0.0001f, origin + relative_dist };
+          // Only difference from front face is opposite direction.
+          malley.z = -malley.z;
+          math::vec3 relative_dist = rotation * malley;
+          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, origin + relative_dist };
+        }
       }
     }
-  }
-
-  /**
-   *  @brief Calculates emission for given system.
-   *  @detail System uses ray caster (@see init()) and given task for N rays and scene's faces.
-   */
-  int calculate(cpu_system_t* system, malley_emission::task_t* task)
-  {
-    make_caster_task(system, task);
-    if (task->rays == 0)
-      return EMISSION_OK;
-    int r = 0;
-    if ((r = ray_caster::system_cast(system->ray_caster, task->rays)) < 0)
-      return r;
 
     return EMISSION_OK;
   }
@@ -206,9 +294,9 @@ namespace malley_cpu
   /// @brief Creates virtual methods table from local methods.
   const emission::system_methods_t methods =
   {
-    (int(*)(emission::system_t* system, ray_caster::system_t* ray_caster))&init,
+    (int(*)(emission::system_t* system, const emission::params_t*))&init,
     (int(*)(emission::system_t* system))&shutdown,
-    (int(*)(emission::system_t* system, ray_caster::scene_t* scene))&set_scene,
+    (int(*)(emission::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(emission::system_t* system, emission::task_t* task))&calculate,
   };
 
@@ -217,5 +305,15 @@ namespace malley_cpu
     cpu_system_t* s = (cpu_system_t*)malloc(sizeof(cpu_system_t));
     s->methods = &methods;
     return s;
+  }
+
+  int emitted_front(emission::system_t* system, int face_idx)
+  {
+    return emitted_front((cpu_system_t*)system, face_idx);
+  }
+
+  int emitted_rear(emission::system_t* system, int face_idx)
+  {
+    return emitted_rear((cpu_system_t*)system, face_idx);
   }
 }

@@ -20,6 +20,7 @@
 #include "math/triangle.h"
 #include "emission/system.h"
 #include "form_factors/system.h"
+#include "emission/malley_cpu.h"
 #include "thermal_solution/system.h"
 #include "thermal_equation/system.h"
 #include "thermal_equation/radiance_cpu.h"
@@ -28,63 +29,28 @@
 
 using namespace testing;
 
-struct FormFactorsParameters
-{
-  FormFactorsParameters()
-    : FormFactors(0)
-    , Accuracy(0.01f)
-  {
-  }
-
-  thermal_equation::system_t* CreateEquation(emission::system_t* emitter)
-  {
-    FormFactors = form_factors::system_create(FORM_FACTORS_CPU, emitter);
-    EquationParams.form_factors_calculator = FormFactors;
-    EquationParams.n_rays = 10000;
-    return thermal_equation::system_create(THERMAL_EQUATION_SB_FF_CPU, &EquationParams);
-  }
-
-  ~FormFactorsParameters()
-  {
-    form_factors::system_free(FormFactors);
-  }
-
-  form_factors::system_t* FormFactors;
-  form_factors_equation::params_t EquationParams;
-  float Accuracy;
-};
-
-struct DirectMethodParameters
-{
-  DirectMethodParameters()
-    : Accuracy(0.001f)
-  {
-  }
-
-  thermal_equation::system_t* CreateEquation(emission::system_t* emitter)
-  { 
-    EquationParams.emitter = emitter;
-    EquationParams.n_rays = 1000;
-    return thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &EquationParams);
-  }
-  
-  radiance_equation::params_t EquationParams;
-  float Accuracy;
-};
+const float Accuracy = 0.001f;
 
 class RadianceSolution
   : public Test
-  , public DirectMethodParameters
 {
 public:
   RadianceSolution()
   {
     RayCaster = ray_caster::system_create(RAY_CASTER_NAIVE_CUDA);
-    Emitter = emission::system_create(EMISSION_MALLEY_CPU, RayCaster);
-    Equation = this->CreateEquation(Emitter);
+    
+    malley_cpu::params_t emitterParams;
+    emitterParams.n_rays = 1000;
+    Emitter = emission::system_create(EMISSION_MALLEY_CPU, &emitterParams);
 
-    SolutionParams = { 1, &Equation };
-    System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &SolutionParams);
+    radiance_equation::params_t equationParams;
+    equationParams.emitters = &Emitter;
+    equationParams.n_emitters = 1;
+    equationParams.ray_caster = RayCaster;
+    Equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
+
+    thermal_solution::params_t solutionParams = { 1, &Equation };
+    System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
 
     Materials[0] = subject::black_body();
     Materials[0].front.emissivity = 0;
@@ -136,7 +102,6 @@ public:
   ray_caster::system_t* RayCaster;
   emission::system_t* Emitter;
   thermal_equation::system_t* Equation;
-  thermal_solution::params_t SolutionParams;
   thermal_solution::system_t* System;
   subject::material_t Materials[1];
   float Scale;
@@ -164,7 +129,7 @@ TEST_F(RadianceSolution, BoxPreserveEnergy)
   }
   r = system_calculate(System, Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  ASSERT_NEAR(1.f, Task->temperatures[0] / initialEnergy, this->Accuracy);
+  ASSERT_NEAR(1.f, Task->temperatures[0] / initialEnergy, Accuracy);
 }
 
 TEST_F(RadianceSolution, NestedBoxesPreserveEnergy)
@@ -184,5 +149,5 @@ TEST_F(RadianceSolution, NestedBoxesPreserveEnergy)
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 
   float resultEnergy = Task->temperatures[0] * Scale * Scale + Task->temperatures[1];
-  ASSERT_NEAR(1.f, resultEnergy / initialEnergy, this->Accuracy);
+  ASSERT_NEAR(1.f, resultEnergy / initialEnergy, Accuracy);
 }

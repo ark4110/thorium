@@ -451,13 +451,10 @@ namespace obj_import
   }
 #endif
 
-  parallel_rays_cpu::source_t static_distant_source(void* param)
+  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source)
   {
-    return *(parallel_rays_cpu::source_t*)param;
-  }
+    distant_source->power = 0;
 
-  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_cpu::params_t* distant_source)
-  {
     char * line = NULL;
     size_t len = 0;
     size_t read;
@@ -517,15 +514,11 @@ namespace obj_import
 
       case 'd':
       {
-        parallel_rays_cpu::source_t* source = (parallel_rays_cpu::source_t*)malloc(sizeof(parallel_rays_cpu::source_t));
-        if (sscanf(line, "dstsrc %f %f %f %f", &source->power, &source->direction.x, &source->direction.y, &source->direction.z) != 4)
+        if (sscanf(line, "dstsrc %f %f %f %f", &distant_source->power, &distant_source->direction.x, &distant_source->direction.y, &distant_source->direction.z) != 4)
         {
           free(line);
           return -OBJ_IMPORT_FORMAT_ERROR;
         }
-
-        distant_source->source_param = source;
-        distant_source->source = static_distant_source;
       }
       break;
 

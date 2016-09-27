@@ -15,7 +15,7 @@
 // along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gtest/gtest.h"
-
+#include "test_scene.h"
 #include <ray_caster/system.h>
 #include <form_factors/system.h>
 #include <math/operations.h>
@@ -26,6 +26,8 @@ using math::vec3;
 using math::make_vec3;
 using namespace testing;
 using namespace form_factors;
+using subject::scene_t;
+using subject::mesh_t;
 
 template <int EngineTypeID>
 struct EngineType
@@ -40,15 +42,15 @@ public:
   FormFactors()
   {
     Scene = 0;
-    RayCaster = ray_caster::system_create(RAY_CASTER_NAIVE_CPU);
-    Emitter = emission::system_create(EMISSION_MALLEY_CPU, RayCaster);
-    Calculator = system_create(EngineType::ID, Emitter);
+    RayCaster = ray_caster::system_create(RAY_CASTER_NAIVE_CUDA);
+    form_factors::params_t params;
+    params.caster = RayCaster;
+    Calculator = system_create(EngineType::ID, &params);
   }
 
   ~FormFactors()
   {
     system_free(Calculator);
-    emission::system_free(Emitter);
     ray_caster::system_free(RayCaster);
     scene_free(Scene);
   }
@@ -92,7 +94,6 @@ public:
   scene_t* MakeParallelPlanesScene(float c, math::mat33 rotation)
   {
     int n_faces = 4;
-    int n_meshes = 2;
     face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
     faces[0] = make_floor_face1(math::make_vec3(0, 0, 0));
     faces[1] = make_floor_face2(math::make_vec3(0, 0, 0));
@@ -105,21 +106,18 @@ public:
       faces[i].points[1] = rotation * faces[i].points[1];
       faces[i].points[2] = rotation * faces[i].points[2];
     }
-
-    mesh_t* meshes = (mesh_t*)malloc(n_meshes * sizeof(mesh_t));
-    meshes[0] = { 0, 2 };
-    meshes[1] = { 2, 2 };
-
-    scene_t* s = scene_create();
-    Scene = s;
-    *s = { n_faces, faces, n_meshes, meshes };
+    
+    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));    
+    AddMaterial(s, subject::black_body());
+    AddMesh(s, { 0, 2, 0 });
+    AddMesh(s, { 2, 2, 0 });
+    Scene = s;    
     return s;
   }
 
   scene_t* MakePerpendicularPlanesScene(math::mat33 rotation)
   {
     int n_faces = 4;
-    int n_meshes = 2;
     float c = 1;
     face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
     faces[0] = make_floor_face1(math::make_vec3(0, 0, 0));
@@ -134,13 +132,11 @@ public:
       faces[i].points[2] = rotation * faces[i].points[2];
     }
 
-    mesh_t* meshes = (mesh_t*)malloc(n_meshes * sizeof(mesh_t));
-    meshes[0] = { 0, 2 };
-    meshes[1] = { 2, 2 };
-
-    scene_t* s = scene_create();
+    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));
+    AddMaterial(s, subject::black_body());
+    AddMesh(s, { 0, 2, 0 });
+    AddMesh(s, { 2, 2, 0 });
     Scene = s;
-    *s = { n_faces, faces, n_meshes, meshes };
     return s;
   }
 
@@ -171,18 +167,15 @@ public:
       faces[i].points[2] = rotation * faces[i].points[2];
     }
 
-    mesh_t* meshes = (mesh_t*)malloc(n_meshes * sizeof(mesh_t));
-    meshes[0] = { 0, n_faces };
-
-    scene_t* s = scene_create();
+    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));
+    AddMaterial(s, subject::black_body());
+    AddMesh(s, { 0, n_faces, 0 });
     Scene = s;
-    *s = { n_faces, faces, n_meshes, meshes };
     return s;
   }
 
   scene_t* Scene;
   ray_caster::system_t* RayCaster;
-  emission::system_t* Emitter;
   system_t* Calculator;
 };
 
@@ -213,7 +206,6 @@ TYPED_TEST(FormFactors, ParallelPlanesCorrect)
     scene_t* stackScene = this->MakeParallelPlanesScene(distances[i], math::IDENTITY_33);
 
     system_set_scene(this->Calculator, stackScene);
-    ASSERT_EQ(FORM_FACTORS_OK, system_prepare(this->Calculator));
 
     float factors[2 * 2];
     task_t task = { 40000, factors };
@@ -235,7 +227,6 @@ TYPED_TEST(FormFactors, RotatedParallelPlanesCorrect)
     scene_t* stackScene = this->MakeParallelPlanesScene(distances[i], rotation);
 
     system_set_scene(this->Calculator, stackScene);
-    ASSERT_EQ(FORM_FACTORS_OK, system_prepare(this->Calculator));
 
     float factors[2 * 2];
     task_t task = { 40000, factors };
@@ -253,7 +244,6 @@ TYPED_TEST(FormFactors, PerpendicularPlanesCorrect)
   scene_t* stackScene = this->MakePerpendicularPlanesScene(math::IDENTITY_33);
 
   system_set_scene(this->Calculator, stackScene);
-  ASSERT_EQ(FORM_FACTORS_OK, system_prepare(this->Calculator));
 
   float factors[2 * 2];
   task_t task = { 40000, factors };
@@ -270,8 +260,7 @@ TYPED_TEST(FormFactors, RotatedPerpendicularPlanesCorrect)
   scene_t* stackScene = this->MakePerpendicularPlanesScene(rotation);
 
   system_set_scene(this->Calculator, stackScene);
-  ASSERT_EQ(FORM_FACTORS_OK, system_prepare(this->Calculator));
-
+  
   float factors[2 * 2];
   task_t task = { 40000, factors };
 
@@ -286,7 +275,6 @@ TYPED_TEST(FormFactors, BoxCorrect)
   scene_t* scene = this->MakeBoxScene(math::IDENTITY_33);
 
   system_set_scene(this->Calculator, scene);
-  ASSERT_EQ(FORM_FACTORS_OK, system_prepare(this->Calculator));
 
   float factors[1 * 1];
   task_t task = { 40000, factors };

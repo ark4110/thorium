@@ -27,8 +27,8 @@
 #include <thread>
 #include <fstream>
 
-FILE _iob[] = { *stdin, *stdout, *stderr };
-extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
+//FILE _iob[] = { *stdin, *stdout, *stderr };
+//extern "C" FILE * __cdecl __iob_func(void) { return _iob; }
 
 void consumeStdin(std::istream& in) {
     float curTime = 0.0f;

@@ -35,8 +35,10 @@ namespace parallel_rays_emission_cpu
 {
   struct cpu_system_t : emission::system_t
   { 
-    ray_caster::scene_t* scene;
-    ray_caster::system_t* ray_caster;    
+    params_t params;
+
+    subject::scene_t* scene;    
+    math::sphere_t bsphere;
 
     // Mersenne's twister uniformly distributed [0, 1) generators.
     std::mt19937 TPGenR;
@@ -47,10 +49,11 @@ namespace parallel_rays_emission_cpu
   };
 
   /// @brief Initializes system with given ray caster after creation.
-  int init(cpu_system_t* system, ray_caster::system_t* ray_caster)
+  int init(cpu_system_t* system, const params_t* params)
   {
-    system->scene = 0;
-    system->ray_caster = ray_caster;
+    system->params = *params;
+
+    system->scene = 0;    
 
     system->TPGenR = std::mt19937(1);
     system->TPGenTheta = std::mt19937(2);
@@ -67,66 +70,49 @@ namespace parallel_rays_emission_cpu
   }
 
   /// @brief Sets loaded scene (polygons in meshes) for calculator and associated ray caster.
-  int set_scene(cpu_system_t* system, ray_caster::scene_t* scene)
+  int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     if (scene == 0 || scene->n_faces == 0)
       return -EMISSION_ERROR;
 
     system->scene = scene;
-
-    int r = 0;
-    if ((r = ray_caster::system_set_scene(system->ray_caster, system->scene)) < 0)
-      return r;
-
-    if ((r = ray_caster::system_prepare(system->ray_caster)) < 0)
-      return r;
+    system->bsphere = math::triangles_bsphere(scene->faces, scene->n_faces);
 
     return EMISSION_OK;
   }
 
- /// @brief Creates task with n_rays of random generated rays.
-  void make_caster_task(cpu_system_t* system, task_t* task)
+  int calculate(cpu_system_t* system, emission::task_t* task)
   {
-    math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), task->direction);
-    
-    int n_input_rays = task->rays ? task->rays->n_tasks : 0;
-    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + task->n_rays);
+    int n_rays = system->params.n_rays;
+    int n_input_rays = task_grow(task, n_rays);
 
-    ray_caster::task_t* ray_caster_task = task->rays;
-    for (int r = 0; r != task->n_rays; ++r)
+    float radius = system->bsphere.radius * 1.1f;
+    float offset = 1.1f + radius;
+    float ray_power = system->params.power * (float(M_PI) * radius * radius) / n_rays;
+
+    math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), system->params.direction);
+
+    for (int r = 0; r != n_rays; ++r)
     {
-      float radius = task->radius * sqrtf(system->Distr_R(system->TPGenR));
-      float theta = system->Distr_Theta(system->TPGenTheta);
-      float x = radius * cosf(theta);
-      float y = radius * sinf(theta);
-      math::vec3 origin = rotation * math::make_vec3(x, y, -task->distance) + task->center;
-      math::vec3 direction = origin + task->direction * 0.1f;
+      float radius_dice = radius * sqrtf(system->Distr_R(system->TPGenR));
+      float theta_dice = system->Distr_Theta(system->TPGenTheta);
+      float x = radius_dice * cosf(theta_dice);
+      float y = radius_dice * sinf(theta_dice);
+      math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
+      math::vec3 direction = origin + system->params.direction * 0.1f;
 
-      ray_caster_task->ray[n_input_rays + r] = { origin, direction };
+      task->rays->ray[n_input_rays + r] = { origin, direction };
+      task->power[n_input_rays + r] = ray_power;
     }
-  }
-
-  int calculate(cpu_system_t* system, task_t* task)
-  {
-    if (task->rays)
-    {
-      // @todo Provide realloc
-      ray_caster::task_free(task->rays);
-      task->rays = 0;
-    }
-    make_caster_task(system, task);
-    int r = 0;
-    if ((r = ray_caster::system_cast(system->ray_caster, task->rays)) < 0)
-      return r;
 
     return EMISSION_OK;
   }
 
   const emission::system_methods_t methods =
   {
-    (int(*)(emission::system_t* system, ray_caster::system_t* ray_caster))&init,
+    (int(*)(emission::system_t* system, const emission::params_t*))&init,
     (int(*)(emission::system_t* system))&shutdown,
-    (int(*)(emission::system_t* system, ray_caster::scene_t* scene))&set_scene,
+    (int(*)(emission::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(emission::system_t* system, emission::task_t* task))&calculate,
   };
 

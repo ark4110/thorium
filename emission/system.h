@@ -25,34 +25,54 @@
 
 #include "../math/types.h"
 #include "../ray_caster/system.h"
+#include "../subject/system.h"
 
+
+/// @todo Rename "emission" to "radiance"
 namespace emission
 {
   /**
    * @brief Task representation for given scene (@see task_create).
    *
-   * Each task consists of N rays (as input for ray_caster) and out-parameter rays (result of rays casting).
+   * Task result consists of N rays (as input for ray_caster) and rays powers.
    */
   struct task_t
   {
-    task_t(int n)
-      : n_rays(n)
-      , rays(0)
-    {}
-
-    /// @brief Approximate amount of rays to be emitted.
-    int n_rays;
+    /**
+    @brief Input meshes temperatures, K.
+    @todo In general case emission don't need mesh temperature. Move it to black body emission?
+    */
+    const float* mesh_temperatures;
 
     /**
       @brief Ray caster task contains calculation output.
-      @detail Rays are packed face-by-face in order. Frontside rays are first, then backside rays.
-      @detail Amount of emmited rays and its calculation method depends on particular emission system.
       @detail Result may be allocated in case of failure.
-      @note Will reallocate and add additional rays to input task.
+      @detail Owned by emission system.
+      @note Will reallocate and add additional rays to input task. I.e. ray_caster::task_reset() before to generate new rays.
       @note Actual rays count can differ from requested n_rays count.
       */
-    ray_caster::task_t* rays; 
+    ray_caster::task_t* rays;
+
+    /**
+      @brief Amount of energy mesh loose during emission, W.
+      @todo In general case emission is not related to objects. Move it to black body emission?
+      @detail Owned by client.
+    */
+    float* mesh_emission;
+
+    /**
+      @brief Power of emitted rays, W.
+      @detail Owned by emission system.
+    */
+    float* power;
   };
+
+  task_t* task_create();
+  void task_free(task_t* task);
+  
+  /// @brief Add more rays to task result.
+  /// @return Previous rays count.
+  int task_grow(task_t* task, int n_rays);
 
   /**
    * @brief Emission system.   
@@ -61,6 +81,10 @@ namespace emission
   {
     /// @brief virtual methods table.
     const struct system_methods_t* methods;
+  };
+
+  struct params_t
+  {
   };
 
   #define EMISSION_OK    0
@@ -75,13 +99,14 @@ namespace emission
   struct system_methods_t
   { 
     /// @brief Initializes system with given ray caster after creation.
-    int(*init)(system_t* system, ray_caster::system_t* ray_caster);
+    int(*init)(system_t* system, const params_t* params);
 
     /// @brief Shutdowns calculator system prior to free memory.
     int(*shutdown)(system_t* system);
 
     /// @brief Sets loaded scene (polygons in meshes) for calculator and associated ray caster.
-    int(*set_scene)(system_t* system, ray_caster::scene_t* scene);
+    /// @todo Scene is not required in general case.
+    int(*set_scene)(system_t* system, subject::scene_t* scene);
 
     /// @brief Calculates weights, generate emission rays and casts rays for given system.
     int(*calculate)(system_t* system, task_t* task);
@@ -97,14 +122,14 @@ namespace emission
    * @note Only CPU calculator type (type = 1) is supported, @see ../cpuEmission/.
    * @note init() system on creation.
    */
-  system_t* system_create(int type, ray_caster::system_t* ray_caster);
+  system_t* system_create(int type, const params_t* params);
 
   /// Here go C-interface wrappers to call system_t's virtual methods.
 
   /// @note shutdown() system on destruction.
   void system_free(system_t* system);
-  int system_init(system_t* system, ray_caster::system_t* ray_caster);
+  int system_init(system_t* system, const params_t* params);
   int system_shutdown(system_t* system);
-  int system_set_scene(system_t* system, ray_caster::scene_t* scene);
+  int system_set_scene(system_t* system, subject::scene_t* scene);
   int system_calculate(system_t* system, task_t* task);
 }
