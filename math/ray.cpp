@@ -16,6 +16,7 @@
 
 #include "ray.h"
 #include "operations.h"
+#include "triangle.h"
 
 namespace math
 {
@@ -32,5 +33,14 @@ namespace math
     float t = (u.x * w.y - u.y * w.x) / -d;
 
     return t >= 0 && t <= 1 && s >= 0;
+  }
+
+  ray_t reflect(const ray_t& ray, const triangle_t& triangle, const vec3& hit_point)
+  {
+    math::vec3 normal = normalize(triangle_normal(triangle));
+    math::vec3 v = normalize(ray.direction - ray.origin);
+    float angle = dot(normal, v);
+    math::vec3 reflection = v - 2 * angle * normalize(normal);
+    return{ hit_point + reflection * 0.0001f, hit_point + reflection };
   }
 }

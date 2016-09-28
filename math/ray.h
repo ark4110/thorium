@@ -27,4 +27,6 @@ namespace math
   @retrun intersect or not
   */
   bool ray_intersect_segment(ray_t p, ray_t q, float& s);
+
+  ray_t reflect(const ray_t& ray, const triangle_t& triangle, const vec3& point);
 }
