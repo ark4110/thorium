@@ -64,11 +64,14 @@ namespace ray_caster
     return task;
   }
 
-  task_t* task_reset(task_t* task)
+  int task_reset(task_t* task)
   {
-    if (task)
-      task->n_tasks = 0;
-    return task;
+    if (task == 0)
+      return 0;
+    
+    int prev = task->n_tasks;
+    task->n_tasks = 0;
+    return prev;
   }
 
   void task_free(task_t* task)

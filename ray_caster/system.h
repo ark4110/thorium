@@ -60,7 +60,7 @@ namespace ray_caster
   task_t* task_realloc(task_t* task, int n_rays);
 
   /// @brief Reset task rays to zero.
-  task_t* task_reset(task_t* task);
+  int task_reset(task_t* task);
 
   /// @brief Frees memory for task.
   void task_free(task_t* task);
