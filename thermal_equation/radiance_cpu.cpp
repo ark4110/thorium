@@ -17,8 +17,11 @@
 
 #include "radiance_cpu.h"
 #include "../math/triangle.h"
+#include "../math/operations.h"
+#include "../math/ray.h"
 #include <float.h>
 #include <cmath>
+#include <random>
 #include <limits>
 #include <stdlib.h>
 #include <cstring>
@@ -32,8 +35,18 @@ namespace radiance_equation
     subject::scene_t* scene;
 
     emission::task_t* emission_task;
+    
+    int postponed_free;
+    int postponed_alloc;
+    math::ray_t* postponed_rays;
+    float* postponed_powers;
 
     int* face_to_mesh_index;
+
+    std::mt19937 HitGen;        
+    std::uniform_real_distribution<float> Distr_0_1;
+
+    math::ray_malley_emission* malley_emission;
   };
 
   /// @brief Initializes system with given ray caster after creation.
@@ -43,12 +56,19 @@ namespace radiance_equation
 
     system->scene = 0;
     system->emission_task = 0;
+    system->postponed_free = 0;
+    system->postponed_alloc = 0;
+    system->postponed_rays = 0;
+    system->postponed_powers = 0;
     system->face_to_mesh_index = 0;
+
+    system->HitGen = std::mt19937(1);    
+    system->Distr_0_1 = std::uniform_real_distribution<float>(0, 1);
+    system->malley_emission = math::ray_malley_emission_create();
 
     return THERMAL_EQUATION_OK;
   }
 
-  /// @brief Shutdowns calculator system prior to free memory.
   int shutdown(cpu_system_t* system)
   {
     system->scene = 0;
@@ -58,6 +78,9 @@ namespace radiance_equation
 
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
+
+    ray_malley_emission_free(system->malley_emission);
+    system->malley_emission = 0;
 
     return THERMAL_EQUATION_OK;
   }
@@ -87,12 +110,47 @@ namespace radiance_equation
     return THERMAL_EQUATION_OK;
   }
 
-  // hit side detection
-  /*math::vec3 normale = math::triangle_normal(*ray_caster_task->hit_face[r]);
-  float side = dot(normale, source.direction);
-  int mesh_idx = face2mesh(system, ray_caster_task->hit_face[r] - system->emission_scene.faces);
-  const subject::material_t& material = mesh_material(system->scene, mesh_idx);
-  task->absorption[mesh_idx] += (side < 0 ? material.front.absorbance : material.rear.absorbance) * ray_power;*/
+  enum hit_decision
+  {
+    hit_absorb,
+    hit_reflect,
+    hit_diffuse,
+    hit_transmit,
+    hit_drop
+  };
+
+  hit_decision make_hit_descision(cpu_system_t* system, const subject::optical_properties_t& optical)
+  {
+    float hit_dice = system->Distr_0_1(system->HitGen);
+
+    // Lets believe in compiler optimization...
+    if (hit_dice < optical.absorbance)
+      return hit_absorb;
+    else if (hit_dice < optical.absorbance + optical.specular_reflectance)
+      return hit_reflect;
+    else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
+      return hit_diffuse;
+    else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance + optical.transmittance)
+      return hit_transmit;
+    else
+      return hit_drop;
+  }
+
+  void postpone(cpu_system_t* system, math::ray_t ray, float power)
+  {
+    if (system->postponed_free == 0)
+    {
+      int grow = std::max<int>(1024, system->postponed_alloc);
+      system->postponed_rays = (math::ray_t*)realloc(system->postponed_rays, (system->postponed_alloc + grow) * sizeof(math::ray_t));
+      system->postponed_powers = (float*)realloc(system->postponed_powers, (system->postponed_alloc + grow) * sizeof(float));
+      system->postponed_free = grow;
+    }
+
+    system->postponed_rays[system->postponed_alloc] = ray;
+    system->postponed_powers[system->postponed_alloc] = power;
+    ++system->postponed_alloc;
+    --system->postponed_free;
+  }
 
   /**
   *  @brief Calculates thermal flow for a given scene.
@@ -100,9 +158,23 @@ namespace radiance_equation
   int calculate(cpu_system_t* system, thermal_equation::task_t* task)
   {
     // Prepare emission task
-    task_reset(system->emission_task->rays);
-    system->emission_task->mesh_temperatures = task->temperatures;
-    system->emission_task->mesh_emission = task->emission;
+    emission::task_t* emission_task = system->emission_task;
+
+    if (emission_task->rays)
+    {
+      // @todo Simplify code/logic and optimize: looks like there are a lot of false reallocs to zero.
+      int n_allocated = task_reset(emission_task->rays);
+
+      std::swap(emission_task->rays->ray, system->postponed_rays);
+      std::swap(emission_task->power, system->postponed_powers);
+      emission_task->rays->n_tasks = system->postponed_alloc;
+      task_realloc(emission_task->rays, system->postponed_alloc);
+      system->postponed_alloc = 0;
+      system->postponed_free = n_allocated;
+    }
+
+    emission_task->mesh_temperatures = task->temperatures;
+    emission_task->mesh_emission = task->emission;
 
     int r = 0;
     for (int e = 0; e != system->params.n_emitters; ++e)
@@ -110,12 +182,15 @@ namespace radiance_equation
       emission::system_t* emitter = system->params.emitters[e];
       if ((r = system_calculate(emitter, system->emission_task)) < 0)
         return r;
-    }  
+    }
+
+    // @todo Is nothing to do ok?
+    if (system->emission_task->rays == 0)
+      return THERMAL_EQUATION_OK;
 
     if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
       return r;
 
-    const emission::task_t* emission_task = system->emission_task;
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
     for (int r = 0; r != n_rays; ++r)
@@ -124,8 +199,48 @@ namespace radiance_equation
       {
         const int hit_face_idx = ray_caster_task->hit_face[r] - system->scene->faces;
         const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
+
+        const math::ray_t& ray = ray_caster_task->ray[r];
+        const math::triangle_t& face = *ray_caster_task->hit_face[r];
+
+        const subject::material_t& material = mesh_material(system->scene, hit_mesh_idx);
+        const subject::optical_properties_t& optical = ray_check_hit_front(ray, face) ? material.front : material.rear;
+
         const float ray_power = emission_task->power[r];
-        task->absorption[hit_mesh_idx] += ray_power;
+
+        hit_decision decision = make_hit_descision(system, optical);
+        switch (decision)
+        {
+        case hit_absorb:
+        {
+          task->absorption[hit_mesh_idx] += ray_power;
+        }
+        break;
+
+        case hit_reflect:
+        {
+          math::ray_t reflected = ray_reflect(ray, face, ray_caster_task->hit_point[r]);
+          postpone(system, reflected, ray_power);
+        }
+        break;
+
+        case hit_diffuse:
+        {
+          math::ray_t reflected = ray_malley_emmit(system->malley_emission, face, ray_caster_task->hit_point[r]);
+          postpone(system, reflected, ray_power);
+        }
+        break;
+
+        case hit_transmit:
+        {
+          math::ray_t transmitted = ray_transmit(ray, ray_caster_task->hit_point[r]);
+          postpone(system, transmitted, ray_power);
+        }
+        break;
+
+        default:
+          break;
+        }
       }
     }
 
