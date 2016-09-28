@@ -87,7 +87,7 @@ namespace parallel_rays_emission_cpu
     int n_input_rays = task_grow(task, n_rays);
 
     float radius = system->bsphere.radius * 1.1f;
-    float offset = 1.1f + radius;
+    float offset = 1.3f + radius;
     float ray_power = system->params.power * (float(M_PI) * radius * radius) / n_rays;
 
     math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), system->params.direction);
