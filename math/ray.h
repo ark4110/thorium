@@ -28,7 +28,22 @@ namespace math
   */
   bool ray_intersect_segment(ray_t p, ray_t q, float& s);
 
-  ray_t reflect(const ray_t& ray, const triangle_t& triangle, const vec3& point);
+  /// @brief Return true if ray hit front side of triangle plane.
+  bool ray_check_hit_front(const ray_t& ray, const triangle_t& plane);
+
+  /**
+    @brief Reflect ray from triangle at hit point.
+    @note There is not check that point belongs to ray or triangle.
+    @note Start ray a little bit out of new origin point.
+  */
+  ray_t ray_reflect(const ray_t& ray, const triangle_t& triangle, const vec3& hit_point);
+  
+  /**
+    @brief Move along ray to new origin
+    @note There is not check that point belongs to ray.
+    @note Start ray a little bit out of new origin point.
+  */
+  ray_t ray_transmit(const ray_t& ray, const vec3& point);
 
   /**
     @brief Malley ray emission algorithm.

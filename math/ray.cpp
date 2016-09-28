@@ -37,13 +37,28 @@ namespace math
     return t >= 0 && t <= 1 && s >= 0;
   }
 
-  ray_t reflect(const ray_t& ray, const triangle_t& triangle, const vec3& hit_point)
+  bool ray_check_hit_front(const ray_t& ray, const triangle_t& plane)
+  {
+    vec3 normal = triangle_normal(plane);
+    vec3 v = ray.direction - ray.origin;
+    float side = dot(normal, v);
+
+    return side < 0;
+  }
+
+  ray_t ray_reflect(const ray_t& ray, const triangle_t& triangle, const vec3& hit_point)
   {
     math::vec3 normal = normalize(triangle_normal(triangle));
     math::vec3 v = normalize(ray.direction - ray.origin);
     float angle = dot(normal, v);
     math::vec3 reflection = v - 2 * angle * normalize(normal);
     return{ hit_point + reflection * 0.0001f, hit_point + reflection };
+  }
+
+  ray_t ray_transmit(const ray_t& ray, const vec3& point)
+  {
+    vec3 v = ray.direction - ray.origin;
+    return { point + v * 0.0001f, point + v };
   }
 
   struct ray_malley_emission_impl : ray_malley_emission
