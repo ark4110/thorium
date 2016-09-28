@@ -44,8 +44,8 @@ TEST(RayReflection, DownToUp)
   ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, 0, 0));
   triangle_t face_top_normal = make_face(make_vec3(0, 0, 1), make_vec3(1, 0, -1), make_vec3(-1, 0, 1));
   triangle_t face_bot_normal = make_face(make_vec3(0, 0, 1), make_vec3(-1, 0, 1), make_vec3(1, 0, -1));
-  ray_t top_reflection = reflect(down, face_top_normal, make_vec3(0, 0, 0));
-  ray_t bot_reflection = reflect(down, face_bot_normal, make_vec3(0, 0, 0));
+  ray_t top_reflection = ray_reflect(down, face_top_normal, make_vec3(0, 0, 0));
+  ray_t bot_reflection = ray_reflect(down, face_bot_normal, make_vec3(0, 0, 0));
 
   ray_t expected = make_ray(make_vec3(0, 0, 0), make_vec3(0, 1, 0));
 
@@ -58,8 +58,8 @@ TEST(RayReflection, DownToRight)
   ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, 0, 0));
   triangle_t face_top_normal = make_face(make_vec3(-1, 1, 0), make_vec3(1, -1, -1), make_vec3(1, -1, 1));
   triangle_t face_bot_normal = make_face(make_vec3(0, 0, 1), make_vec3(1, -1, 1), make_vec3(1, -1, -1));
-  ray_t top_reflection = reflect(down, face_top_normal, make_vec3(0, 0, 0));
-  ray_t bot_reflection = reflect(down, face_bot_normal, make_vec3(0, 0, 0));
+  ray_t top_reflection = ray_reflect(down, face_top_normal, make_vec3(0, 0, 0));
+  ray_t bot_reflection = ray_reflect(down, face_bot_normal, make_vec3(0, 0, 0));
 
   ray_t expected = make_ray(make_vec3(0, 0, 0), make_vec3(1, 0, 0));
 
