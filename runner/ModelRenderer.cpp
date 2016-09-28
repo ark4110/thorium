@@ -199,7 +199,8 @@ void ModelRenderer::onResize(int newWidth, int newHeight) {
 
 void ModelRenderer::onEvent(SDL_Event &event) {
     switch (event.type) {
-        case (SDL_USEREVENT): {
+        case (SDL_USEREVENT):
+        {
             switch (event.user.code) {
                 case (EV_NEWFRAME) : {
                     Timeline::frame_t* frame = (Timeline::frame_t *)event.user.data1;
@@ -217,16 +218,19 @@ void ModelRenderer::onEvent(SDL_Event &event) {
                     break;
             }
         }
-        case (SDL_MOUSEWHEEL) : {
+        break;
+        case (SDL_MOUSEWHEEL) :
+        {
             if (event.wheel.y) {
                 cameraVec += cameraVec * ((float)event.wheel.y / cameraVec.length() / cameraVec.length());
                 cameraMatrix = glm::lookAt(cameraVec, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
                 sprogram.bind();
                 sprogram.setUniform("cameraMatrix", cameraMatrix);
             }
-            break;
         }
-        case (SDL_MOUSEBUTTONDOWN): {
+        break;
+        case (SDL_MOUSEBUTTONDOWN):
+        {
             int x = event.button.x;
             int y = event.button.y;
             if (event.button.button == SDL_BUTTON_LEFT) {
@@ -239,16 +243,18 @@ void ModelRenderer::onEvent(SDL_Event &event) {
                     }
                     timeLine.setPos(p);
                 }
-            }
-            break;
+            }            
         }
-        case (SDL_KEYDOWN) : {
+        break;
+        case (SDL_KEYDOWN) :
+        {
             SDL_KeyboardEvent kev = event.key;
             if (kev.keysym.sym == SDLK_SPACE) {
                 playing = !playing;
             }
-            break;
+            
         }
+        break;
         default:
             break;
     }
