@@ -29,4 +29,22 @@ namespace math
   bool ray_intersect_segment(ray_t p, ray_t q, float& s);
 
   ray_t reflect(const ray_t& ray, const triangle_t& triangle, const vec3& point);
+
+  /**
+    @brief Malley ray emission algorithm.
+    @detail Malley emission algorithm is an nice and efficient hack to emit ray from black-body.
+    @detail It consider normal distribution of rays AND cosine-weighted distribution.
+  */
+  struct ray_malley_emission
+  {};
+
+  ray_malley_emission* ray_malley_emission_create();
+  void ray_malley_emission_free(ray_malley_emission*);
+
+  // @brief Pick direction from cosine-weighted distribution.
+  vec3 ray_malley_emmit(ray_malley_emission* system);
+
+  /// @brief Emmit ray from triangle point.
+  /// @note Don't use for massive rays emission because face normal rotation matrix must be cached!
+  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin);
 }

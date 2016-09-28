@@ -17,6 +17,8 @@
 #include "ray.h"
 #include "operations.h"
 #include "triangle.h"
+#include "mat.h"
+#include <random>
 
 namespace math
 {
@@ -42,5 +44,58 @@ namespace math
     float angle = dot(normal, v);
     math::vec3 reflection = v - 2 * angle * normalize(normal);
     return{ hit_point + reflection * 0.0001f, hit_point + reflection };
+  }
+
+  struct ray_malley_emission_impl : ray_malley_emission
+  {
+    ray_malley_emission_impl()
+      : HSGenTheta(5)
+      , HSGenR(6)
+      , Distr_0_1(0, 1)
+      , Distr_0_2PI(0, float(M_2PI))
+    {
+    }
+
+    vec3 emmit()
+    {
+      float r = Distr_0_1(HSGenR);
+      float rad = sqrtf(r);
+      float phi = Distr_0_2PI(HSGenTheta);
+      return { rad * cosf(phi), rad * sinf(phi), sqrtf(1 - r) };
+    }
+
+    std::mt19937 HSGenTheta;
+    std::mt19937 HSGenR;   
+    std::uniform_real_distribution<float> Distr_0_1;
+    std::uniform_real_distribution<float> Distr_0_2PI;
+  };
+
+  ray_malley_emission* ray_malley_emission_create()
+  {
+    return new ray_malley_emission_impl();
+  }
+
+  void ray_malley_emission_free(ray_malley_emission* system)
+  {
+    delete static_cast<ray_malley_emission_impl*>(system);
+  }
+
+  vec3 ray_malley_emmit(ray_malley_emission* system)
+  {
+    return static_cast<ray_malley_emission_impl*>(system)->emmit();
+  }
+
+  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin)
+  {
+    // Pick direction from cosine-weighted distribution
+    vec3 malley = ray_malley_emmit(system);
+
+    // Store rotation for a given face (from Z axis towards face's normal).
+    math::mat33 rotation = pick_face_rotation(face, math::make_vec3(0, 0, 1));
+
+    // Rotate ray towards face's normal
+    math::vec3 relative_dist = rotation * malley;
+
+    return { origin + relative_dist * 0.0001f, origin + relative_dist };
   }
 }

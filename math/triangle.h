@@ -138,4 +138,7 @@ namespace math
 
   /// @brief Check if point inside triangle.
   bool triangle_2d_contains_point(const triangle_t& t, const vec3& point);
+
+  /// @brief Creates rotation matrix of z vector towards face's normal.
+  mat33 pick_face_rotation(const face_t& face, math::vec3 z);
 }

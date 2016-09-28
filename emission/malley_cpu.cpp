@@ -24,6 +24,7 @@
 #include "../math/operations.h"
 #include "../math/triangle.h"
 #include "../math/mat.h"
+#include "../math/ray.h"
 #include <float.h>
 #include <random>
 #include <cmath>
@@ -46,12 +47,11 @@ namespace malley_cpu
     // Mersenne's twister uniformly distributed [0, 1) generators.
     std::mt19937 TPGenA;
     std::mt19937 TPGenB;
-    std::mt19937 HSGenTheta;
-    std::mt19937 HSGenR;
 
-    // [0, 1) and [0, 2 * PI) redistributions
+    // [0, 1)
     std::uniform_real_distribution<float> Distr_0_1;
-    std::uniform_real_distribution<float> Distr_0_2PI;
+
+    math::ray_malley_emission* malley_emission;
   };
 
   /// @brief Initializes system with given ray caster after creation.
@@ -65,10 +65,9 @@ namespace malley_cpu
 
     system->TPGenA = std::mt19937(1);
     system->TPGenB = std::mt19937(2);
-    system->HSGenTheta = std::mt19937(3);
-    system->HSGenR = std::mt19937(4);
     system->Distr_0_1 = std::uniform_real_distribution<float>(0, 1);
-    system->Distr_0_2PI = std::uniform_real_distribution<float>(0, float(M_2PI));
+    system->malley_emission = math::ray_malley_emission_create();
+
     return EMISSION_OK;
   }
 
@@ -82,6 +81,9 @@ namespace malley_cpu
 
     free(system->face_weights);
     system->face_weights = 0;
+
+    math::ray_malley_emission_free(system->malley_emission);
+    system->malley_emission = 0;
 
     return EMISSION_OK;
   }
@@ -188,23 +190,6 @@ namespace malley_cpu
     return face.points[0] + a * v0 + b * v1;
   }
 
-  /// @brief Creates rotation matrix of z vector towards face's normal.
-  math::mat33 pick_face_rotation(const math::face_t& face, math::vec3 z)
-  {
-    math::vec3 norm = triangle_normal(face);
-    return math::rotate_towards(z, norm);
-  }
-
-  /// @brief Generates cosine-weighted distribution of points on hemisphere
-  /// with radius of 1 and normal of (0, 0, 1).
-  math::vec3 pick_malley_point(cpu_system_t* system)
-  {
-    float r = system->Distr_0_1(system->HSGenR);
-    float rad = sqrtf(r);
-    float phi = system->Distr_0_2PI(system->HSGenTheta);
-    return{ rad * cosf(phi), rad * sinf(phi), sqrtf(1 - r) };
-  }
-
   const float sigma = 5.670400e-8f;
 
   int calculate(cpu_system_t* system, emission::task_t* task)
@@ -263,7 +248,7 @@ namespace malley_cpu
           math::vec3 origin = pick_face_point(system, face);
 
           // Pick direction from cosine-weighted distribution
-          math::vec3 malley = pick_malley_point(system);
+          math::vec3 malley = ray_malley_emmit(system->malley_emission);
 
           // Rotate ray towards face's normal
           math::vec3 relative_dist = rotation * malley;
@@ -278,7 +263,7 @@ namespace malley_cpu
           task->power[n_input_rays + n_ray] = ray_power;
           
           math::vec3 origin = pick_face_point(system, face);
-          math::vec3 malley = pick_malley_point(system);
+          math::vec3 malley = ray_malley_emmit(system->malley_emission);
 
           // Only difference from front face is opposite direction.
           malley.z = -malley.z;

@@ -20,6 +20,7 @@
 
 #include "triangle.h"
 #include "operations.h"
+#include "mat.h"
 #include <cmath>
 #include <float.h>
 
@@ -447,5 +448,11 @@ namespace math
     average.points[2] /= (float)n_triangles;
 
     return{ aabb, min_area, max_area, average_area, min_area_xy, max_area_xy, average_area_xy, average };
+  }
+
+  mat33 pick_face_rotation(const face_t& face, vec3 z)
+  {
+    vec3 norm = triangle_normal(face);
+    return rotate_towards(z, norm);
   }
 }

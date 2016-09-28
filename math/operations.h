@@ -78,6 +78,11 @@ namespace math
     return make_vec3(a.x - b.x, a.y - b.y, a.z - b.z);
   }
 
+  inline vec3 operator-(vec3 a)
+  {
+    return make_vec3(-a.x, -a.y, -a.z);
+  }
+
   /// @brief Minus-and-assign operation of two 3d vectors.
   inline void operator-=(vec3&a, vec3 b)
   {
@@ -172,7 +177,7 @@ namespace math
   {
     point_t n = norm(a);
     if (n > _FLT_EPSILON) {
-      a /= sqrtf(n);
+      a /= n;
     }
     return a;
   }
