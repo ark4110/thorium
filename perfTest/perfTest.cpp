@@ -235,17 +235,19 @@ int main(int argc, char* argv[])
 
   int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
 
-  systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
+  //systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
   systemsToCheck[RAY_CASTER_OPTIX] = 1;
+
+  task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
 
   try
   {
-    int n_faces = 100000;
+    int n_faces = 1000000;
     int n_rays = 100 * n_faces;
     bool no_cpu = false;
     bool no_radiance = false;
 
-    float radius = 20;
+    float radius = pow(n_faces, 0.3);
     
     subject::generator_t* generator = subject::generator_create_spherical();
     // Create random scene for ray caster.
@@ -264,13 +266,15 @@ int main(int argc, char* argv[])
       n_rays = 100 * ss->n_faces;
       scene = (scene_t*)ss;
     }
-    math::grid_draw_hist(1024, scene->faces, scene->n_faces);
+    
+    if (systemsToCheck[RAY_CASTER_ZGRID_CPU] || systemsToCheck[RAY_CASTER_ZGRID_CUDA])
+      math::grid_draw_hist(1024, scene->faces, scene->n_faces);
     
     printf("Generating %d collapsing rays...\n", n_rays);
-    task_t* baseTask = MakeCollapsingRays(n_rays, radius, generator);
-    task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
+    task_t* baseTask = MakeCollapsingRays(n_rays, radius, generator);    
     for(int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
-      tasks[s] = task_clone(baseTask);
+      if (systemsToCheck[s])
+        tasks[s] = task_clone(baseTask);
 
     double timings[RAY_CASTER_SYSTEMS_COUNT] = {};
     
@@ -332,14 +336,6 @@ int main(int argc, char* argv[])
     printErrorStatsTable<double*>(systemsToCheck, timings, "\nTimings:", [](double* timings, int i, int j, char* buf) {
       sprintf(buf, "%f", timings[i] / timings[j]);
     }); 
-    //printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);
-
-    /*printf("Error is %f average, %f max, %f total.\n", error.AverageDistance, error.MaxDistance, error.TotalDistance);
-    printf("Face hit mismatch count is %d.\n", error.Mismatch);
-    printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);*/
-
-    
-    
 
     scene_free(rs);
     scene_free(ss);
@@ -347,9 +343,12 @@ int main(int argc, char* argv[])
     free(baseTask->ray);
     for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
     {
-      free(tasks[s]->hit_face);
-      free(tasks[s]->hit_point);
-      free(tasks[s]);
+      if (systemsToCheck[s])
+      {
+        free(tasks[s]->hit_face);
+        free(tasks[s]->hit_point);
+        free(tasks[s]);
+      }
     }
 
     generator_free(generator);
