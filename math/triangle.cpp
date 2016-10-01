@@ -456,11 +456,8 @@ namespace math
     return rotate_towards(z, norm);
   }
 
-  vec3 triangle_uv_to_point(const triangle_t& t, float uv, float vv)
+  vec3 triangle_uv_to_point(const triangle_t& t, float u, float v)
   {
-    vec3 u = t.points[1] - t.points[0];
-    vec3 v = t.points[2] - t.points[0];
-
-    return t.points[0] + u * uv + v * vv;
+    return u * t.points[0] + v * t.points[1] + (1.f - u - v) * t.points[2];
   }
 }
