@@ -43,7 +43,7 @@ public:
     emitterParams.n_rays = 1000;
     Emitter = emission::system_create(EMISSION_MALLEY_CPU, &emitterParams);
 
-    radiance_equation::params_t equationParams;
+    radiance_equation::params_t equationParams = {};
     equationParams.emitters = &Emitter;
     equationParams.n_emitters = 1;
     equationParams.ray_caster = RayCaster;

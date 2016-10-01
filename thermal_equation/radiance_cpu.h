@@ -27,13 +27,51 @@
 
 namespace radiance_equation
 {
+  struct stats_t
+  {
+    union
+    {
+      struct
+      { 
+        int n_absorbed;
+        int n_reflected;
+        int n_diffused;
+        int n_transmited;
+        int n_droped;
+        int n_postponed;
+        int n_missed;
+      } named;
+      int raw[7];
+    } quants;
+
+    union
+    {
+      struct
+      {        
+        float e_absorbed;
+        float e_reflected;
+        float e_diffused;
+        float e_transmited;
+        float e_droped;
+        float e_postponed;
+        float e_missed;
+      } named;
+      float raw[7];
+    } powers;
+  };
+
   struct params_t
   {
     int n_emitters;
     emission::system_t** emitters;
 
     ray_caster::system_t* ray_caster;
+
+    // Optional stats collector.
+    stats_t* stats;
   };
 
   thermal_equation::system_t* system_create();
+
+  void print_stats(const stats_t& stats);
 }

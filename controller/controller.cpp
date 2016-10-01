@@ -171,10 +171,12 @@ int main(int argc, char* argv[])
 
   thermal_equation::system_t* equations[3];
   
-  radiance_equation::params_t radiance_params;  
+  radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = emitters;
   radiance_params.n_emitters = exterior_emission_params.power > 0 ? 2 : 1;
   radiance_params.ray_caster = caster;
+  radiance_equation::stats_t radiance_stats;
+  radiance_params.stats = &radiance_stats;
   equations[0] = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &radiance_params);
   if (!equations[0])
   {
@@ -227,6 +229,8 @@ int main(int argc, char* argv[])
       std::cerr << "Failed to calculate thermal solution step" << std::endl; 
       return 1;
     }
+
+    radiance_equation::print_stats(radiance_stats);
 
     binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene->n_meshes, task);
   }

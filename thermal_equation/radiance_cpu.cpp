@@ -112,11 +112,11 @@ namespace radiance_equation
 
   enum hit_decision
   {
-    hit_absorb,
-    hit_reflect,
-    hit_diffuse,
-    hit_transmit,
-    hit_drop
+    hit_absorb = 0,
+    hit_reflect = 1,
+    hit_diffuse = 2,
+    hit_transmit = 3,
+    hit_drop = 4
   };
 
   hit_decision make_hit_descision(cpu_system_t* system, const subject::optical_properties_t& optical)
@@ -139,7 +139,7 @@ namespace radiance_equation
   void postpone(cpu_system_t* system, math::ray_t ray, float power)
   {
     if (system->postponed_free == 0)
-    {
+    { 
       int grow = std::max<int>(1024, system->postponed_alloc);
       system->postponed_rays = (math::ray_t*)realloc(system->postponed_rays, (system->postponed_alloc + grow) * sizeof(math::ray_t));
       system->postponed_powers = (float*)realloc(system->postponed_powers, (system->postponed_alloc + grow) * sizeof(float));
@@ -173,9 +173,13 @@ namespace radiance_equation
       system->postponed_free = n_allocated;
     }
 
+    if (system->params.stats)
+      *system->params.stats = stats_t();
+
     emission_task->mesh_temperatures = task->temperatures;
     emission_task->mesh_emission = task->emission;
 
+    int n_rays_before_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
     int r = 0;
     for (int e = 0; e != system->params.n_emitters; ++e)
     {
@@ -183,6 +187,7 @@ namespace radiance_equation
       if ((r = system_calculate(emitter, system->emission_task)) < 0)
         return r;
     }
+    int n_rays_after_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
 
     // @todo Is nothing to do ok?
     if (system->emission_task->rays == 0)
@@ -191,11 +196,23 @@ namespace radiance_equation
     if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
       return r;
 
+    unsigned n_ray_counter[hit_drop + 1] = {};
+    float ray_power_counter[hit_drop + 2] = {};
+
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
     for (int r = 0; r != n_rays; ++r)
     {
-      if (ray_caster_task->hit_face[r])
+      if (!ray_caster_task->hit_face[r])
+      {
+        if (system->params.stats)
+        {
+          const float ray_power = emission_task->power[r];
+          ++system->params.stats->quants.named.n_missed;
+          system->params.stats->powers.named.e_missed += ray_power;
+        }
+      }
+      else
       {
         const int hit_face_idx = ray_caster_task->hit_face[r] - system->scene->faces;
         const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
@@ -209,6 +226,14 @@ namespace radiance_equation
         const float ray_power = emission_task->power[r];
 
         hit_decision decision = make_hit_descision(system, optical);
+        if (system->params.stats)
+        {
+          ++system->params.stats->quants.raw[decision];
+          system->params.stats->powers.raw[decision] += ray_power;
+          if (decision != hit_absorb && decision != hit_drop)
+            system->params.stats->powers.named.e_postponed += ray_power;
+        }        
+
         switch (decision)
         {
         case hit_absorb:
@@ -244,6 +269,9 @@ namespace radiance_equation
       }
     }
 
+    if (system->params.stats)
+      system->params.stats->quants.named.n_postponed = system->postponed_alloc;
+
     return THERMAL_EQUATION_OK;
   }
 
@@ -263,4 +291,26 @@ namespace radiance_equation
     return s;
   }
 
+  void print_stats(const stats_t& stats)
+  {
+    fprintf(stderr, "RADIANCE\tRays: postponed %d, absorbed %d, reflected %d, diffused %d, transmited %d, droped %d, missed %d\n"
+      , stats.quants.named.n_postponed
+      , stats.quants.named.n_absorbed
+      , stats.quants.named.n_reflected
+      , stats.quants.named.n_diffused
+      , stats.quants.named.n_transmited
+      , stats.quants.named.n_droped
+      , stats.quants.named.n_missed
+    );
+
+    fprintf(stderr, "RADIANCE\tRays power: postponed %.2Ef, absorbed %.2Ef, reflected %.2Ef, diffused %.2Ef, transmited %.2Ef, droped %.2Ef, missed %.2Ef\n"
+      , stats.powers.named.e_postponed
+      , stats.powers.named.e_absorbed
+      , stats.powers.named.e_reflected
+      , stats.powers.named.e_diffused
+      , stats.powers.named.e_transmited
+      , stats.powers.named.e_droped
+      , stats.powers.named.e_missed
+    );
+  }
 }
