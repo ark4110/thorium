@@ -48,7 +48,7 @@ public:
   system_t* System;
 };
 
-typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA> > RayCasterTypes;
+typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA>, EngineType<RAY_CASTER_OPTIX> > RayCasterTypes;
 TYPED_TEST_CASE(RayCaster, RayCasterTypes);
 
 TYPED_TEST(RayCaster, MemoryManagementIsCorrect)

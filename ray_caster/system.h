@@ -107,10 +107,15 @@ namespace ray_caster
     int(*cast)(system_t* system, task_t* task);
   };
 
-  #define RAY_CASTER_NAIVE_CPU 1
-  #define RAY_CASTER_NAIVE_CUDA 2
-  #define RAY_CASTER_ZGRID_CPU 3
-  #define RAY_CASTER_ZGRID_CUDA 4
+  const char* system_get_name(int system_id);
+  const char* system_get_id(int system_id);
+
+  #define RAY_CASTER_NAIVE_CPU 0
+  #define RAY_CASTER_NAIVE_CUDA 1
+  #define RAY_CASTER_ZGRID_CPU 2
+  #define RAY_CASTER_ZGRID_CUDA 3
+  #define RAY_CASTER_OPTIX 4
+  #define RAY_CASTER_SYSTEMS_COUNT 5
 
   /**
    * @brief Factory method for ray caster creation.

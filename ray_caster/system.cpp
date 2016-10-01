@@ -23,6 +23,7 @@
 #include "naive_cpu.h"
 #include "zgrid_cpu.h"
 #include "../cuda_ray_caster/cuda_system.h"
+#include "../optix_ray_caster/optix_system.h"
 #include <stdlib.h>
 
 namespace ray_caster
@@ -105,11 +106,49 @@ namespace ray_caster
     case RAY_CASTER_ZGRID_CUDA:
       system = zgrid_cuda_ray_caster::system_create();
       break;
+
+    case RAY_CASTER_OPTIX:
+      system = optix_ray_caster::system_create();
+      break;
     }    
 
     system_init(system);
     
     return system;
+  }
+
+  const char* system_names[RAY_CASTER_SYSTEMS_COUNT + 1] = {
+    "naive cpu",
+    "naive cuda",
+    "zgrid cpu",
+    "zgrid cuda",
+    "optix",
+    "unknown"
+  };
+
+  const char* system_get_name(int type)
+  {
+    if (type >= 0 && type < RAY_CASTER_SYSTEMS_COUNT)
+      return system_names[type];
+    else
+      return system_names[RAY_CASTER_SYSTEMS_COUNT];
+  }
+
+  const char* system_ids[RAY_CASTER_SYSTEMS_COUNT + 1] = {
+    "naive_cpu",
+    "naive_cuda",
+    "zgrid_cpu",
+    "zgrid_cuda",
+    "optix",
+    "unknown"
+  };
+
+  const char* system_get_id(int type)
+  {
+    if (type >= 0 && type < RAY_CASTER_SYSTEMS_COUNT)
+      return system_ids[type];
+    else
+      return system_ids[RAY_CASTER_SYSTEMS_COUNT];
   }
 
   system_t* system_create_default()

@@ -55,6 +55,9 @@
     <ProjectReference Include="..\math\math.vcxproj">
       <Project>{4de00af7-2632-4a7b-981a-9411663d4048}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\optix_ray_caster\optix_ray_caster.vcxproj">
+      <Project>{61e56691-939b-434f-bca1-57aa150b00ac}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\ray_caster\ray_caster.vcxproj">
       <Project>{0730886b-2df9-40dc-914c-07e6a22aa7b4}</Project>
     </ProjectReference>
@@ -146,8 +149,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\Win32;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
     </Link>
@@ -164,8 +167,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>main</EntryPointSymbol>
     </Link>
   </ItemDefinitionGroup>
@@ -185,8 +188,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\Win32;</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
     </Link>
@@ -196,19 +199,20 @@
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>../ext/gtest/include;../;./</AdditionalIncludeDirectories>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\x64</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V8_0)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
