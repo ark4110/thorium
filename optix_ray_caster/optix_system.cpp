@@ -123,8 +123,6 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
     if (rtpBufferDescSetRange(rays, 0, task->n_tasks) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    /*if ((c = rtpBufferDescSetStride(rays, 0)) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;*/
 
     struct optix_hit
     {
