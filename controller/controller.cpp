@@ -35,7 +35,7 @@
 
 void PrintUsage()
 {
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <step count [100]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda)[zgrid_cpu]> <binary output [0]>" << std::endl;
+  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <step count [100]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
   const char* result_name = "-";
   int n_rays = 1000 * 1000;
   int n_steps = 100;
-  int type = RAY_CASTER_ZGRID_CPU;
+  int type = RAY_CASTER_OPTIX;
   bool binary_output = false;
 
   for (int i = 1; i < argc; ++i)
@@ -91,6 +91,8 @@ int main(int argc, char* argv[])
         type = RAY_CASTER_ZGRID_CPU;
       else if (strcmp("zgrid_cuda", argv[i]) == 0)
         type = RAY_CASTER_ZGRID_CUDA;
+      else if (strcmp("optix", argv[i]) == 0)
+        type = RAY_CASTER_OPTIX;
       else
         return -RAY_CASTER_NOT_SUPPORTED;
 
@@ -106,8 +108,6 @@ int main(int argc, char* argv[])
     std::cerr << "Failed to create ray caster" << std::endl;
     return 1;
   }
-
-  
 
   int r = 0;
   subject::scene_t* scene = 0;
