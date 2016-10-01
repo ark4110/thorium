@@ -22,8 +22,8 @@ using namespace math;
 
 TEST(RaySegment, Inersect)
 {
-  ray_t segment = make_ray(make_vec3(1, 1, 0), make_vec3(2, 1, 0));
-  ray_t ray = make_ray(make_vec3(.5f, 2, 0), make_vec3(1, 1.5f, 0));
+  ray_t segment = make_ray(make_vec3(1, 1, 0), make_vec3(1, 0, 0));
+  ray_t ray = make_ray(make_vec3(.5f, 2, 0), make_vec3(0.5f, -0.5f, 0));
   float s;
   bool hit = ray_intersect_segment(ray, segment, s);
   ASSERT_TRUE(hit);
@@ -32,8 +32,8 @@ TEST(RaySegment, Inersect)
 
 TEST(RaySegment, NotInersect)
 {
-  ray_t segment = make_ray(make_vec3(1, 1, 0), make_vec3(2, 1, 0));
-  ray_t ray = make_ray(make_vec3(0, 2, 0), make_vec3(1, .9f, 0));
+  ray_t segment = make_ray(make_vec3(1, 1, 0), make_vec3(1, 0, 0));
+  ray_t ray = make_ray(make_vec3(0, 2, 0), make_vec3(1, 1.1f, 0));
   float s;
   bool hit = ray_intersect_segment(ray, segment, s);
   ASSERT_FALSE(hit);
@@ -41,7 +41,7 @@ TEST(RaySegment, NotInersect)
 
 TEST(RayReflection, DownToUp)
 {
-  ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, 0, 0));
+  ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, -1, 0));
   triangle_t face_top_normal = make_face(make_vec3(0, 0, 1), make_vec3(1, 0, -1), make_vec3(-1, 0, 1));
   triangle_t face_bot_normal = make_face(make_vec3(0, 0, 1), make_vec3(-1, 0, 1), make_vec3(1, 0, -1));
   ray_t top_reflection = ray_reflect(down, face_top_normal, make_vec3(0, 0, 0));
@@ -55,7 +55,7 @@ TEST(RayReflection, DownToUp)
 
 TEST(RayReflection, DownToRight)
 {
-  ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, 0, 0));
+  ray_t down = make_ray(make_vec3(0, 1, 0), make_vec3(0, -1, 0));
   triangle_t face_top_normal = make_face(make_vec3(-1, 1, 0), make_vec3(1, -1, -1), make_vec3(1, -1, 1));
   triangle_t face_bot_normal = make_face(make_vec3(0, 0, 1), make_vec3(1, -1, 1), make_vec3(1, -1, -1));
   ray_t top_reflection = ray_reflect(down, face_top_normal, make_vec3(0, 0, 0));

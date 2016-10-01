@@ -248,7 +248,7 @@ namespace naive_cuda_ray_caster
     if (i < n_rays)
     {
       memcpy(&target[i], &source[i], 2 * sizeof(vec3));
-      target[i].inv_dir = make_float3(1.) / (target[i].direction - target[i].origin);
+      target[i].inv_dir = make_float3(1.) / target[i].direction;
     }
   }
 
@@ -549,9 +549,9 @@ namespace zgrid_cuda_ray_caster
 
   __device__ bool ray_intersect_segment(ray_t p, ray_t q, float& s)
   {
-    vec3 v = q.direction - q.origin;
+    vec3 v = q.direction;
     vec3 w = p.origin - q.origin;
-    vec3 u = p.direction - p.origin;
+    vec3 u = p.direction;
 
     float d = (v.x * u.y - v.y * u.x);
 
@@ -565,13 +565,13 @@ namespace zgrid_cuda_ray_caster
   {
     vec3 u = ray.origin - grid->base;
     vec3 h = u - grid->size;
-    vec3 v = ray.direction - ray.origin;
+    vec3 v = ray.direction;
 
     bool out_of_bound = u.x < 0 || h.x > 0 || u.y < 0 || h.y > 0;
     if (!out_of_bound)
       return true;
 
-    ray_t plane_ray = make_ray(u, ray.direction - grid->base);
+    ray_t plane_ray = make_ray(u, ray.direction);
 
     float s1;
     float s2;
@@ -579,8 +579,8 @@ namespace zgrid_cuda_ray_caster
     float s4;
     bool i1 = ray_intersect_segment(plane_ray, make_ray(make_float3(0, 0, 0), make_float3(grid->size.x, 0, 0)), s1);
     bool i2 = ray_intersect_segment(plane_ray, make_ray(make_float3(0, 0, 0), make_float3(0, grid->size.y, 0)), s2);
-    bool i3 = ray_intersect_segment(plane_ray, make_ray(make_float3(0, grid->size.y, 0), make_float3(grid->size.x, grid->size.y, 0)), s3);
-    bool i4 = ray_intersect_segment(plane_ray, make_ray(make_float3(grid->size.x, 0, 0), make_float3(grid->size.x, grid->size.y, 0)), s4);
+    bool i3 = ray_intersect_segment(plane_ray, make_ray(make_float3(0, grid->size.y, 0), make_float3(grid->size.x, 0, 0)), s3);
+    bool i4 = ray_intersect_segment(plane_ray, make_ray(make_float3(grid->size.x, 0, 0), make_float3(0, grid->size.y, 0)), s4);
 
     if (!i1 && !i2 && !i3 && !i4)
       return false;
@@ -593,7 +593,6 @@ namespace zgrid_cuda_ray_caster
 
     vec3 shift = v * (s + 0.00001f);
     ray.origin += shift;
-    ray.direction += shift;
 
     return true;
   }
@@ -747,7 +746,7 @@ namespace cuda_math
     if (dot(n, n) < EPSILON)      // triangle is degenerate
       return -TRIANGLE_INTERSECTION_DEGENERATE; // do not deal with this case
 
-    dir = direction - origin; // ray direction vec3
+    dir = direction; // ray direction vec3
     w0 = origin - triangle[0];
     a = -dot(n, w0);
     b = dot(n, dir);

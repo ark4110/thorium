@@ -30,13 +30,13 @@ namespace math
   {
     vec3 u = ray.origin - grid->base;
     vec3 h = u - grid->size;
-    vec3 v = ray.direction - ray.origin;
+    vec3 v = ray.direction;
 
     bool out_of_bound = u.x < 0 || h.x > 0 || u.y < 0 || h.y > 0;
     if (!out_of_bound)
       return true;
 
-    ray_t plane_ray = make_ray(u, ray.direction - grid->base);
+    ray_t plane_ray = make_ray(u, ray.direction);
 
     float s1;
     float s2;
@@ -44,8 +44,8 @@ namespace math
     float s4;
     bool i1 = ray_intersect_segment(plane_ray, make_ray(make_vec3(0, 0, 0), make_vec3(grid->size.x, 0, 0)), s1);
     bool i2 = ray_intersect_segment(plane_ray, make_ray(make_vec3(0, 0, 0), make_vec3(0, grid->size.y, 0)), s2);
-    bool i3 = ray_intersect_segment(plane_ray, make_ray(make_vec3(0, grid->size.y, 0), make_vec3(grid->size.x, grid->size.y, 0)), s3);
-    bool i4 = ray_intersect_segment(plane_ray, make_ray(make_vec3(grid->size.x, 0, 0), make_vec3(grid->size.x, grid->size.y, 0)), s4);
+    bool i3 = ray_intersect_segment(plane_ray, make_ray(make_vec3(0, grid->size.y, 0), make_vec3(grid->size.x, 0, 0)), s3);
+    bool i4 = ray_intersect_segment(plane_ray, make_ray(make_vec3(grid->size.x, 0, 0), make_vec3(0, grid->size.y, 0)), s4);
 
     if (!i1 && !i2 && !i3 && !i4)
       return false;
@@ -58,7 +58,6 @@ namespace math
 
     vec3 shift = v * (s + 0.00001f);
     ray.origin += shift;
-    ray.direction += shift;
 
     return true;
   }
@@ -69,7 +68,7 @@ namespace math
       return;
 
     vec3 u = ray.origin - grid->base;
-    vec3 v = ray.direction - ray.origin;
+    vec3 v = ray.direction;
     grid_coord_t p = { (int)(u.x / grid->side.x), (int)(u.y / grid->side.y) };
 
     // @todo Understand abs() logic - is it really required, or t can be negative.
@@ -180,9 +179,9 @@ namespace math
   void collector_countour(const grid_2d_t* grid, rasterizer_countour_t& c, const triangle_t& t)
   {
     // @todo Collect countour by axis with minimal object dimension.
-    grid_put(grid, { t.points[0], t.points[1] }, (grid_traversal_callback)&collect_countour, &c);
-    grid_put(grid, { t.points[0], t.points[2] }, (grid_traversal_callback)&collect_countour, &c);
-    grid_put(grid, { t.points[1], t.points[2] }, (grid_traversal_callback)&collect_countour, &c);
+    grid_put(grid, { t.points[0], t.points[1] - t.points[0] }, (grid_traversal_callback)&collect_countour, &c);
+    grid_put(grid, { t.points[0], t.points[2] - t.points[0] }, (grid_traversal_callback)&collect_countour, &c);
+    grid_put(grid, { t.points[1], t.points[2] - t.points[1] }, (grid_traversal_callback)&collect_countour, &c);
   }
 
   void report_countour(const rasterizer_countour_t& c, grid_traversal_callback callback, void* param)

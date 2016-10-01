@@ -48,7 +48,11 @@ public:
   system_t* System;
 };
 
-typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA>, EngineType<RAY_CASTER_OPTIX> > RayCasterTypes;
+typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA>
+#ifdef _WIN64
+  , EngineType<RAY_CASTER_OPTIX>
+#endif
+> RayCasterTypes;
 TYPED_TEST_CASE(RayCaster, RayCasterTypes);
 
 TYPED_TEST(RayCaster, MemoryManagementIsCorrect)
@@ -151,7 +155,7 @@ TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
 
   vec3 center = triangle_center(stackScene->faces[0]);
   vec3 origin = center + make_vec3(0.f, 0.f, .5f);
-  vec3 direction = center - make_vec3(0.f, 0.f, .5f);
+  vec3 direction = make_vec3(0.f, 0.f, -.5f);
   ray_t ray = { origin, direction };
   face_t* hit_face = 0;
   vec3 hit_point;

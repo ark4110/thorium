@@ -253,7 +253,7 @@ namespace malley_cpu
           // Rotate ray towards face's normal
           math::vec3 relative_dist = rotation * malley;
 
-          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, origin + relative_dist };
+          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, relative_dist };
         }
 
         // Duplicate "front" cycle to avoid branches.
@@ -268,7 +268,7 @@ namespace malley_cpu
           // Only difference from front face is opposite direction.
           malley.z = -malley.z;
           math::vec3 relative_dist = rotation * malley;
-          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, origin + relative_dist };
+          ray_caster_task->ray[n_input_rays + n_ray] = { origin + relative_dist * 0.0001f, relative_dist };
         }
       }
     }

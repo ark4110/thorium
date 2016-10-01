@@ -78,35 +78,35 @@ private:
 
 TEST_F(GridTraversal, HitSingleCell)
 {
-  ray_t r = { math::make_vec3(1.25f, 1.25f, 0), math::make_vec3(1.5f, 1.5f, 0) };
+  ray_t r = { math::make_vec3(1.25f, 1.25f, 0), math::make_vec3(1.5f, 1.5f, 0) - math::make_vec3(1.25f, 1.25f, 0) };
   coord_set expected = MakeExpected({ { 2, 2 } });
   ASSERT_EQ(expected, Traverse(r));
 }
 
 TEST_F(GridTraversal, SmallAngleCollectRow)
 {
-  ray_t r = { math::make_vec3(0.f, 0.7f, 0), math::make_vec3(2.f, 0.8f, 0) };
+  ray_t r = { math::make_vec3(0.f, 0.7f, 0), math::make_vec3(2.f, 0.8f, 0) - math::make_vec3(0.f, 0.7f, 0) };
   coord_set expected = MakeExpected({ { 0, 1 }, { 1, 1 }, { 2, 1 } });
   ASSERT_EQ(expected, Traverse(r));
 }
 
 TEST_F(GridTraversal, VerticalCollectRow)
 {
-  ray_t r = { math::make_vec3(.7f, 0.1f, 0), math::make_vec3(.7f, 0.2f, 0) };
+  ray_t r = { math::make_vec3(.7f, 0.1f, 0), math::make_vec3(0, 0.1f, 0) };
   coord_set expected = MakeExpected({ { 1, 0 }, { 1, 1 }, { 1, 2 } });
   ASSERT_EQ(expected, Traverse(r));
 }
 
 TEST_F(GridTraversal, AlmostCenteredCollectPolylineDiagonal)
 {
-  ray_t r = { math::make_vec3(.3f, .4f, 0), math::make_vec3(.4f, 0.5f, 0) };
+  ray_t r = { math::make_vec3(.3f, .4f, 0), math::make_vec3(.1f, 0.1f, 0) };
   coord_set expected = MakeExpected({ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 1, 2 }, { 2, 2 } });
   ASSERT_EQ(expected, Traverse(r));
 }
 
 TEST_F(GridTraversal, NegativeDirectionCollectCells)
 {
-  ray_t r = { math::make_vec3(1.4f, 1.49f, 0), math::make_vec3(1.3f, 1.4f, 0) };
+  ray_t r = { math::make_vec3(1.4f, 1.49f, 0), math::make_vec3(1.3f, 1.4f, 0) - math::make_vec3(1.4f, 1.49f, 0) };
   coord_set expected = MakeExpected({ { 0, 0 }, { 0, 1 }, { 1, 1 }, { 1, 2 }, { 2, 2 } });
   ASSERT_EQ(expected, Traverse(r));
 }
@@ -114,48 +114,48 @@ TEST_F(GridTraversal, NegativeDirectionCollectCells)
 
 TEST_F(GridTraversal, NegativeXDirectionCollectCells)
 {
-  ray_t r = { math::make_vec3(1.1f, 0, 0), math::make_vec3(1, .1f, 0) };
+  ray_t r = { math::make_vec3(1.1f, 0, 0), math::make_vec3(-0.1f, .1f, 0) };
   coord_set expected = MakeExpected({ { 2, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { 0, 2 } });
   ASSERT_EQ(expected, Traverse(r));
 }
 
 TEST_F(GridTraversal, OutOfBoundRayReachGrid)
 {
-  ray_t r = { math::make_vec3(-0.5f, 2, 0), math::make_vec3(.25f, 1.5f, 0) };
+  ray_t r = { math::make_vec3(-0.5f, 2, 0), math::make_vec3(.25f, 1.5f, 0) - math::make_vec3(-0.5f, 2, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(-0.5f, 2, 0), math::make_vec3(0, 1.25f, 0) };
+  r = { math::make_vec3(-0.5f, 2, 0), math::make_vec3(0, 1.25f, 0) - math::make_vec3(-0.5f, 2, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(-0.5f, -0.5f, 0), math::make_vec3(0, .25f, 0) };
+  r = { math::make_vec3(-0.5f, -0.5f, 0), math::make_vec3(0, .25f, 0) - math::make_vec3(-0.5f, -0.5f, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(-0.5f, -0.5f, 0), math::make_vec3(.25f, 0, 0) };
+  r = { math::make_vec3(-0.5f, -0.5f, 0), math::make_vec3(.25f, 0, 0) - math::make_vec3(-0.5f, -0.5f, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(2, 2, 0), math::make_vec3(1.25f, 1.5f, 0) };
+  r = { math::make_vec3(2, 2, 0), math::make_vec3(1.25f, 1.5f, 0) - math::make_vec3(2, 2, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(2, 2, 0), math::make_vec3(1.5f, 1.25f, 0) };
+  r = { math::make_vec3(2, 2, 0), math::make_vec3(1.5f, 1.25f, 0) - math::make_vec3(2, 2, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(2, -0.5f, 0), math::make_vec3(1.5f, .25f, 0) };
+  r = { math::make_vec3(2, -0.5f, 0), math::make_vec3(1.5f, .25f, 0) - math::make_vec3(2, -0.5f, 0) };
   ASSERT_EQ(3, Traverse(r).size());
-  r = { math::make_vec3(2, -0.5f, 0), math::make_vec3(1.25f, 0, 0) };
+  r = { math::make_vec3(2, -0.5f, 0), math::make_vec3(1.25f, 0, 0) - math::make_vec3(2, -0.5f, 0) };
   ASSERT_EQ(3, Traverse(r).size());
 }
 
 TEST_F(GridTraversal, PutNegativeXYSegment)
 {
-  ray_t r = { math::make_vec3(.75f, 1.25f, 0), math::make_vec3(.25f, .25f, 0) };
+  ray_t r = { math::make_vec3(.75f, 1.25f, 0), math::make_vec3(.25f, .25f, 0) - math::make_vec3(.75f, 1.25f, 0) };
   coord_set expected = MakeExpected({ { 1, 2 }, { 1, 1 }, { 0, 1 }, { 0, 0 } });
   ASSERT_EQ(expected, Put(r));
 }
 
 TEST_F(GridTraversal, DontGetCellOnFastSegments)
 {
-  ray_t r = { math::make_vec3(.55f, .95f, 0), math::make_vec3(.45f, .55f, 0) };
+  ray_t r = { math::make_vec3(.55f, .95f, 0), math::make_vec3(.45f, .55f, 0) - math::make_vec3(.55f, .95f, 0) };
   coord_set expected = MakeExpected({ { 1, 1 }, { 0, 1 } });
   ASSERT_EQ(expected, Put(r));
 }
 
 TEST_F(GridTraversal, DontGetCellOnBorderSegment)
 {
-  ray_t r = { math::make_vec3(.55f, .95f, 0), math::make_vec3(.95f, .55f, 0) };
+  ray_t r = { math::make_vec3(.55f, .95f, 0), math::make_vec3(.95f, .55f, 0) - math::make_vec3(.55f, .95f, 0) };
   coord_set expected = MakeExpected({ { 1, 1 } });
   ASSERT_EQ(expected, Put(r));
 }

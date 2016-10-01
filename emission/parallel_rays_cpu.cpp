@@ -99,7 +99,7 @@ namespace parallel_rays_emission_cpu
       float x = radius_dice * cosf(theta_dice);
       float y = radius_dice * sinf(theta_dice);
       math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
-      math::vec3 direction = origin + system->params.direction * 0.1f;
+      math::vec3 direction = system->params.direction;
 
       task->rays->ray[n_input_rays + r] = { origin, direction };
       task->power[n_input_rays + r] = ray_power;

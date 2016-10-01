@@ -25,9 +25,9 @@ namespace math
   /// See for details http ://geomalgorithms.com/a05-_intersect-1.html
   bool ray_intersect_segment(ray_t p, ray_t q, float& s)
   {
-    vec3 v = q.direction - q.origin;
+    vec3 v = q.direction;
     vec3 w = p.origin - q.origin;
-    vec3 u = p.direction - p.origin;
+    vec3 u = p.direction;
 
     float d = (v.x * u.y - v.y * u.x);
 
@@ -40,7 +40,7 @@ namespace math
   bool ray_check_hit_front(const ray_t& ray, const triangle_t& plane)
   {
     vec3 normal = triangle_normal(plane);
-    vec3 v = ray.direction - ray.origin;
+    vec3 v = ray.direction;
     float side = dot(normal, v);
 
     return side < 0;
@@ -49,16 +49,16 @@ namespace math
   ray_t ray_reflect(const ray_t& ray, const triangle_t& triangle, const vec3& hit_point)
   {
     math::vec3 normal = normalize(triangle_normal(triangle));
-    math::vec3 v = normalize(ray.direction - ray.origin);
+    math::vec3 v = normalize(ray.direction);
     float angle = dot(normal, v);
     math::vec3 reflection = v - 2 * angle * normalize(normal);
-    return{ hit_point + reflection * 0.0001f, hit_point + reflection };
+    return{ hit_point + reflection * 0.0001f, reflection };
   }
 
   ray_t ray_transmit(const ray_t& ray, const vec3& point)
   {
-    vec3 v = ray.direction - ray.origin;
-    return { point + v * 0.0001f, point + v };
+    vec3 v = ray.direction;
+    return { point + v * 0.0001f, v };
   }
 
   struct ray_malley_emission_impl : ray_malley_emission

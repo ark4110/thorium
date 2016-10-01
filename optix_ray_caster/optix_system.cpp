@@ -109,17 +109,12 @@ namespace optix_ray_caster
   {
     if (task->n_tasks == 0)
       return RAY_CASTER_OK;
-
-    math::ray_t* directed_rays = (math::ray_t*)malloc(task->n_tasks * sizeof(math::ray_t));
-    memcpy(directed_rays, task->ray, task->n_tasks * sizeof(math::ray_t));
-    for (int r = 0; r != task->n_tasks; ++r)
-      directed_rays[r].direction -= directed_rays[r].origin;
     
     int c = 0;
     RTPbufferdesc rays;
     if (rtpBufferDescCreate(system->context,
       RTP_BUFFER_FORMAT_RAY_ORIGIN_DIRECTION,
-      RTP_BUFFER_TYPE_HOST, directed_rays, &rays) != RTP_SUCCESS)
+      RTP_BUFFER_TYPE_HOST, task->ray, &rays) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
     if (rtpBufferDescSetRange(rays, 0, task->n_tasks) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
@@ -165,7 +160,6 @@ namespace optix_ray_caster
     rtpBufferDescDestroy(rays);
 
     free(hits_buffer);
-    free(directed_rays);
 
     return RAY_CASTER_OK;
   }

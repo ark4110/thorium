@@ -77,7 +77,7 @@ task_t* MakeCollapsingRays(int n_rays, float radius, subject::generator_t* gener
     direction *= (2 + radius);
     // Origin is scaled by 10% to direction - rays directed towards zero.
     math::vec3 origin = direction * 1.1f;
-    rays[i] = { origin, direction };
+    rays[i] = { origin, direction - origin };
   }
 
   return task;
@@ -229,20 +229,38 @@ void printErrorStatsTable(const int* activeSystems, T stats, const char* taskNam
 
 int main(int argc, char* argv[])
 {
+  if (argc == 1)
+  {
+    printf("Usage: perfTest [n_faces] [engines]*\n");
+    return -1;
+  }
+
   system_t* systems[RAY_CASTER_SYSTEMS_COUNT];
   for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
     systems[s] = system_create(s);
 
   int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
 
-  systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
-  systemsToCheck[RAY_CASTER_OPTIX] = 1;
+  if (argc > 2)
+  {
+    for (int a = 2; a != argc; ++a)
+    {
+      for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+        if (strcmp(ray_caster::system_get_id(s), argv[a]) == 0)
+          systemsToCheck[s] = 1;
+    }
+  }
+  else
+  {
+    systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
+    systemsToCheck[RAY_CASTER_OPTIX] = 1; 
+  }
 
   task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
 
   try
   {
-    int n_faces = 10000;
+    int n_faces = atoi(argv[1]);
     int n_rays = 100 * n_faces;
     bool no_cpu = false;
     bool no_radiance = false;
@@ -254,18 +272,18 @@ int main(int argc, char* argv[])
     scene_t* scene = 0;
     ray_caster::scene_t* rs = 0;
     subject::scene_t* ss = 0;
-    if (argc == 1) {
-      printf("Generating confetti scene with %d elements...\n", n_faces);
-      rs = MakeConfettiScene(n_faces, radius, generator);
-      scene = rs;
-    }
-    else {
+
+    printf("Generating confetti scene with %d elements...\n", n_faces);
+    rs = MakeConfettiScene(n_faces, radius, generator);
+    scene = rs;
+
+    /*{
       printf("Loading scene from '%s'...\n", argv[1]);
       if (int r = obj_import::scene(argv[1], &ss))
         return r;
       n_rays = 100 * ss->n_faces;
       scene = (scene_t*)ss;
-    }
+    }*/
     
     if (systemsToCheck[RAY_CASTER_ZGRID_CPU] || systemsToCheck[RAY_CASTER_ZGRID_CUDA])
       math::grid_draw_hist(1024, scene->faces, scene->n_faces);

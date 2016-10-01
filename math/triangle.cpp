@@ -39,7 +39,7 @@ namespace math
     if (dot(n, n) < _FLT_EPSILON)      // triangle is degenerate
       return -TRIANGLE_INTERSECTION_DEGENERATE; // do not deal with this case
 
-    dir = ray.direction - ray.origin; // ray direction vec3
+    dir = ray.direction; // ray direction vec3
     w0 = ray.origin - triangle.points[0];
     a = -dot(n, w0);
     b = dot(n, dir);
@@ -103,8 +103,8 @@ namespace math
   ray_t ray_to_triangle(vec3 origin, triangle_t t)
   {
     vec3 center = triangle_center(t);
-    vec3 destination = origin + (center - origin) / 2.f; // ray direction vec3
-    return{ origin, destination };
+    vec3 direction = (center - origin) / 2.f;
+    return{ origin, direction };
   }
 
   aabb_t triangle_aabb(const triangle_t& t)
