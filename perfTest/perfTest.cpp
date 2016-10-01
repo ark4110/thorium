@@ -114,7 +114,7 @@ struct ErrorStats
 /// @brief Checks errors between tasks in different ray caster implementations.
 ErrorStats CalculateError(task_t* cpu, task_t* gpu)
 {
-  ErrorStats result;
+  ErrorStats result = {};
   for (int i = 0; i != cpu->n_tasks; ++i)
   {
     if (cpu->hit_face[i] != gpu->hit_face[i])
@@ -173,7 +173,7 @@ void printErrorStatsTable(const int* activeSystems, T stats, const char* taskNam
       if (strlen(ray_caster::system_get_id(s)) + 1 > columns[0])
         columns[0] = strlen(ray_caster::system_get_id(s)) + 1;
 
-  int prev = columns[0] + columns[0];
+  int prev = columns[0];
   for (int s = 1; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
   {
     if (activeSystems[s])
@@ -235,14 +235,14 @@ int main(int argc, char* argv[])
 
   int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
 
-  //systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
+  systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
   systemsToCheck[RAY_CASTER_OPTIX] = 1;
 
   task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
 
   try
   {
-    int n_faces = 1000000;
+    int n_faces = 10000;
     int n_rays = 100 * n_faces;
     bool no_cpu = false;
     bool no_radiance = false;
@@ -318,15 +318,15 @@ int main(int argc, char* argv[])
     }
 
     printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nAverage diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
-      sprintf(buf, "%f", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].AverageDistance);
+      sprintf(buf, "%.3Ef", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].AverageDistance);
     });
 
-    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\Max diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
-      sprintf(buf, "%d", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].MaxDistance);
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nMax diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%.3Ef", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].MaxDistance);
     });
 
-    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\Total diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
-      sprintf(buf, "%d", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].TotalDistance);
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nTotal diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%.3Ef", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].TotalDistance);
     });
 
     printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nHit mismatch counts:", [](ErrorStats* stats, int i, int j, char* buf) {
