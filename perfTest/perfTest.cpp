@@ -306,13 +306,13 @@ int main(int argc, char* argv[])
         timings[s] = -1;
         continue;
       }
-      sdkResetTimer(&hTimer);
-      sdkStartTimer(&hTimer);
 
       printf("Casting scene on %s ...\n", ray_caster::system_get_name(s));
       ray_caster::system_t* system = systems[s];
       system_set_scene(system, scene);
       system_prepare(system);
+      sdkResetTimer(&hTimer);
+      sdkStartTimer(&hTimer);
       system_cast(system, tasks[s]);
       sdkStopTimer(&hTimer);
       timings[s] = 1.0e-3 * sdkGetTimerValue(&hTimer);
