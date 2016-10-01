@@ -153,11 +153,94 @@ int CalculateMismatch(task_t* cpu, task_t* gpu)
   return result;
 }
 
+#include <functional>
+
+int align(int pos, int column, const int* columns)
+{
+  char buf[32];
+  memset(buf, ' ', sizeof(buf));
+  buf[columns[column] - pos] = 0;
+  printf(buf);
+  return columns[column];
+}
+
+template <typename T>
+void printErrorStatsTable(const int* activeSystems, T stats, const char* taskName, std::function<void(T stats, int i, int j, char* buf)> fieldPrinter)
+{
+  int columns[RAY_CASTER_SYSTEMS_COUNT] = {};
+  for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+    if (activeSystems[s])
+      if (strlen(ray_caster::system_get_id(s)) + 1 > columns[0])
+        columns[0] = strlen(ray_caster::system_get_id(s)) + 1;
+
+  int prev = columns[0] + columns[0];
+  for (int s = 1; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+  {
+    if (activeSystems[s])
+    {
+      columns[s] = prev;
+      prev += strlen(ray_caster::system_get_id(s)) + 1;
+    }
+  }
+
+  char buf[256];
+  printf("%s\n", taskName);
+  int pos = 0;
+  for (int j = 0; j != RAY_CASTER_SYSTEMS_COUNT; ++j)
+    if (activeSystems[j])
+    {
+      pos = align(pos, j, columns);
+      const char* name = ray_caster::system_get_id(j);
+      printf("%s", name);
+      pos += strlen(name);
+
+    }
+  printf("\n");
+
+  for (int i = 0; i != RAY_CASTER_SYSTEMS_COUNT; ++i)
+  {
+    if (!activeSystems[i])
+      continue;
+
+    const char* name = ray_caster::system_get_id(i);
+    printf("%s", name);
+    int pos = strlen(name);
+    for (int j = 0; j != RAY_CASTER_SYSTEMS_COUNT; ++j)
+    {
+      if (!activeSystems[j])
+        continue;
+
+      pos = align(pos, j, columns);
+
+      if (i == j)
+      {
+        printf("-");
+        pos += 1;
+        continue;
+      }
+
+      fieldPrinter(stats, i, j, buf);
+      printf("%s", buf);
+      pos += strlen(buf);
+    }
+    printf("\n");
+  }
+}
+
 int main(int argc, char* argv[])
 {
+  system_t* systems[RAY_CASTER_SYSTEMS_COUNT];
+  for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+    systems[s] = system_create(s);
+
+  int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
+
+  systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
+  systemsToCheck[RAY_CASTER_OPTIX] = 1;
+
   try
   {
-    int n_faces = 38000;
+    int n_faces = 100000;
     int n_rays = 100 * n_faces;
     bool no_cpu = false;
     bool no_radiance = false;
@@ -165,13 +248,7 @@ int main(int argc, char* argv[])
     float radius = 20;
     
     subject::generator_t* generator = subject::generator_create_spherical();
-    // Create systems for CPU and GPU.
-    system_t* cuda_zgrid = system_create(RAY_CASTER_ZGRID_CUDA);
-    system_t* cuda_naive = system_create(RAY_CASTER_NAIVE_CUDA);
-    system_t* cpu_zgrid = system_create(RAY_CASTER_ZGRID_CPU);
-
     // Create random scene for ray caster.
-    
     scene_t* scene = 0;
     ray_caster::scene_t* rs = 0;
     subject::scene_t* ss = 0;
@@ -188,171 +265,92 @@ int main(int argc, char* argv[])
       scene = (scene_t*)ss;
     }
     math::grid_draw_hist(1024, scene->faces, scene->n_faces);
+    
     printf("Generating %d collapsing rays...\n", n_rays);
+    task_t* baseTask = MakeCollapsingRays(n_rays, radius, generator);
+    task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
+    for(int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+      tasks[s] = task_clone(baseTask);
 
-    // Create task for ray caster.
-    task_t* gpuTask = MakeCollapsingRays(n_rays, radius, generator);
-    task_t* naiveTask = task_clone(gpuTask);
-    task_t* zgridTask = task_clone(gpuTask);
-
-    // Create small warm-up scene for ray caster (from main confetti scene) and run ray caster on it.
-    printf("Warming up...\n");
-    scene_t warm_up_scene = *scene;
-    warm_up_scene.n_faces = warm_up_scene.n_faces > 32 ? 32 : warm_up_scene.n_faces;
-    task_t warm_up_task = *gpuTask;
-    warm_up_task.n_tasks = 1;
-    system_set_scene(cuda_zgrid, &warm_up_scene);
-    system_prepare(cuda_zgrid);
-    system_cast(cuda_zgrid, &warm_up_task);
-
+    double timings[RAY_CASTER_SYSTEMS_COUNT] = {};
+    
     StopWatchInterface *hTimer;
     sdkCreateTimer(&hTimer);
-    sdkResetTimer(&hTimer);
-    sdkStartTimer(&hTimer);
-
-    // Run GPU ray casting task.
-    printf("Casting scene on GPU using zgrid algorithm...\n");
-    system_set_scene(cuda_zgrid, scene);
-    system_prepare(cuda_zgrid);
-    system_cast(cuda_zgrid, gpuTask);
-    sdkStopTimer(&hTimer);
-    double gpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-    printf("Done in %fs.\n", gpuTime);
-
-    if (!no_cpu)
+    for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
     {
-      printf("Casting scene on GPU using naive algorithm...\n");
+      if (!systemsToCheck[s])
+      {
+        printf("Skip %s system test\n", ray_caster::system_get_name(s));
+        timings[s] = -1;
+        continue;
+      }
       sdkResetTimer(&hTimer);
       sdkStartTimer(&hTimer);
-      system_set_scene(cuda_naive, scene);
-      system_prepare(cuda_naive);      
-      system_cast(cuda_naive, naiveTask);
-      sdkStopTimer(&hTimer);
-      double naiveTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-      printf("Done in %fs.\n", naiveTime);
-      
-      ErrorStats error = CalculateError(naiveTask, gpuTask);
-      printf("Error is %f average, %f max, %f total.\n", error.AverageDistance, error.MaxDistance, error.TotalDistance);
-      printf("Face hit mismatch count is %d.\n", error.Mismatch);
-      printf("naive/zgrid GPU performance ratio is %.3f.\n", naiveTime / gpuTime);
 
-      printf("Casting scene on CPU using zgrid algorithm...\n");
-      sdkResetTimer(&hTimer);
-      sdkStartTimer(&hTimer);
-      system_set_scene(cpu_zgrid, scene);
-      system_prepare(cpu_zgrid);
-      system_cast(cpu_zgrid, zgridTask);
+      printf("Casting scene on %s ...\n", ray_caster::system_get_name(s));
+      ray_caster::system_t* system = systems[s];
+      system_set_scene(system, scene);
+      system_prepare(system);
+      system_cast(system, tasks[s]);
       sdkStopTimer(&hTimer);
-      double zgridTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-      printf("Done in %fs.\n", zgridTime);
-
-      error = CalculateError(zgridTask, gpuTask);
-      printf("Error is %f average, %f max, %f total.\n", error.AverageDistance, error.MaxDistance, error.TotalDistance);
-      printf("Face hit mismatch count is %d.\n", error.Mismatch);
-      printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);
+      timings[s] = 1.0e-3 * sdkGetTimerValue(&hTimer);
+      printf("Done in %fs.\n", timings[s]);
     }
 
-    if (!no_radiance)
+    ErrorStats stats[RAY_CASTER_SYSTEMS_COUNT][RAY_CASTER_SYSTEMS_COUNT] = {};
+    for (int i = 0; i != RAY_CASTER_SYSTEMS_COUNT; ++i)
     {
-      malley_cpu::params_t emissionParams;
-      emissionParams.n_rays = n_rays;
-      emission::system_t* emitter = emission::system_create(EMISSION_MALLEY_CPU, &emissionParams);
-
-      const int rays_per_face = 100;
-      radiance_equation::params_t equationParams;
-      equationParams.emitters = &emitter;
-      equationParams.n_emitters = 1;
-      equationParams.ray_caster = cuda_zgrid;
-
-      thermal_equation::system_t* equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
-
-      thermal_solution::params_t solutionParams = { 1, &equation };
-      thermal_solution::system_t* solution = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
-
-      subject::material_t materials[1];
-      materials[0] = subject::black_body();
-
-      subject::scene_t te_scene;
-      te_scene.n_faces = scene->n_faces;
-      te_scene.faces = scene->faces;
-
-      int n_meshes = scene->n_faces;
-      te_scene.n_meshes = n_meshes;
-      te_scene.meshes = (subject::mesh_t*)malloc(n_meshes * sizeof(subject::mesh_t));
-      float* temperatures = (float*)malloc(n_meshes * sizeof(float));
-
-      for (int m = 0; m != n_meshes; ++m)
+      if (!systemsToCheck[i])
+        continue;
+      for (int j = i; j != RAY_CASTER_SYSTEMS_COUNT; ++j)
       {
-        subject::mesh_t& mesh = te_scene.meshes[m];
-        mesh.first_idx = m;
-        mesh.n_faces = 1;
-        mesh.material_idx = 0;
-
-        temperatures[m] = 300;
+        if (!systemsToCheck[j])
+          continue;
+        if (i == j)
+          continue;
+        stats[i][j] = CalculateError(tasks[i], tasks[j]);
+        stats[j][i] = stats[i][j];
       }
-
-      te_scene.n_materials = 1;
-      te_scene.materials = materials;
-
-      thermal_solution::task_t* task = thermal_solution::task_create(te_scene.n_meshes);
-      task->time_delta = 0.1f;
-
-      FILE* scene_dump = fopen("perf_test_scene.obj", "w");
-      obj_export::scene(scene_dump, &te_scene);
-      fclose(scene_dump);
-
-      int steps_count = 100;
-      printf("Calculating %d steps of thermal solution using %d rays per face in average...\n", steps_count, rays_per_face);
-      sdkResetTimer(&hTimer);
-      sdkStartTimer(&hTimer);
-
-      int r = 0;
-      if ((r = system_set_scene(solution, &te_scene, temperatures)) < 0)
-      {
-        printf("Failed to calculate thermal solution step.");
-        return r;
-      }
-      
-      for (int step = 1; step < steps_count; ++step)
-      {
-        if ((r = system_calculate(solution, task)) < 0)
-        {
-          printf("Failed to calculate thermal solution step.");
-          return r;
-        }
-      }
-      
-
-      sdkStopTimer(&hTimer);
-      double cpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-      printf("Done in %fs.\n", cpuTime);
-      int solution_ray_casts = scene->n_faces * rays_per_face * steps_count;
-      printf("Solution/Ray one ray casting times ratio is %.3f\n", (cpuTime / solution_ray_casts) / (gpuTime / n_rays));
-
-      free(temperatures);
-      free(te_scene.meshes);
-      thermal_solution::task_free(task);
-      thermal_solution::system_free(solution);
-      thermal_equation::system_free(equation);
-      emission::system_free(emitter);
     }
+
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nAverage diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%f", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].AverageDistance);
+    });
+
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\Max diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%d", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].MaxDistance);
+    });
+
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\Total diff distances:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%d", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].TotalDistance);
+    });
+
+    printErrorStatsTable<ErrorStats*>(systemsToCheck, (ErrorStats*)stats, "\nHit mismatch counts:", [](ErrorStats* stats, int i, int j, char* buf) {
+      sprintf(buf, "%d", stats[i * RAY_CASTER_SYSTEMS_COUNT + j].Mismatch);
+    });
+
+    printErrorStatsTable<double*>(systemsToCheck, timings, "\nTimings:", [](double* timings, int i, int j, char* buf) {
+      sprintf(buf, "%f", timings[i] / timings[j]);
+    }); 
+    //printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);
+
+    /*printf("Error is %f average, %f max, %f total.\n", error.AverageDistance, error.MaxDistance, error.TotalDistance);
+    printf("Face hit mismatch count is %d.\n", error.Mismatch);
+    printf("CPU/GPU performance ratio is %.3f.\n", zgridTime / gpuTime);*/
+
     
-    system_free(cuda_zgrid);
-    system_free(cuda_naive);
-    system_free(cpu_zgrid);
+    
 
     scene_free(rs);
     scene_free(ss);
-    free(gpuTask->ray);
-    free(gpuTask->hit_face);
-    free(gpuTask->hit_point);
-    free(gpuTask);
-    free(naiveTask->hit_face);
-    free(naiveTask->hit_point);
-    free(naiveTask);
-    free(zgridTask->hit_face);
-    free(zgridTask->hit_point);
-    free(zgridTask);
+
+    free(baseTask->ray);
+    for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+    {
+      free(tasks[s]->hit_face);
+      free(tasks[s]->hit_point);
+      free(tasks[s]);
+    }
 
     generator_free(generator);
 
