@@ -39,6 +39,8 @@ namespace subject
     if (scene)
     {
       free(scene->faces);
+      for (int m = 0; m != scene->n_meshes; ++m)
+        free(scene->meshes[m].name);
       free(scene->meshes);
       free(scene->materials);
       free(scene);

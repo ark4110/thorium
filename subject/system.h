@@ -66,6 +66,7 @@ namespace subject
     int first_idx;
     int n_faces;
     int material_idx;
+    char* name;
   };
 
   inline mesh_t make_mesh(int first_idx, int n_faces, int material_idx)
