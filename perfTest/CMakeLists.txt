@@ -21,5 +21,6 @@ set(SOURCE_FILES
 
 add_executable(perf_test ${SOURCE_FILES})
 
-target_link_libraries(perf_test import_export thermal_equation thermal_solution emission ray_caster cuda_ray_caster form_factors subject math)
+target_link_libraries(perf_test import_export thermal_equation thermal_solution emission ray_caster cuda_ray_caster optix_ray_caster form_factors subject math)
 target_link_libraries(perf_test ${CUDA_LIBRARIES})
+target_link_libraries(perf_test ${optix_prime_LIBRARY})

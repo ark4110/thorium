@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.0.2)
-project (LALA)
+project (Thorium)
+
+set(CMAKE_MODULE_PATH
+  "${CMAKE_SOURCE_DIR}/ext/optix/CMake"
+  ${CMAKE_MODULE_PATH}
+  )
+
+find_package(OptiX REQUIRED)
 
 add_subdirectory("emission")
 add_subdirectory("math")
 add_subdirectory("ray_caster")
 add_subdirectory("cuda_ray_caster")
+add_subdirectory("optix_ray_caster")
 add_subdirectory("form_factors")
 add_subdirectory("import_export")
 add_subdirectory("test")

@@ -107,7 +107,7 @@ namespace ray_caster
       system = zgrid_cuda_ray_caster::system_create();
       break;
 
-#ifdef _WIN64
+#if !(defined _WIN32 && !defined _WIN64)
     case RAY_CASTER_OPTIX:
       system = optix_ray_caster::system_create();
       break;    
