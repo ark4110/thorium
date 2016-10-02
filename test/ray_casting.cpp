@@ -80,6 +80,16 @@ TYPED_TEST(RayCaster, PrepareFailsForNoScene)
   ASSERT_EQ(-RAY_CASTER_ERROR, system_prepare(this->System));
 }
 
+TYPED_TEST(RayCaster, AcceptConsequencesSetScene)
+{
+  scene_t* scene1 = MakeFloorScene();
+  scene_t* scene2 = MakeFloorScene();
+  ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, scene1));
+  ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, scene2));
+  scene_free(scene1);
+  scene_free(scene2);
+}
+
 TYPED_TEST(RayCaster, PrepareFailsForEmptyScene)
 {
   scene_t* emptyScence = MakeEmptyScene();

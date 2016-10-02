@@ -70,8 +70,22 @@ namespace optix_ray_caster
     return RAY_CASTER_OK;
   }
 
+  void system_release_scene_data(system_t* system)
+  {
+    rtpBufferDescDestroy(system->vertices);
+    system->vertices = {};
+    
+    rtpModelDestroy(system->model);
+    system->model = {};
+
+    system->scene = 0;
+  }
+
   int set_scene(system_t* system, ray_caster::scene_t* scene)
   {
+    if (system->scene)
+      system_release_scene_data(system);
+
     system->scene = scene;
 
     if (scene->n_faces == 0)
