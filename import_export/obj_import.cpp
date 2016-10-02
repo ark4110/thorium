@@ -245,12 +245,14 @@ namespace obj_import
 
       case 'o':
       case 'g':
-      {
+      { 
         subject::mesh_t mesh;
         mesh.first_idx = (int)faces.size();
         mesh.material_idx = 0;
         if (!meshes.empty())
           meshes.back().n_faces = (int)(faces.size() - meshes.back().first_idx);
+        if (str.length() > 2)
+        mesh.name = strdup(str.c_str() + 2);
         meshes.push_back(mesh);
       }
       break;

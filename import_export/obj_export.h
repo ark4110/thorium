@@ -30,6 +30,6 @@ namespace obj_export
   int scene(FILE* out, const subject::scene_t* scene);
 
   /// @brief Exports solution task in OBJ format.
-  int task(FILE* out, int n_meshes, const thermal_solution::task_t* task);
+  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task);
   int task_binary(FILE* out, int n_meshes, const thermal_solution::task_t* task);
 }

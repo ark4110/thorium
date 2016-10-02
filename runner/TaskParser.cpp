@@ -19,7 +19,7 @@
 TaskParser::TaskParser(onEndCb onEnd, onEndFrameCb onFrameEnd)
     : newFrame_re("^\\s{0,}newfrm\\s{1,}frame_(\\d+)$", regex_constants::icase),
       step_re("^\\s{0,}step\\s{1,}([\\d\\.]+)$"),
-      tmp_re("^\\s{0,}tmprt\\s{1,}([\\d\\.]+)$", regex_constants::icase),
+      tmp_re("^\\s{0,}tmprt\\s{1,}([\\d\\.]+\\s.*)$", regex_constants::icase),
       comment_re("^\\s{0,}#.{0,}$", regex_constants::icase),
       curState(RUNNING) {
     assert(onEnd);

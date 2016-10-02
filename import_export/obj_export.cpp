@@ -87,13 +87,17 @@ namespace obj_export
     return 0;
   }
 
-  int task(FILE* out, int n_meshes, const thermal_solution::task_t* task)
+  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task)
   {
     fprintf(out, "newfrm frame_%d\n", task->n_step);
     fprintf(out, "step %f\n", task->time_delta);
-    for (const float* f = task->temperatures; f != task->temperatures + n_meshes; ++f)
+    const float* f = task->temperatures;
+    const subject::mesh_t* m = scene->meshes;
+    for (int m = 0; m != scene->n_meshes; ++m)
     {
-      fprintf(out, "tmprt %f\n", *f);
+      float temperature = task->temperatures[m];
+      const char* name = scene->meshes[m].name ? scene->meshes[m].name : "";      
+      fprintf(out, "tmprt %f %s\n", temperature, name);
     }
     
     fprintf(out, "\n");
