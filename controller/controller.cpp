@@ -35,7 +35,7 @@
 
 void PrintUsage()
 {
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <step count [100]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
+  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -50,7 +50,8 @@ int main(int argc, char* argv[])
   const char* input_task = 0;
   const char* result_name = "-";
   int n_rays = 1000 * 1000;
-  int n_steps = 100;
+  int n_distant_rays = 50000;
+  int n_steps = 1000;
   int type = RAY_CASTER_OPTIX;
   bool binary_output = false;
 
@@ -75,10 +76,14 @@ int main(int argc, char* argv[])
       break;
 
     case 5:
-      n_steps = atoi(argv[i]);
+      n_distant_rays = atoi(argv[i]);
       break;
 
     case 6:
+      n_steps = atoi(argv[i]);
+      break;
+
+    case 7:
       if (strcmp("cuda", argv[i]) == 0)
         type = RAY_CASTER_ZGRID_CUDA;
       else if (strcmp("cpu", argv[i]) == 0)
@@ -96,7 +101,7 @@ int main(int argc, char* argv[])
       else
         return -RAY_CASTER_NOT_SUPPORTED;
 
-    case 7:
+    case 8:
       binary_output = strcmp("1", argv[i]) == 0;
       break;
     }
@@ -122,7 +127,7 @@ int main(int argc, char* argv[])
 
   parallel_rays_emission_cpu::params_t exterior_emission_params;
   exterior_emission_params.power = 0;
-  exterior_emission_params.n_rays = 10000;
+  exterior_emission_params.n_rays = n_distant_rays;
 
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
   thermal_solution::task_t* task = thermal_solution::task_create(0);
@@ -209,7 +214,7 @@ int main(int argc, char* argv[])
 
   FILE* result_file = result_name[0] == '-' ? stdout : fopen(result_name, "w");
 
-  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene->n_meshes, task);
+  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
   
   StopWatchInterface *hTimer;
   sdkCreateTimer(&hTimer);
@@ -232,7 +237,7 @@ int main(int argc, char* argv[])
 
     radiance_equation::print_stats(radiance_stats);
 
-    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene->n_meshes, task);
+    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
   }
   
   sdkStopTimer(&hTimer);
