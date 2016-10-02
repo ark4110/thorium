@@ -235,9 +235,7 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  system_t* systems[RAY_CASTER_SYSTEMS_COUNT];
-  for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
-    systems[s] = system_create(s);
+  
 
   int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
 
@@ -255,6 +253,11 @@ int main(int argc, char* argv[])
     systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
     systemsToCheck[RAY_CASTER_OPTIX] = 1; 
   }
+
+  system_t* systems[RAY_CASTER_SYSTEMS_COUNT];
+  for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
+    if (systemsToCheck[s])
+      systems[s] = system_create(s);
 
   task_t* tasks[RAY_CASTER_SYSTEMS_COUNT] = {};
 
