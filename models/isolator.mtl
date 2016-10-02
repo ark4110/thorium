@@ -1,0 +1,73 @@
+# Blender MTL File: 'isolator.blend'
+# Material Count: 3
+
+newmtl None
+Ns 0
+Ka 0.000000 0.000000 0.000000
+Kd 0.8 0.8 0.8
+Ks 0.8 0.8 0.8
+d 1
+illum 2
+# Using aluminium as default material
+shell.density 2698.899902
+shell.heat_capacity 903.000000
+shell.thermal_conductivity 237.000000
+shell.thickness 0.010000
+front.specular_reflectance 0.000000
+front.diffuse_reflectance 0.000000
+front.absorbance 1.000000
+front.transmittance 0.000000
+front.emissivity 0.000000
+rear.specular_reflectance 0.000000
+rear.diffuse_reflectance 0.000000
+rear.absorbance 1.000000
+rear.transmittance 0.000000
+rear.emissivity 0.000000
+
+newmtl consumer
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+shell.density 300.000000
+shell.heat_capacity 300.000000
+shell.thermal_conductivity 0.000000
+shell.thickness 0.010000
+front.specular_reflectance 0.000000
+front.diffuse_reflectance 0.000000
+front.absorbance 1.000000
+front.transmittance 0.000000
+front.emissivity 0.000000
+rear.specular_reflectance 0.000000
+rear.diffuse_reflectance 0.000000
+rear.absorbance 0.000000
+rear.transmittance 0.000000
+rear.emissivity 0.000000
+
+newmtl isolator
+Ns 96.078431
+Ka 1.000000 1.000000 1.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+shell.density 1000.000000
+shell.heat_capacity 1000.000000
+shell.thermal_conductivity 0.000000
+shell.thickness 0.010000
+front.specular_reflectance 0.000000
+front.diffuse_reflectance 0.000000
+front.absorbance 0.000000
+front.transmittance 0.000000
+front.emissivity 0.000000
+rear.specular_reflectance 1.000000
+rear.diffuse_reflectance 0.000000
+rear.absorbance 0.000000
+rear.transmittance 0.000000
+rear.emissivity 0.000000

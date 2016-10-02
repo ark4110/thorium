@@ -1,0 +1,8 @@
+newfrm frame_0
+step 0.500000
+dstsrc 3000 0 -1 0
+tmprt 300.000000
+tmprt 300.000000
+tmprt 300.000000
+tmprt 100.000000
+tmprt 10.000000
