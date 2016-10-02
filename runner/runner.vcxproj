@@ -72,9 +72,12 @@
     <PostBuildEvent>
       <Message>Copying dlls</Message>
       <Command>echo Copying GLEW dlls to $(TargetDir)
+
 copy "..\ext\glew\bin\Release\Win32\glew32.dll" "$(TargetDir)"
+
 echo Copying SDL2 dlls to $(TargetDir)
-copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"</Command>
+copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"
+xcopy /Y /Q /I "..\shaders\*" "$(TargetDir)\shaders\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -99,9 +102,12 @@ copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo Copying GLEW dlls to $(TargetDir)
+
 copy "..\ext\glew\bin\Release\Win32\glew32.dll" "$(TargetDir)"
+
 echo Copying SDL2 dlls to $(TargetDir)
-copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"</Command>
+copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"
+xcopy /Y /Q /I "..\shaders\*" "$(TargetDir)\shaders\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -127,9 +133,13 @@ copy "..\ext\sdl\lib\x86\SDL2.dll" "$(TargetDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo Copying GLEW dlls to $(TargetDir)
+
 copy "..\ext\glew\bin\Release\x64\glew32.dll" "$(TargetDir)"
+
 echo Copying SDL2 dlls to $(TargetDir)
-copy "..\ext\sdl\lib\x64\SDL2.dll" "$(TargetDir)"</Command>
+
+copy "..\ext\sdl\lib\x64\SDL2.dll" "$(TargetDir)"
+xcopy /Q /I /Y "..\shaders\*" "$(TargetDir)\shaders\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

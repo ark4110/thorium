@@ -68,8 +68,8 @@ int ModelRenderer::afterInit() {
     sprogram.init();
     TRACE("Initialized");
 
-    if (sprogram.addShaderFromSourceFile(OpenGLShaderProgram::VertexType, "../shaders/mvp.vert") != 0 ||
-        sprogram.addShaderFromSourceFile(OpenGLShaderProgram::FragmentType, "../shaders/simple.frag") != 0) {
+    if (sprogram.addShaderFromSourceFile(OpenGLShaderProgram::VertexType, "shaders/mvp.vert") != 0 ||
+        sprogram.addShaderFromSourceFile(OpenGLShaderProgram::FragmentType, "shaders/simple.frag") != 0) {
         ERROR("Can not compile shaders");
         return 1;
     } else {
@@ -144,8 +144,8 @@ int ModelRenderer::afterInit() {
     // Temperatures
     sprogram.setUniform("maxTemp", 300.0f);
 
-    tempScale.init(10, height, width, height, "../shaders/mvpRect.vert", "../shaders/fragRect.frag");
-    timeLine.init(width - 30, 10, width, height, "../shaders/mvpRect.vert", "../shaders/fragRectPos.frag");
+    tempScale.init(10, height, width, height, "shaders/mvpRect.vert", "shaders/fragRect.frag");
+    timeLine.init(width - 30, 10, width, height, "shaders/mvpRect.vert", "shaders/fragRectPos.frag");
 
     TRACE("All initializaiton done");
 
