@@ -1,1286 +1,1128 @@
 newfrm frame_0
 step 0.500000
 dstsrc 3000 0 0 -1
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 50.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
-tmprt 300.000000
+tmprt 300.000000 Text.002
+tmprt 300.000000 Text.001
+tmprt 300.000000 Text
+tmprt 50.000000 Sphere.1119
+tmprt 50.000000 Sphere.1118
+tmprt 50.000000 Sphere.1117
+tmprt 50.000000 Sphere.1116
+tmprt 50.000000 Sphere.1115
+tmprt 50.000000 Sphere.1114
+tmprt 50.000000 Sphere.1113
+tmprt 50.000000 Sphere.1112
+tmprt 50.000000 Sphere.1111
+tmprt 50.000000 Sphere.1110
+tmprt 50.000000 Sphere.1109
+tmprt 50.000000 Sphere.1108
+tmprt 50.000000 Sphere.1107
+tmprt 50.000000 Sphere.1106
+tmprt 50.000000 Sphere.1105
+tmprt 50.000000 Sphere.1104
+tmprt 50.000000 Sphere.1103
+tmprt 50.000000 Sphere.1102
+tmprt 50.000000 Sphere.1101
+tmprt 50.000000 Sphere.1100
+tmprt 50.000000 Sphere.1099
+tmprt 50.000000 Sphere.1098
+tmprt 50.000000 Sphere.1097
+tmprt 50.000000 Sphere.1096
+tmprt 50.000000 Sphere.1095
+tmprt 50.000000 Sphere.1094
+tmprt 50.000000 Sphere.1093
+tmprt 50.000000 Sphere.1092
+tmprt 50.000000 Sphere.1091
+tmprt 50.000000 Sphere.1090
+tmprt 50.000000 Sphere.1089
+tmprt 50.000000 Sphere.1088
+tmprt 50.000000 Sphere.1087
+tmprt 50.000000 Sphere.1086
+tmprt 50.000000 Sphere.1085
+tmprt 50.000000 Sphere.1084
+tmprt 50.000000 Sphere.1083
+tmprt 50.000000 Sphere.1082
+tmprt 50.000000 Sphere.1081
+tmprt 50.000000 Sphere.1080
+tmprt 50.000000 Sphere.1079
+tmprt 50.000000 Sphere.1078
+tmprt 50.000000 Sphere.1077
+tmprt 50.000000 Sphere.1076
+tmprt 50.000000 Sphere.1075
+tmprt 50.000000 Sphere.1074
+tmprt 50.000000 Sphere.1073
+tmprt 50.000000 Sphere.1072
+tmprt 50.000000 Sphere.1071
+tmprt 50.000000 Sphere.1070
+tmprt 50.000000 Sphere.1069
+tmprt 50.000000 Sphere.1068
+tmprt 50.000000 Sphere.1067
+tmprt 50.000000 Sphere.1066
+tmprt 50.000000 Sphere.1065
+tmprt 50.000000 Sphere.1064
+tmprt 50.000000 Sphere.1063
+tmprt 50.000000 Sphere.1062
+tmprt 50.000000 Sphere.1061
+tmprt 50.000000 Sphere.1060
+tmprt 50.000000 Sphere.1059
+tmprt 50.000000 Sphere.1058
+tmprt 50.000000 Sphere.1057
+tmprt 50.000000 Sphere.1056
+tmprt 50.000000 Sphere.1055
+tmprt 50.000000 Sphere.1054
+tmprt 50.000000 Sphere.1053
+tmprt 50.000000 Sphere.1052
+tmprt 50.000000 Sphere.1051
+tmprt 50.000000 Sphere.1050
+tmprt 50.000000 Sphere.1049
+tmprt 50.000000 Sphere.1048
+tmprt 50.000000 Sphere.1047
+tmprt 50.000000 Sphere.1046
+tmprt 50.000000 Sphere.1045
+tmprt 50.000000 Sphere.1044
+tmprt 50.000000 Sphere.1043
+tmprt 50.000000 Sphere.1042
+tmprt 50.000000 Sphere.1041
+tmprt 50.000000 Sphere.1040
+tmprt 50.000000 Sphere.1039
+tmprt 50.000000 Sphere.1038
+tmprt 50.000000 Sphere.1037
+tmprt 50.000000 Sphere.1036
+tmprt 50.000000 Sphere.1035
+tmprt 50.000000 Sphere.1034
+tmprt 50.000000 Sphere.1033
+tmprt 50.000000 Sphere.1032
+tmprt 50.000000 Sphere.1031
+tmprt 50.000000 Sphere.1030
+tmprt 50.000000 Sphere.1029
+tmprt 50.000000 Sphere.1028
+tmprt 50.000000 Sphere.1027
+tmprt 50.000000 Sphere.1026
+tmprt 50.000000 Sphere.1025
+tmprt 50.000000 Sphere.1024
+tmprt 50.000000 Sphere.1023
+tmprt 50.000000 Sphere.1022
+tmprt 50.000000 Sphere.1021
+tmprt 50.000000 Sphere.1020
+tmprt 50.000000 Sphere.1019
+tmprt 50.000000 Sphere.1018
+tmprt 50.000000 Sphere.1017
+tmprt 50.000000 Sphere.1016
+tmprt 50.000000 Sphere.1015
+tmprt 50.000000 Sphere.1014
+tmprt 50.000000 Sphere.1013
+tmprt 50.000000 Sphere.1012
+tmprt 50.000000 Sphere.1011
+tmprt 50.000000 Sphere.1010
+tmprt 50.000000 Sphere.1009
+tmprt 50.000000 Sphere.1008
+tmprt 50.000000 Sphere.1007
+tmprt 50.000000 Sphere.1006
+tmprt 50.000000 Sphere.1005
+tmprt 50.000000 Sphere.1004
+tmprt 50.000000 Sphere.1003
+tmprt 50.000000 Sphere.1002
+tmprt 50.000000 Sphere.1001
+tmprt 50.000000 Sphere.1000
+tmprt 50.000000 Sphere.999
+tmprt 50.000000 Sphere.998
+tmprt 50.000000 Sphere.997
+tmprt 50.000000 Sphere.996
+tmprt 50.000000 Sphere.995
+tmprt 50.000000 Sphere.994
+tmprt 50.000000 Sphere.993
+tmprt 50.000000 Sphere.992
+tmprt 50.000000 Sphere.991
+tmprt 50.000000 Sphere.990
+tmprt 50.000000 Sphere.989
+tmprt 50.000000 Sphere.988
+tmprt 50.000000 Sphere.987
+tmprt 50.000000 Sphere.986
+tmprt 50.000000 Sphere.985
+tmprt 50.000000 Sphere.984
+tmprt 50.000000 Sphere.983
+tmprt 50.000000 Sphere.982
+tmprt 50.000000 Sphere.981
+tmprt 50.000000 Sphere.980
+tmprt 50.000000 Sphere.979
+tmprt 50.000000 Sphere.978
+tmprt 50.000000 Sphere.977
+tmprt 50.000000 Sphere.976
+tmprt 50.000000 Sphere.975
+tmprt 50.000000 Sphere.974
+tmprt 50.000000 Sphere.973
+tmprt 50.000000 Sphere.972
+tmprt 50.000000 Sphere.971
+tmprt 50.000000 Sphere.970
+tmprt 50.000000 Sphere.969
+tmprt 50.000000 Sphere.968
+tmprt 50.000000 Sphere.967
+tmprt 50.000000 Sphere.966
+tmprt 50.000000 Sphere.965
+tmprt 50.000000 Sphere.964
+tmprt 50.000000 Sphere.963
+tmprt 50.000000 Sphere.962
+tmprt 50.000000 Sphere.961
+tmprt 50.000000 Sphere.960
+tmprt 50.000000 Sphere.959
+tmprt 50.000000 Sphere.958
+tmprt 50.000000 Sphere.957
+tmprt 50.000000 Sphere.956
+tmprt 50.000000 Sphere.955
+tmprt 50.000000 Sphere.954
+tmprt 50.000000 Sphere.953
+tmprt 50.000000 Sphere.952
+tmprt 50.000000 Sphere.951
+tmprt 50.000000 Sphere.950
+tmprt 50.000000 Sphere.949
+tmprt 50.000000 Sphere.948
+tmprt 50.000000 Sphere.947
+tmprt 50.000000 Sphere.946
+tmprt 50.000000 Sphere.945
+tmprt 50.000000 Sphere.944
+tmprt 50.000000 Sphere.943
+tmprt 50.000000 Sphere.942
+tmprt 50.000000 Sphere.941
+tmprt 50.000000 Sphere.940
+tmprt 50.000000 Sphere.939
+tmprt 50.000000 Sphere.938
+tmprt 50.000000 Sphere.937
+tmprt 50.000000 Sphere.936
+tmprt 50.000000 Sphere.935
+tmprt 50.000000 Sphere.934
+tmprt 50.000000 Sphere.933
+tmprt 50.000000 Sphere.932
+tmprt 50.000000 Sphere.931
+tmprt 50.000000 Sphere.930
+tmprt 50.000000 Sphere.929
+tmprt 50.000000 Sphere.928
+tmprt 50.000000 Sphere.927
+tmprt 50.000000 Sphere.926
+tmprt 50.000000 Sphere.925
+tmprt 50.000000 Sphere.924
+tmprt 50.000000 Sphere.923
+tmprt 50.000000 Sphere.922
+tmprt 50.000000 Sphere.921
+tmprt 50.000000 Sphere.920
+tmprt 50.000000 Sphere.919
+tmprt 50.000000 Sphere.918
+tmprt 50.000000 Sphere.917
+tmprt 50.000000 Sphere.916
+tmprt 50.000000 Sphere.915
+tmprt 50.000000 Sphere.914
+tmprt 50.000000 Sphere.913
+tmprt 50.000000 Sphere.912
+tmprt 50.000000 Sphere.911
+tmprt 50.000000 Sphere.910
+tmprt 50.000000 Sphere.909
+tmprt 50.000000 Sphere.908
+tmprt 50.000000 Sphere.907
+tmprt 50.000000 Sphere.906
+tmprt 50.000000 Sphere.905
+tmprt 50.000000 Sphere.904
+tmprt 50.000000 Sphere.903
+tmprt 50.000000 Sphere.902
+tmprt 50.000000 Sphere.901
+tmprt 50.000000 Sphere.900
+tmprt 50.000000 Sphere.899
+tmprt 50.000000 Sphere.898
+tmprt 50.000000 Sphere.897
+tmprt 50.000000 Sphere.896
+tmprt 50.000000 Sphere.895
+tmprt 50.000000 Sphere.894
+tmprt 50.000000 Sphere.893
+tmprt 50.000000 Sphere.892
+tmprt 50.000000 Sphere.891
+tmprt 50.000000 Sphere.890
+tmprt 50.000000 Sphere.889
+tmprt 50.000000 Sphere.888
+tmprt 50.000000 Sphere.887
+tmprt 50.000000 Sphere.886
+tmprt 50.000000 Sphere.885
+tmprt 50.000000 Sphere.884
+tmprt 50.000000 Sphere.883
+tmprt 50.000000 Sphere.882
+tmprt 50.000000 Sphere.881
+tmprt 50.000000 Sphere.880
+tmprt 50.000000 Sphere.879
+tmprt 50.000000 Sphere.878
+tmprt 50.000000 Sphere.877
+tmprt 50.000000 Sphere.876
+tmprt 50.000000 Sphere.875
+tmprt 50.000000 Sphere.874
+tmprt 50.000000 Sphere.873
+tmprt 50.000000 Sphere.872
+tmprt 50.000000 Sphere.871
+tmprt 50.000000 Sphere.870
+tmprt 50.000000 Sphere.869
+tmprt 50.000000 Sphere.868
+tmprt 50.000000 Sphere.867
+tmprt 50.000000 Sphere.866
+tmprt 50.000000 Sphere.865
+tmprt 50.000000 Sphere.864
+tmprt 50.000000 Sphere.863
+tmprt 50.000000 Sphere.862
+tmprt 50.000000 Sphere.861
+tmprt 50.000000 Sphere.860
+tmprt 50.000000 Sphere.859
+tmprt 50.000000 Sphere.858
+tmprt 50.000000 Sphere.857
+tmprt 50.000000 Sphere.856
+tmprt 50.000000 Sphere.855
+tmprt 50.000000 Sphere.854
+tmprt 50.000000 Sphere.853
+tmprt 50.000000 Sphere.852
+tmprt 50.000000 Sphere.851
+tmprt 50.000000 Sphere.850
+tmprt 50.000000 Sphere.849
+tmprt 50.000000 Sphere.848
+tmprt 50.000000 Sphere.847
+tmprt 50.000000 Sphere.846
+tmprt 50.000000 Sphere.845
+tmprt 50.000000 Sphere.844
+tmprt 50.000000 Sphere.843
+tmprt 50.000000 Sphere.842
+tmprt 50.000000 Sphere.841
+tmprt 50.000000 Sphere.840
+tmprt 50.000000 Sphere.839
+tmprt 50.000000 Sphere.838
+tmprt 50.000000 Sphere.837
+tmprt 50.000000 Sphere.836
+tmprt 50.000000 Sphere.835
+tmprt 50.000000 Sphere.834
+tmprt 50.000000 Sphere.833
+tmprt 50.000000 Sphere.832
+tmprt 50.000000 Sphere.831
+tmprt 50.000000 Sphere.830
+tmprt 50.000000 Sphere.829
+tmprt 50.000000 Sphere.828
+tmprt 50.000000 Sphere.827
+tmprt 50.000000 Sphere.826
+tmprt 50.000000 Sphere.825
+tmprt 50.000000 Sphere.824
+tmprt 50.000000 Sphere.823
+tmprt 50.000000 Sphere.822
+tmprt 50.000000 Sphere.821
+tmprt 50.000000 Sphere.820
+tmprt 50.000000 Sphere.819
+tmprt 50.000000 Sphere.818
+tmprt 50.000000 Sphere.817
+tmprt 50.000000 Sphere.816
+tmprt 50.000000 Sphere.815
+tmprt 50.000000 Sphere.814
+tmprt 50.000000 Sphere.813
+tmprt 50.000000 Sphere.812
+tmprt 50.000000 Sphere.811
+tmprt 50.000000 Sphere.810
+tmprt 50.000000 Sphere.809
+tmprt 50.000000 Sphere.808
+tmprt 50.000000 Sphere.807
+tmprt 50.000000 Sphere.806
+tmprt 50.000000 Sphere.805
+tmprt 50.000000 Sphere.804
+tmprt 50.000000 Sphere.803
+tmprt 50.000000 Sphere.802
+tmprt 50.000000 Sphere.801
+tmprt 50.000000 Sphere.800
+tmprt 50.000000 Sphere.799
+tmprt 50.000000 Sphere.798
+tmprt 50.000000 Sphere.797
+tmprt 50.000000 Sphere.796
+tmprt 50.000000 Sphere.795
+tmprt 50.000000 Sphere.794
+tmprt 50.000000 Sphere.793
+tmprt 50.000000 Sphere.792
+tmprt 50.000000 Sphere.791
+tmprt 50.000000 Sphere.790
+tmprt 50.000000 Sphere.789
+tmprt 50.000000 Sphere.788
+tmprt 50.000000 Sphere.787
+tmprt 50.000000 Sphere.786
+tmprt 50.000000 Sphere.785
+tmprt 50.000000 Sphere.784
+tmprt 50.000000 Sphere.783
+tmprt 50.000000 Sphere.782
+tmprt 50.000000 Sphere.781
+tmprt 50.000000 Sphere.780
+tmprt 50.000000 Sphere.779
+tmprt 50.000000 Sphere.778
+tmprt 50.000000 Sphere.777
+tmprt 50.000000 Sphere.776
+tmprt 50.000000 Sphere.775
+tmprt 50.000000 Sphere.774
+tmprt 50.000000 Sphere.773
+tmprt 50.000000 Sphere.772
+tmprt 50.000000 Sphere.771
+tmprt 50.000000 Sphere.770
+tmprt 50.000000 Sphere.769
+tmprt 50.000000 Sphere.768
+tmprt 50.000000 Sphere.767
+tmprt 50.000000 Sphere.766
+tmprt 50.000000 Sphere.765
+tmprt 50.000000 Sphere.764
+tmprt 50.000000 Sphere.763
+tmprt 50.000000 Sphere.762
+tmprt 50.000000 Sphere.761
+tmprt 50.000000 Sphere.760
+tmprt 50.000000 Sphere.759
+tmprt 50.000000 Sphere.758
+tmprt 50.000000 Sphere.757
+tmprt 50.000000 Sphere.756
+tmprt 50.000000 Sphere.755
+tmprt 50.000000 Sphere.754
+tmprt 50.000000 Sphere.753
+tmprt 50.000000 Sphere.752
+tmprt 50.000000 Sphere.751
+tmprt 50.000000 Sphere.750
+tmprt 50.000000 Sphere.749
+tmprt 50.000000 Sphere.748
+tmprt 50.000000 Sphere.747
+tmprt 50.000000 Sphere.746
+tmprt 50.000000 Sphere.745
+tmprt 50.000000 Sphere.744
+tmprt 50.000000 Sphere.743
+tmprt 50.000000 Sphere.742
+tmprt 50.000000 Sphere.741
+tmprt 50.000000 Sphere.740
+tmprt 50.000000 Sphere.739
+tmprt 50.000000 Sphere.738
+tmprt 50.000000 Sphere.737
+tmprt 50.000000 Sphere.736
+tmprt 50.000000 Sphere.735
+tmprt 50.000000 Sphere.734
+tmprt 50.000000 Sphere.733
+tmprt 50.000000 Sphere.732
+tmprt 50.000000 Sphere.731
+tmprt 50.000000 Sphere.730
+tmprt 50.000000 Sphere.729
+tmprt 50.000000 Sphere.728
+tmprt 50.000000 Sphere.727
+tmprt 50.000000 Sphere.726
+tmprt 50.000000 Sphere.725
+tmprt 50.000000 Sphere.724
+tmprt 50.000000 Sphere.723
+tmprt 50.000000 Sphere.722
+tmprt 50.000000 Sphere.721
+tmprt 50.000000 Sphere.720
+tmprt 50.000000 Sphere.719
+tmprt 50.000000 Sphere.718
+tmprt 50.000000 Sphere.717
+tmprt 50.000000 Sphere.716
+tmprt 50.000000 Sphere.715
+tmprt 50.000000 Sphere.714
+tmprt 50.000000 Sphere.713
+tmprt 50.000000 Sphere.712
+tmprt 50.000000 Sphere.711
+tmprt 50.000000 Sphere.710
+tmprt 50.000000 Sphere.709
+tmprt 50.000000 Sphere.708
+tmprt 50.000000 Sphere.707
+tmprt 50.000000 Sphere.706
+tmprt 50.000000 Sphere.705
+tmprt 50.000000 Sphere.704
+tmprt 50.000000 Sphere.703
+tmprt 50.000000 Sphere.702
+tmprt 50.000000 Sphere.701
+tmprt 50.000000 Sphere.700
+tmprt 50.000000 Sphere.699
+tmprt 50.000000 Sphere.698
+tmprt 50.000000 Sphere.697
+tmprt 50.000000 Sphere.696
+tmprt 50.000000 Sphere.695
+tmprt 50.000000 Sphere.694
+tmprt 50.000000 Sphere.693
+tmprt 50.000000 Sphere.692
+tmprt 50.000000 Sphere.691
+tmprt 50.000000 Sphere.690
+tmprt 50.000000 Sphere.689
+tmprt 50.000000 Sphere.688
+tmprt 50.000000 Sphere.687
+tmprt 50.000000 Sphere.686
+tmprt 50.000000 Sphere.685
+tmprt 50.000000 Sphere.684
+tmprt 50.000000 Sphere.683
+tmprt 50.000000 Sphere.682
+tmprt 50.000000 Sphere.681
+tmprt 50.000000 Sphere.680
+tmprt 50.000000 Sphere.679
+tmprt 50.000000 Sphere.678
+tmprt 50.000000 Sphere.677
+tmprt 50.000000 Sphere.676
+tmprt 50.000000 Sphere.675
+tmprt 50.000000 Sphere.674
+tmprt 50.000000 Sphere.673
+tmprt 50.000000 Sphere.672
+tmprt 50.000000 Sphere.671
+tmprt 50.000000 Sphere.670
+tmprt 50.000000 Sphere.669
+tmprt 50.000000 Sphere.668
+tmprt 50.000000 Sphere.667
+tmprt 50.000000 Sphere.666
+tmprt 50.000000 Sphere.665
+tmprt 50.000000 Sphere.664
+tmprt 50.000000 Sphere.663
+tmprt 50.000000 Sphere.662
+tmprt 50.000000 Sphere.661
+tmprt 50.000000 Sphere.660
+tmprt 50.000000 Sphere.659
+tmprt 50.000000 Sphere.658
+tmprt 50.000000 Sphere.657
+tmprt 50.000000 Sphere.656
+tmprt 50.000000 Sphere.655
+tmprt 50.000000 Sphere.654
+tmprt 50.000000 Sphere.653
+tmprt 50.000000 Sphere.652
+tmprt 50.000000 Sphere.651
+tmprt 50.000000 Sphere.650
+tmprt 50.000000 Sphere.649
+tmprt 50.000000 Sphere.648
+tmprt 50.000000 Sphere.647
+tmprt 50.000000 Sphere.646
+tmprt 50.000000 Sphere.645
+tmprt 50.000000 Sphere.644
+tmprt 50.000000 Sphere.643
+tmprt 50.000000 Sphere.642
+tmprt 50.000000 Sphere.641
+tmprt 50.000000 Sphere.640
+tmprt 50.000000 Sphere.639
+tmprt 50.000000 Sphere.638
+tmprt 50.000000 Sphere.637
+tmprt 50.000000 Sphere.636
+tmprt 50.000000 Sphere.635
+tmprt 50.000000 Sphere.634
+tmprt 50.000000 Sphere.633
+tmprt 50.000000 Sphere.632
+tmprt 50.000000 Sphere.631
+tmprt 50.000000 Sphere.630
+tmprt 50.000000 Sphere.629
+tmprt 50.000000 Sphere.628
+tmprt 50.000000 Sphere.627
+tmprt 50.000000 Sphere.626
+tmprt 50.000000 Sphere.625
+tmprt 50.000000 Sphere.624
+tmprt 50.000000 Sphere.623
+tmprt 50.000000 Sphere.622
+tmprt 50.000000 Sphere.621
+tmprt 50.000000 Sphere.620
+tmprt 50.000000 Sphere.619
+tmprt 50.000000 Sphere.618
+tmprt 50.000000 Sphere.617
+tmprt 50.000000 Sphere.616
+tmprt 50.000000 Sphere.615
+tmprt 50.000000 Sphere.614
+tmprt 50.000000 Sphere.613
+tmprt 50.000000 Sphere.612
+tmprt 50.000000 Sphere.611
+tmprt 50.000000 Sphere.610
+tmprt 50.000000 Sphere.609
+tmprt 50.000000 Sphere.608
+tmprt 50.000000 Sphere.607
+tmprt 50.000000 Sphere.606
+tmprt 50.000000 Sphere.605
+tmprt 50.000000 Sphere.604
+tmprt 50.000000 Sphere.603
+tmprt 50.000000 Sphere.602
+tmprt 50.000000 Sphere.601
+tmprt 50.000000 Sphere.600
+tmprt 50.000000 Sphere.599
+tmprt 50.000000 Sphere.598
+tmprt 50.000000 Sphere.597
+tmprt 50.000000 Sphere.596
+tmprt 50.000000 Sphere.595
+tmprt 50.000000 Sphere.594
+tmprt 50.000000 Sphere.593
+tmprt 50.000000 Sphere.592
+tmprt 50.000000 Sphere.591
+tmprt 50.000000 Sphere.590
+tmprt 50.000000 Sphere.589
+tmprt 50.000000 Sphere.588
+tmprt 50.000000 Sphere.587
+tmprt 50.000000 Sphere.586
+tmprt 50.000000 Sphere.585
+tmprt 50.000000 Sphere.584
+tmprt 50.000000 Sphere.583
+tmprt 50.000000 Sphere.582
+tmprt 50.000000 Sphere.581
+tmprt 50.000000 Sphere.580
+tmprt 50.000000 Sphere.579
+tmprt 50.000000 Sphere.578
+tmprt 50.000000 Sphere.577
+tmprt 50.000000 Sphere.576
+tmprt 50.000000 Sphere.575
+tmprt 50.000000 Sphere.574
+tmprt 50.000000 Sphere.573
+tmprt 50.000000 Sphere.572
+tmprt 50.000000 Sphere.571
+tmprt 50.000000 Sphere.570
+tmprt 50.000000 Sphere.569
+tmprt 50.000000 Sphere.568
+tmprt 50.000000 Sphere.567
+tmprt 50.000000 Sphere.566
+tmprt 50.000000 Sphere.565
+tmprt 50.000000 Sphere.564
+tmprt 50.000000 Sphere.563
+tmprt 50.000000 Sphere.562
+tmprt 50.000000 Sphere.561
+tmprt 50.000000 Sphere.560
+tmprt 50.000000 Sphere.559
+tmprt 50.000000 Sphere.558
+tmprt 50.000000 Sphere.557
+tmprt 50.000000 Sphere.556
+tmprt 50.000000 Sphere.555
+tmprt 50.000000 Sphere.554
+tmprt 50.000000 Sphere.553
+tmprt 50.000000 Sphere.552
+tmprt 50.000000 Sphere.551
+tmprt 50.000000 Sphere.550
+tmprt 50.000000 Sphere.549
+tmprt 50.000000 Sphere.548
+tmprt 50.000000 Sphere.547
+tmprt 50.000000 Sphere.546
+tmprt 50.000000 Sphere.545
+tmprt 50.000000 Sphere.544
+tmprt 50.000000 Sphere.543
+tmprt 50.000000 Sphere.542
+tmprt 50.000000 Sphere.541
+tmprt 50.000000 Sphere.540
+tmprt 50.000000 Sphere.539
+tmprt 50.000000 Sphere.538
+tmprt 50.000000 Sphere.537
+tmprt 50.000000 Sphere.536
+tmprt 50.000000 Sphere.535
+tmprt 50.000000 Sphere.534
+tmprt 50.000000 Sphere.533
+tmprt 50.000000 Sphere.532
+tmprt 50.000000 Sphere.531
+tmprt 50.000000 Sphere.530
+tmprt 50.000000 Sphere.529
+tmprt 50.000000 Sphere.528
+tmprt 50.000000 Sphere.527
+tmprt 50.000000 Sphere.526
+tmprt 50.000000 Sphere.525
+tmprt 50.000000 Sphere.524
+tmprt 50.000000 Sphere.523
+tmprt 50.000000 Sphere.522
+tmprt 50.000000 Sphere.521
+tmprt 50.000000 Sphere.520
+tmprt 50.000000 Sphere.519
+tmprt 50.000000 Sphere.518
+tmprt 50.000000 Sphere.517
+tmprt 50.000000 Sphere.516
+tmprt 50.000000 Sphere.515
+tmprt 50.000000 Sphere.514
+tmprt 50.000000 Sphere.513
+tmprt 50.000000 Sphere.512
+tmprt 50.000000 Sphere.511
+tmprt 50.000000 Sphere.510
+tmprt 50.000000 Sphere.509
+tmprt 50.000000 Sphere.508
+tmprt 50.000000 Sphere.507
+tmprt 50.000000 Sphere.506
+tmprt 50.000000 Sphere.505
+tmprt 50.000000 Sphere.504
+tmprt 50.000000 Sphere.503
+tmprt 50.000000 Sphere.502
+tmprt 50.000000 Sphere.501
+tmprt 50.000000 Sphere.500
+tmprt 50.000000 Sphere.499
+tmprt 50.000000 Sphere.498
+tmprt 50.000000 Sphere.497
+tmprt 50.000000 Sphere.496
+tmprt 50.000000 Sphere.495
+tmprt 50.000000 Sphere.494
+tmprt 50.000000 Sphere.493
+tmprt 50.000000 Sphere.492
+tmprt 50.000000 Sphere.491
+tmprt 50.000000 Sphere.490
+tmprt 50.000000 Sphere.489
+tmprt 50.000000 Sphere.488
+tmprt 50.000000 Sphere.487
+tmprt 50.000000 Sphere.486
+tmprt 50.000000 Sphere.485
+tmprt 50.000000 Sphere.484
+tmprt 50.000000 Sphere.483
+tmprt 50.000000 Sphere.482
+tmprt 50.000000 Sphere.481
+tmprt 50.000000 Sphere.480
+tmprt 50.000000 Sphere.479
+tmprt 50.000000 Sphere.478
+tmprt 50.000000 Sphere.477
+tmprt 50.000000 Sphere.476
+tmprt 50.000000 Sphere.475
+tmprt 50.000000 Sphere.474
+tmprt 50.000000 Sphere.473
+tmprt 50.000000 Sphere.472
+tmprt 50.000000 Sphere.471
+tmprt 50.000000 Sphere.470
+tmprt 50.000000 Sphere.469
+tmprt 50.000000 Sphere.468
+tmprt 50.000000 Sphere.467
+tmprt 50.000000 Sphere.466
+tmprt 50.000000 Sphere.465
+tmprt 50.000000 Sphere.464
+tmprt 50.000000 Sphere.463
+tmprt 50.000000 Sphere.462
+tmprt 50.000000 Sphere.461
+tmprt 50.000000 Sphere.460
+tmprt 50.000000 Sphere.459
+tmprt 50.000000 Sphere.458
+tmprt 50.000000 Sphere.457
+tmprt 50.000000 Sphere.456
+tmprt 50.000000 Sphere.455
+tmprt 50.000000 Sphere.454
+tmprt 50.000000 Sphere.453
+tmprt 50.000000 Sphere.452
+tmprt 50.000000 Sphere.451
+tmprt 50.000000 Sphere.450
+tmprt 50.000000 Sphere.449
+tmprt 50.000000 Sphere.448
+tmprt 50.000000 Sphere.447
+tmprt 50.000000 Sphere.446
+tmprt 50.000000 Sphere.445
+tmprt 50.000000 Sphere.444
+tmprt 50.000000 Sphere.443
+tmprt 50.000000 Sphere.442
+tmprt 50.000000 Sphere.441
+tmprt 50.000000 Sphere.440
+tmprt 50.000000 Sphere.439
+tmprt 50.000000 Sphere.438
+tmprt 50.000000 Sphere.437
+tmprt 50.000000 Sphere.436
+tmprt 50.000000 Sphere.435
+tmprt 50.000000 Sphere.434
+tmprt 50.000000 Sphere.433
+tmprt 50.000000 Sphere.432
+tmprt 50.000000 Sphere.431
+tmprt 50.000000 Sphere.430
+tmprt 50.000000 Sphere.429
+tmprt 50.000000 Sphere.428
+tmprt 50.000000 Sphere.427
+tmprt 50.000000 Sphere.426
+tmprt 50.000000 Sphere.425
+tmprt 50.000000 Sphere.424
+tmprt 50.000000 Sphere.423
+tmprt 50.000000 Sphere.422
+tmprt 50.000000 Sphere.421
+tmprt 50.000000 Sphere.420
+tmprt 50.000000 Sphere.419
+tmprt 50.000000 Sphere.418
+tmprt 50.000000 Sphere.417
+tmprt 50.000000 Sphere.416
+tmprt 50.000000 Sphere.415
+tmprt 50.000000 Sphere.414
+tmprt 50.000000 Sphere.413
+tmprt 50.000000 Sphere.412
+tmprt 50.000000 Sphere.411
+tmprt 50.000000 Sphere.410
+tmprt 50.000000 Sphere.409
+tmprt 50.000000 Sphere.408
+tmprt 50.000000 Sphere.407
+tmprt 50.000000 Sphere.406
+tmprt 50.000000 Sphere.405
+tmprt 50.000000 Sphere.404
+tmprt 50.000000 Sphere.403
+tmprt 50.000000 Sphere.402
+tmprt 50.000000 Sphere.401
+tmprt 50.000000 Sphere.400
+tmprt 50.000000 Sphere.399
+tmprt 50.000000 Sphere.398
+tmprt 50.000000 Sphere.397
+tmprt 50.000000 Sphere.396
+tmprt 50.000000 Sphere.395
+tmprt 50.000000 Sphere.394
+tmprt 50.000000 Sphere.393
+tmprt 50.000000 Sphere.392
+tmprt 50.000000 Sphere.391
+tmprt 50.000000 Sphere.390
+tmprt 50.000000 Sphere.389
+tmprt 50.000000 Sphere.388
+tmprt 50.000000 Sphere.387
+tmprt 50.000000 Sphere.386
+tmprt 50.000000 Sphere.385
+tmprt 50.000000 Sphere.384
+tmprt 50.000000 Sphere.383
+tmprt 50.000000 Sphere.382
+tmprt 50.000000 Sphere.381
+tmprt 50.000000 Sphere.380
+tmprt 50.000000 Sphere.379
+tmprt 50.000000 Sphere.378
+tmprt 50.000000 Sphere.377
+tmprt 50.000000 Sphere.376
+tmprt 50.000000 Sphere.375
+tmprt 50.000000 Sphere.374
+tmprt 50.000000 Sphere.373
+tmprt 50.000000 Sphere.372
+tmprt 50.000000 Sphere.371
+tmprt 50.000000 Sphere.370
+tmprt 50.000000 Sphere.369
+tmprt 50.000000 Sphere.368
+tmprt 50.000000 Sphere.367
+tmprt 50.000000 Sphere.366
+tmprt 50.000000 Sphere.365
+tmprt 50.000000 Sphere.364
+tmprt 50.000000 Sphere.363
+tmprt 50.000000 Sphere.362
+tmprt 50.000000 Sphere.361
+tmprt 50.000000 Sphere.360
+tmprt 50.000000 Sphere.359
+tmprt 50.000000 Sphere.358
+tmprt 50.000000 Sphere.357
+tmprt 50.000000 Sphere.356
+tmprt 50.000000 Sphere.355
+tmprt 50.000000 Sphere.354
+tmprt 50.000000 Sphere.353
+tmprt 50.000000 Sphere.352
+tmprt 50.000000 Sphere.351
+tmprt 50.000000 Sphere.350
+tmprt 50.000000 Sphere.349
+tmprt 50.000000 Sphere.348
+tmprt 50.000000 Sphere.347
+tmprt 50.000000 Sphere.346
+tmprt 50.000000 Sphere.345
+tmprt 50.000000 Sphere.344
+tmprt 50.000000 Sphere.343
+tmprt 50.000000 Sphere.342
+tmprt 50.000000 Sphere.341
+tmprt 50.000000 Sphere.340
+tmprt 50.000000 Sphere.339
+tmprt 50.000000 Sphere.338
+tmprt 50.000000 Sphere.337
+tmprt 50.000000 Sphere.336
+tmprt 50.000000 Sphere.335
+tmprt 50.000000 Sphere.334
+tmprt 50.000000 Sphere.333
+tmprt 50.000000 Sphere.332
+tmprt 50.000000 Sphere.331
+tmprt 50.000000 Sphere.330
+tmprt 50.000000 Sphere.329
+tmprt 50.000000 Sphere.328
+tmprt 50.000000 Sphere.327
+tmprt 50.000000 Sphere.326
+tmprt 50.000000 Sphere.325
+tmprt 50.000000 Sphere.324
+tmprt 50.000000 Sphere.323
+tmprt 50.000000 Sphere.322
+tmprt 50.000000 Sphere.321
+tmprt 50.000000 Sphere.320
+tmprt 50.000000 Sphere.319
+tmprt 50.000000 Sphere.318
+tmprt 50.000000 Sphere.317
+tmprt 50.000000 Sphere.316
+tmprt 50.000000 Sphere.315
+tmprt 50.000000 Sphere.314
+tmprt 50.000000 Sphere.313
+tmprt 50.000000 Sphere.312
+tmprt 50.000000 Sphere.311
+tmprt 50.000000 Sphere.310
+tmprt 50.000000 Sphere.309
+tmprt 50.000000 Sphere.308
+tmprt 50.000000 Sphere.307
+tmprt 50.000000 Sphere.306
+tmprt 50.000000 Sphere.305
+tmprt 50.000000 Sphere.304
+tmprt 50.000000 Sphere.303
+tmprt 50.000000 Sphere.302
+tmprt 50.000000 Sphere.301
+tmprt 50.000000 Sphere.300
+tmprt 50.000000 Sphere.299
+tmprt 50.000000 Sphere.298
+tmprt 50.000000 Sphere.297
+tmprt 50.000000 Sphere.296
+tmprt 50.000000 Sphere.295
+tmprt 50.000000 Sphere.294
+tmprt 50.000000 Sphere.293
+tmprt 50.000000 Sphere.292
+tmprt 50.000000 Sphere.291
+tmprt 50.000000 Sphere.290
+tmprt 50.000000 Sphere.289
+tmprt 50.000000 Sphere.288
+tmprt 50.000000 Sphere.287
+tmprt 50.000000 Sphere.286
+tmprt 50.000000 Sphere.285
+tmprt 50.000000 Sphere.284
+tmprt 50.000000 Sphere.283
+tmprt 50.000000 Sphere.282
+tmprt 50.000000 Sphere.281
+tmprt 50.000000 Sphere.280
+tmprt 50.000000 Sphere.279
+tmprt 50.000000 Sphere.278
+tmprt 50.000000 Sphere.277
+tmprt 50.000000 Sphere.276
+tmprt 50.000000 Sphere.275
+tmprt 50.000000 Sphere.274
+tmprt 50.000000 Sphere.273
+tmprt 50.000000 Sphere.272
+tmprt 50.000000 Sphere.271
+tmprt 50.000000 Sphere.270
+tmprt 50.000000 Sphere.269
+tmprt 50.000000 Sphere.268
+tmprt 50.000000 Sphere.267
+tmprt 50.000000 Sphere.266
+tmprt 50.000000 Sphere.265
+tmprt 50.000000 Sphere.264
+tmprt 50.000000 Sphere.263
+tmprt 50.000000 Sphere.262
+tmprt 50.000000 Sphere.261
+tmprt 50.000000 Sphere.260
+tmprt 50.000000 Sphere.259
+tmprt 50.000000 Sphere.258
+tmprt 50.000000 Sphere.257
+tmprt 50.000000 Sphere.256
+tmprt 50.000000 Sphere.255
+tmprt 50.000000 Sphere.254
+tmprt 50.000000 Sphere.253
+tmprt 50.000000 Sphere.252
+tmprt 50.000000 Sphere.251
+tmprt 50.000000 Sphere.250
+tmprt 50.000000 Sphere.249
+tmprt 50.000000 Sphere.248
+tmprt 50.000000 Sphere.247
+tmprt 50.000000 Sphere.246
+tmprt 50.000000 Sphere.245
+tmprt 50.000000 Sphere.244
+tmprt 50.000000 Sphere.243
+tmprt 50.000000 Sphere.242
+tmprt 50.000000 Sphere.241
+tmprt 50.000000 Sphere.240
+tmprt 50.000000 Sphere.239
+tmprt 50.000000 Sphere.238
+tmprt 50.000000 Sphere.237
+tmprt 50.000000 Sphere.236
+tmprt 50.000000 Sphere.235
+tmprt 50.000000 Sphere.234
+tmprt 50.000000 Sphere.233
+tmprt 50.000000 Sphere.232
+tmprt 50.000000 Sphere.231
+tmprt 50.000000 Sphere.230
+tmprt 50.000000 Sphere.229
+tmprt 50.000000 Sphere.228
+tmprt 50.000000 Sphere.227
+tmprt 50.000000 Sphere.226
+tmprt 50.000000 Sphere.225
+tmprt 50.000000 Sphere.224
+tmprt 50.000000 Sphere.223
+tmprt 50.000000 Sphere.222
+tmprt 50.000000 Sphere.221
+tmprt 50.000000 Sphere.220
+tmprt 50.000000 Sphere.219
+tmprt 50.000000 Sphere.218
+tmprt 50.000000 Sphere.217
+tmprt 50.000000 Sphere.216
+tmprt 50.000000 Sphere.215
+tmprt 50.000000 Sphere.214
+tmprt 50.000000 Sphere.213
+tmprt 50.000000 Sphere.212
+tmprt 50.000000 Sphere.211
+tmprt 50.000000 Sphere.210
+tmprt 50.000000 Sphere.209
+tmprt 50.000000 Sphere.208
+tmprt 50.000000 Sphere.207
+tmprt 50.000000 Sphere.206
+tmprt 50.000000 Sphere.205
+tmprt 50.000000 Sphere.204
+tmprt 50.000000 Sphere.203
+tmprt 50.000000 Sphere.202
+tmprt 50.000000 Sphere.201
+tmprt 50.000000 Sphere.200
+tmprt 50.000000 Sphere.199
+tmprt 50.000000 Sphere.198
+tmprt 50.000000 Sphere.197
+tmprt 50.000000 Sphere.196
+tmprt 50.000000 Sphere.195
+tmprt 50.000000 Sphere.194
+tmprt 50.000000 Sphere.193
+tmprt 50.000000 Sphere.192
+tmprt 50.000000 Sphere.191
+tmprt 50.000000 Sphere.190
+tmprt 50.000000 Sphere.189
+tmprt 50.000000 Sphere.188
+tmprt 50.000000 Sphere.187
+tmprt 50.000000 Sphere.186
+tmprt 50.000000 Sphere.185
+tmprt 50.000000 Sphere.184
+tmprt 50.000000 Sphere.183
+tmprt 50.000000 Sphere.182
+tmprt 50.000000 Sphere.181
+tmprt 50.000000 Sphere.180
+tmprt 50.000000 Sphere.179
+tmprt 50.000000 Sphere.178
+tmprt 50.000000 Sphere.177
+tmprt 50.000000 Sphere.176
+tmprt 50.000000 Sphere.175
+tmprt 50.000000 Sphere.174
+tmprt 50.000000 Sphere.173
+tmprt 50.000000 Sphere.172
+tmprt 50.000000 Sphere.171
+tmprt 50.000000 Sphere.170
+tmprt 50.000000 Sphere.169
+tmprt 50.000000 Sphere.168
+tmprt 50.000000 Sphere.167
+tmprt 50.000000 Sphere.166
+tmprt 50.000000 Sphere.165
+tmprt 50.000000 Sphere.164
+tmprt 50.000000 Sphere.163
+tmprt 50.000000 Sphere.162
+tmprt 50.000000 Sphere.161
+tmprt 50.000000 Sphere.160
+tmprt 50.000000 Sphere.159
+tmprt 50.000000 Sphere.158
+tmprt 50.000000 Sphere.157
+tmprt 50.000000 Sphere.156
+tmprt 50.000000 Sphere.155
+tmprt 50.000000 Sphere.154
+tmprt 50.000000 Sphere.153
+tmprt 50.000000 Sphere.152
+tmprt 50.000000 Sphere.151
+tmprt 50.000000 Sphere.150
+tmprt 50.000000 Sphere.149
+tmprt 50.000000 Sphere.148
+tmprt 50.000000 Sphere.147
+tmprt 50.000000 Sphere.146
+tmprt 50.000000 Sphere.145
+tmprt 50.000000 Sphere.144
+tmprt 50.000000 Sphere.143
+tmprt 50.000000 Sphere.142
+tmprt 50.000000 Sphere.141
+tmprt 50.000000 Sphere.140
+tmprt 50.000000 Sphere.139
+tmprt 50.000000 Sphere.138
+tmprt 50.000000 Sphere.137
+tmprt 50.000000 Sphere.136
+tmprt 50.000000 Sphere.135
+tmprt 50.000000 Sphere.134
+tmprt 50.000000 Sphere.133
+tmprt 50.000000 Sphere.132
+tmprt 50.000000 Sphere.131
+tmprt 50.000000 Sphere.130
+tmprt 50.000000 Sphere.129
+tmprt 50.000000 Sphere.128
+tmprt 50.000000 Sphere.127
+tmprt 50.000000 Sphere.126
+tmprt 50.000000 Sphere.125
+tmprt 50.000000 Sphere.124
+tmprt 50.000000 Sphere.123
+tmprt 50.000000 Sphere.122
+tmprt 50.000000 Sphere.121
+tmprt 50.000000 Sphere.120
+tmprt 50.000000 Sphere.119
+tmprt 50.000000 Sphere.118
+tmprt 50.000000 Sphere.117
+tmprt 50.000000 Sphere.116
+tmprt 50.000000 Sphere.115
+tmprt 50.000000 Sphere.114
+tmprt 50.000000 Sphere.113
+tmprt 50.000000 Sphere.112
+tmprt 50.000000 Sphere.111
+tmprt 50.000000 Sphere.110
+tmprt 50.000000 Sphere.109
+tmprt 50.000000 Sphere.108
+tmprt 50.000000 Sphere.107
+tmprt 50.000000 Sphere.106
+tmprt 50.000000 Sphere.105
+tmprt 50.000000 Sphere.104
+tmprt 50.000000 Sphere.103
+tmprt 50.000000 Sphere.102
+tmprt 50.000000 Sphere.101
+tmprt 50.000000 Sphere.100
+tmprt 50.000000 Sphere.099
+tmprt 50.000000 Sphere.098
+tmprt 50.000000 Sphere.097
+tmprt 50.000000 Sphere.096
+tmprt 50.000000 Sphere.095
+tmprt 50.000000 Sphere.094
+tmprt 50.000000 Sphere.093
+tmprt 50.000000 Sphere.092
+tmprt 50.000000 Sphere.091
+tmprt 50.000000 Sphere.090
+tmprt 50.000000 Sphere.089
+tmprt 50.000000 Sphere.088
+tmprt 50.000000 Sphere.087
+tmprt 50.000000 Sphere.086
+tmprt 50.000000 Sphere.085
+tmprt 50.000000 Sphere.084
+tmprt 50.000000 Sphere.083
+tmprt 50.000000 Sphere.082
+tmprt 50.000000 Sphere.081
+tmprt 50.000000 Sphere.080
+tmprt 50.000000 Sphere.079
+tmprt 50.000000 Sphere.078
+tmprt 50.000000 Sphere.077
+tmprt 50.000000 Sphere.076
+tmprt 50.000000 Sphere.075
+tmprt 50.000000 Sphere.074
+tmprt 50.000000 Sphere.073
+tmprt 50.000000 Sphere.072
+tmprt 50.000000 Sphere.071
+tmprt 50.000000 Sphere.070
+tmprt 50.000000 Sphere.069
+tmprt 50.000000 Sphere.068
+tmprt 50.000000 Sphere.067
+tmprt 50.000000 Sphere.066
+tmprt 50.000000 Sphere.065
+tmprt 50.000000 Sphere.064
+tmprt 50.000000 Sphere.063
+tmprt 50.000000 Sphere.062
+tmprt 50.000000 Sphere.061
+tmprt 50.000000 Sphere.060
+tmprt 50.000000 Sphere.059
+tmprt 50.000000 Sphere.058
+tmprt 50.000000 Sphere.057
+tmprt 50.000000 Sphere.056
+tmprt 50.000000 Sphere.055
+tmprt 50.000000 Sphere.054
+tmprt 50.000000 Sphere.053
+tmprt 50.000000 Sphere.052
+tmprt 50.000000 Sphere.051
+tmprt 50.000000 Sphere.050
+tmprt 50.000000 Sphere.049
+tmprt 50.000000 Sphere.048
+tmprt 50.000000 Sphere.047
+tmprt 50.000000 Sphere.046
+tmprt 50.000000 Sphere.045
+tmprt 50.000000 Sphere.044
+tmprt 50.000000 Sphere.043
+tmprt 50.000000 Sphere.042
+tmprt 50.000000 Sphere.041
+tmprt 50.000000 Sphere.040
+tmprt 50.000000 Sphere.039
+tmprt 50.000000 Sphere.038
+tmprt 50.000000 Sphere.037
+tmprt 50.000000 Sphere.036
+tmprt 50.000000 Sphere.035
+tmprt 50.000000 Sphere.034
+tmprt 50.000000 Sphere.033
+tmprt 50.000000 Sphere.032
+tmprt 50.000000 Sphere.031
+tmprt 50.000000 Sphere.030
+tmprt 50.000000 Sphere.029
+tmprt 50.000000 Sphere.028
+tmprt 50.000000 Sphere.027
+tmprt 50.000000 Sphere.026
+tmprt 50.000000 Sphere.025
+tmprt 50.000000 Sphere.024
+tmprt 50.000000 Sphere.023
+tmprt 50.000000 Sphere.022
+tmprt 50.000000 Sphere.021
+tmprt 50.000000 Sphere.020
+tmprt 50.000000 Sphere.019
+tmprt 50.000000 Sphere.018
+tmprt 50.000000 Sphere.017
+tmprt 50.000000 Sphere.016
+tmprt 50.000000 Sphere.015
+tmprt 50.000000 Sphere.014
+tmprt 50.000000 Sphere.013
+tmprt 50.000000 Sphere.012
+tmprt 50.000000 Sphere.011
+tmprt 50.000000 Sphere.010
+tmprt 50.000000 Sphere.009
+tmprt 50.000000 Sphere.008
+tmprt 50.000000 Sphere.007
+tmprt 50.000000 Sphere.006
+tmprt 50.000000 Sphere.005
+tmprt 50.000000 Sphere.004
+tmprt 50.000000 Sphere.003
+tmprt 50.000000 Sphere.002
+tmprt 50.000000 Sphere.001
+tmprt 50.000000 Sphere
+tmprt 300.000000 Icosphere.080
+

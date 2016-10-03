@@ -24,7 +24,7 @@ rear.absorbance 1.000000
 rear.transmittance 0.000000
 rear.emissivity 0.000000
 
-newmtl consumer
+newmtl Алюминий_полированный
 Ns 96.078431
 Ka 1.000000 1.000000 1.000000
 Kd 0.640000 0.640000 0.640000
@@ -33,22 +33,22 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-shell.density 8960.000000
-shell.heat_capacity 38.599998
-shell.thermal_conductivity 0.000000
+shell.density 2712.000000
+shell.heat_capacity 903.000000
+shell.thermal_conductivity 237.000000
 shell.thickness 0.010000
-front.specular_reflectance 0.000000
-front.diffuse_reflectance 0.000000
-front.absorbance 1.000000
+front.specular_reflectance 0.900000
+front.diffuse_reflectance 0.050000
+front.absorbance 0.050000
 front.transmittance 0.000000
-front.emissivity 0.000000
-rear.specular_reflectance 0.000000
-rear.diffuse_reflectance 0.000000
-rear.absorbance 1.000000
+front.emissivity 0.090000
+rear.specular_reflectance 0.900000
+rear.diffuse_reflectance 0.050000
+rear.absorbance 0.050000
 rear.transmittance 0.000000
-rear.emissivity 0.000000
+rear.emissivity 0.090000
 
-newmtl reflector
+newmtl Свинец_окисленный
 Ns 96.078431
 Ka 1.000000 1.000000 1.000000
 Kd 0.640000 0.640000 0.640000
@@ -57,17 +57,17 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-shell.density 8960.000000
-shell.heat_capacity 386.000000
-shell.thermal_conductivity 1401.000000
+shell.density 11340.000000
+shell.heat_capacity 1130.000000
+shell.thermal_conductivity 35.299999
 shell.thickness 0.010000
-front.specular_reflectance 1.000000
-front.diffuse_reflectance 0.000000
-front.absorbance 0.000000
+front.specular_reflectance 0.100000
+front.diffuse_reflectance 0.100000
+front.absorbance 0.800000
 front.transmittance 0.000000
-front.emissivity 0.000000
-rear.specular_reflectance 1.000000
-rear.diffuse_reflectance 0.000000
-rear.absorbance 0.000000
+front.emissivity 0.430000
+rear.specular_reflectance 0.100000
+rear.diffuse_reflectance 0.100000
+rear.absorbance 0.800000
 rear.transmittance 0.000000
-rear.emissivity 0.000000
+rear.emissivity 0.430000
