@@ -35,7 +35,7 @@
 
 void PrintUsage()
 {
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
+  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <report interval [1]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
 }
 
 int main(int argc, char* argv[])
@@ -51,7 +51,8 @@ int main(int argc, char* argv[])
   const char* result_name = "-";
   int n_rays = 1000 * 1000;
   int n_distant_rays = 50000;
-  int n_steps = 1000;
+  int n_steps = 10000;
+  float report_interval = 1.f;
   int type = RAY_CASTER_OPTIX;
   bool binary_output = false;
 
@@ -84,6 +85,10 @@ int main(int argc, char* argv[])
       break;
 
     case 7:
+      report_interval = (float)atof(argv[i]);
+      break;
+
+    case 8:
       if (strcmp("cuda", argv[i]) == 0)
         type = RAY_CASTER_ZGRID_CUDA;
       else if (strcmp("cpu", argv[i]) == 0)
@@ -101,7 +106,7 @@ int main(int argc, char* argv[])
       else
         return -RAY_CASTER_NOT_SUPPORTED;
 
-    case 8:
+    case 9:
       binary_output = strcmp("1", argv[i]) == 0;
       break;
     }
@@ -214,7 +219,11 @@ int main(int argc, char* argv[])
 
   FILE* result_file = result_name[0] == '-' ? stdout : fopen(result_name, "w");
 
+  float time = 0;
+  float temp = task->time_delta;
+  task->time_delta = 0;
   binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
+  task->time_delta = temp;
   
   StopWatchInterface *hTimer;
   sdkCreateTimer(&hTimer);
@@ -227,6 +236,7 @@ int main(int argc, char* argv[])
     return r;
   }
 
+  float prev_report_time = time;
   for (int step = 0; step < n_steps; ++step)
   {
     if ((r = system_calculate(solution, task)) < 0)
@@ -237,6 +247,23 @@ int main(int argc, char* argv[])
 
     radiance_equation::print_stats(radiance_stats);
 
+    time += task->time_delta;
+    if (time >= report_interval)
+    {
+      // Pain, meet ugly. Ugly, pain.
+      float temp = task->time_delta;
+      task->time_delta = time - prev_report_time;
+      binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
+      task->time_delta = temp;
+
+      time -= report_interval;
+      prev_report_time = time;
+    }
+  }
+
+  if (prev_report_time != time)
+  {
+    task->time_delta = time - prev_report_time;
     binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
   }
   
@@ -257,4 +284,3 @@ int main(int argc, char* argv[])
   
 	return 0;
 }
-
