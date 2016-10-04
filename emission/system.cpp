@@ -22,6 +22,7 @@
 #include "malley_cpu.h"
 #include "parallel_rays_cpu.h"
 #include "system.h"
+#include "../cuda_emission/cuda_emission.h"
 #include <cstdlib>
 
 namespace emission
@@ -62,6 +63,14 @@ namespace emission
 
     case EMISSION_PARALLEL_RAYS_CPU:
       system = parallel_rays_emission_cpu::system_create();
+      break;
+
+    case EMISSION_MALLEY_CUDA:
+      system = cuda_malley_emission::system_create();
+      break;
+
+    case EMISSION_PARALLEL_RAYS_CUDA:
+      system = cuda_parallel_rays_emission::system_create();
       break;
 
     default:

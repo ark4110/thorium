@@ -114,6 +114,8 @@ namespace emission
 
   #define EMISSION_MALLEY_CPU 1
   #define EMISSION_PARALLEL_RAYS_CPU 2
+  #define EMISSION_MALLEY_CUDA 3
+  #define EMISSION_PARALLEL_RAYS_CUDA 4
 
   /**
    * @brief Factory method for calculator creation.

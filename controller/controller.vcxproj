@@ -155,6 +155,9 @@
     <ClCompile Include="controller.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\cuda_emission\cuda_emission.vcxproj">
+      <Project>{9a8c8cf8-f6e6-4228-a5d9-5fe3428de7db}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\cuda_ray_caster\cuda_ray_caster.vcxproj">
       <Project>{558b0343-7bd0-43f8-86ec-660021b420fe}</Project>
     </ProjectReference>

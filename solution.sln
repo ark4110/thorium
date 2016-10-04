@@ -54,6 +54,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "form_factors", "form_factor
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "optix_ray_caster", "optix_ray_caster\optix_ray_caster.vcxproj", "{61E56691-939B-434F-BCA1-57AA150B00AC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_emission", "cuda_emission\cuda_emission.vcxproj", "{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -181,6 +183,14 @@ Global
 		{61E56691-939B-434F-BCA1-57AA150B00AC}.Release|Win32.Build.0 = Release|Win32
 		{61E56691-939B-434F-BCA1-57AA150B00AC}.Release|x64.ActiveCfg = Release|x64
 		{61E56691-939B-434F-BCA1-57AA150B00AC}.Release|x64.Build.0 = Release|x64
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Debug|Win32.Build.0 = Debug|Win32
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Debug|x64.ActiveCfg = Debug|x64
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Debug|x64.Build.0 = Debug|x64
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|Win32.ActiveCfg = Release|Win32
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|Win32.Build.0 = Release|Win32
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|x64.ActiveCfg = Release|x64
+		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
