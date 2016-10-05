@@ -17,6 +17,10 @@
 #include "gtest/gtest.h"
 #include "test_scene.h"
 #include "emission/malley_cpu.h"
+#include "emission/parallel_rays_cpu.h"
+#include "thermal_solution/system.h"
+#include "thermal_equation/system.h"
+#include "thermal_equation/radiance_cpu.h"
 #include "math/operations.h"
 #include "math/triangle.h"
 #include "subject/objects.h"
@@ -38,7 +42,6 @@ class MalleyEmission : public Test
 public:
   MalleyEmission()
   {
-    Caster = ray_caster::system_create(RAY_CASTER_NAIVE_CPU);
     malley_cpu::params_t params;
     params.n_rays = 1;
     Emitter = emission::system_create(EngineType::ID, &params);
@@ -53,15 +56,11 @@ public:
   ~MalleyEmission()
   {
     system_free(Emitter);
-    system_free(Caster);
     scene_free(Scene);
   }
 
-  ray_caster::system_t* Caster;
   emission::system_t* Emitter;
   subject::scene_t* Scene;
-  subject::material_t Material;
-  subject::mesh_t Mesh;
 };
 
 typedef ::testing::Types<EngineType<EMISSION_MALLEY_CPU>, EngineType<EMISSION_MALLEY_CUDA>> MalleyEmissionTypes;
@@ -126,4 +125,112 @@ TYPED_TEST(MalleyEmission, DISABLED_LargeObject)
   free(temperatures);
 
   scene_free(scene);
+}
+
+
+template <typename EngineType>
+class ParallelEmission : public Test
+{
+public:
+  ParallelEmission()
+    : SourcesCount(0)
+  {
+  }
+
+  void AddSource(parallel_rays_emission_cpu::parallel_rays_source_t source)
+  {
+    Sources[SourcesCount++] = source;
+  }
+
+  float GetTemperatureDiff()
+  {
+    auto caster = ray_caster::system_create(RAY_CASTER_NAIVE_CPU);
+
+    auto scene = ToSubjectScene(MakeFloorScene());
+    AddMaterial(scene, subject::material_absolute_absorbance());
+    AddMesh(scene, { 0, 2, 0 });
+
+    parallel_rays_emission_cpu::params_t emitterParams;
+    emitterParams.n_sources = SourcesCount;
+    emitterParams.sources = Sources;
+    auto emitter = emission::system_create(EngineType::ID, &emitterParams);
+
+    radiance_equation::params_t equationParams = {};
+    equationParams.emitters = &emitter;
+    equationParams.n_emitters = 1;
+    equationParams.ray_caster = caster;
+    auto equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
+
+    thermal_solution::params_t solutionParams = { 1, &equation };
+    auto solution = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
+    
+    float* temperatures = (float*)malloc(sizeof(float));
+    temperatures[0] = 300;
+
+    system_set_scene(solution, scene, temperatures);
+
+    auto task = thermal_solution::task_create(scene->n_meshes);
+    task->time_delta = 1;
+    task->n_step = 1;
+    task->temperatures = temperatures;
+    task->time_delta = 1.f;
+
+    thermal_solution::system_calculate(solution, task);
+
+    float temperatureDiff = task->temperatures[0] - 300.f;
+    task_free(task);
+    system_free(solution);
+    system_free(equation);
+    system_free(emitter);
+    system_free(caster);
+    scene_free(scene);
+
+    return temperatureDiff;
+  }
+
+  int SourcesCount;
+  parallel_rays_emission_cpu::parallel_rays_source_t Sources[2];
+};
+
+typedef ::testing::Types<EngineType<EMISSION_PARALLEL_RAYS_CPU>, EngineType<EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
+
+TYPED_TEST_CASE(ParallelEmission, ParallelEmissionTypes);
+
+TYPED_TEST(ParallelEmission, TopSource)
+{
+  parallel_rays_emission_cpu::parallel_rays_source_t source;
+  source.n_rays = 10000;
+  source.power = 10;
+  source.direction = math::make_vec3(0, 0, -1);
+
+  AddSource(source);
+  float diff = GetTemperatureDiff();
+  ASSERT_NEAR(10, diff, 0.2f);
+}
+
+TYPED_TEST(ParallelEmission, SkewSource)
+{
+  parallel_rays_emission_cpu::parallel_rays_source_t source;
+  source.n_rays = 10000;
+  source.power = 10;
+  source.direction = math::make_vec3(0, -1, -1);
+
+  AddSource(source);
+  float diff = GetTemperatureDiff();
+  ASSERT_NEAR(5, diff, 0.2f);
+}
+
+TYPED_TEST(ParallelEmission, TwoSkewSource)
+{
+  parallel_rays_emission_cpu::parallel_rays_source_t source;
+  source.n_rays = 10000;
+  source.power = 10;
+  source.direction = math::make_vec3(0, -1, -1);
+  AddSource(source);
+
+  source.direction = math::make_vec3(-1, 0, 1);
+  AddSource(source);
+
+  float diff = GetTemperatureDiff();
+  ASSERT_NEAR(10, diff, 0.2f);
 }

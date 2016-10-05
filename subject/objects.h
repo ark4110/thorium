@@ -29,4 +29,6 @@ namespace subject
   mesh_t* tplane_grid_meshes(int cells_x, int cells_y);
   
   material_t material_Al(float thickness);
+
+  material_t material_absolute_absorbance();
 }

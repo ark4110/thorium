@@ -187,6 +187,15 @@ namespace subject
     return material;
   }
 
+  material_t material_absolute_absorbance()
+  {
+    optical_properties_t optical = black_material();
+    optical.absorbance = 1.f;
+    optical.emissivity = 0.f;
+    material_t material = { default_shell_properties(), optical, optical, "absolute_absorbance" };
+    return material;
+  }
+
   material_t material_Al(float thickness)
   {
     material_t result = { shell_Al(), optical_Al(), optical_Al(), "alliminuim" };
