@@ -227,16 +227,17 @@ namespace cuda_parallel_rays_emission
   using cuda_math::mat33;
   using cuda_math::ray_t;
 
-  struct context_t
-  {
-    mat33 rotation;
-    float3 origin;
+  struct source_params_t
+  { 
     float3 direction;
-
     int n_rays;
-    float radius;
-    float offset;
-    float ray_power;
+  };
+
+  struct context_t
+  { 
+    // Scene parameters
+    float3 origin; // bounding sphere center
+    float radius; // bounding sphere radius
 
     ray_t* rays;
 
@@ -244,5 +245,5 @@ namespace cuda_parallel_rays_emission
     curandStateMtgp32* HSGenTheta;
   };
 
-  __global__ void emit_parallel_rays(context_t* ctx, ray_t* rays);
+  __global__ void emit_parallel_rays(context_t* ctx, source_params_t params, ray_t* rays);
 }

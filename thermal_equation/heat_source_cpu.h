@@ -30,7 +30,7 @@ namespace heat_source_equation
     int mesh_idx;
 
     /// @note Power value may be negative. Then heat source become a heat sink.
-    float power;
+    float power; // W
   };
 
   struct params_t

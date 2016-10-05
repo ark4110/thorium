@@ -83,26 +83,30 @@ namespace parallel_rays_emission_cpu
 
   int calculate(cpu_system_t* system, emission::task_t* task)
   {
-    int n_rays = system->params.n_rays;
-    int n_input_rays = task_grow(task, n_rays);
-
-    float radius = system->bsphere.radius * 1.1f;
-    float offset = 1.3f + radius;
-    float ray_power = system->params.power * (float(M_PI) * radius * radius) / n_rays;
-
-    math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), system->params.direction);
-
-    for (int r = 0; r != n_rays; ++r)
+    for (int source_idx = 0; source_idx != system->params.n_sources; ++source_idx)
     {
-      float radius_dice = radius * sqrtf(system->Distr_R(system->TPGenR));
-      float theta_dice = system->Distr_Theta(system->TPGenTheta);
-      float x = radius_dice * cosf(theta_dice);
-      float y = radius_dice * sinf(theta_dice);
-      math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
-      math::vec3 direction = system->params.direction;
+      parallel_rays_source_t& source = system->params.sources[source_idx];
+      int n_rays = source.n_rays;
+      int n_input_rays = task_grow(task, n_rays);
 
-      task->rays->ray[n_input_rays + r] = { origin, direction };
-      task->power[n_input_rays + r] = ray_power;
+      float radius = system->bsphere.radius * 1.1f;
+      float offset = 1.3f + radius;
+      float ray_power = source.power * (float(M_PI) * radius * radius) / n_rays;
+
+      math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), source.direction);
+
+      for (int r = 0; r != n_rays; ++r)
+      {
+        float radius_dice = radius * sqrtf(system->Distr_R(system->TPGenR));
+        float theta_dice = system->Distr_Theta(system->TPGenTheta);
+        float x = radius_dice * cosf(theta_dice);
+        float y = radius_dice * sinf(theta_dice);
+        math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
+        math::vec3 direction = source.direction;
+
+        task->rays->ray[n_input_rays + r] = { origin, direction };
+        task->power[n_input_rays + r] = ray_power;
+      }
     }
 
     return EMISSION_OK;

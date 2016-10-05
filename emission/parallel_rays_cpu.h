@@ -24,12 +24,18 @@
 
 namespace parallel_rays_emission_cpu
 {
-  /// @todo Provide a way to change origin and direction in time.
-  struct params_t : emission::params_t
+  struct parallel_rays_source_t
   {
     int n_rays;
     float power; /// W/m^2
     math::vec3 direction;
+  };
+
+  /// @todo Provide a way to change origin and direction in time.
+  struct params_t : emission::params_t
+  {
+    int n_sources;
+    parallel_rays_source_t* sources;
   };
 
   /**

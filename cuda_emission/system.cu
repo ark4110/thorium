@@ -549,10 +549,23 @@ namespace cuda_parallel_rays_emission
     checkCudaErrors(cudaMemcpy(system->device_context, &system->host_context, sizeof(context_t), cudaMemcpyHostToDevice));
   }
 
+  int calculate_total_rays(const params_t& params)
+  {
+    int n_rays = 0;
+    for (int i = 0; i != params.n_sources; ++i)
+      n_rays += params.sources[i].n_rays;
+    return n_rays;
+  }
+
+  const int N_MAX_SOURCES = 4;
+
   /// @brief Initializes system with given ray caster after creation.
   int init(system_t* system, const parallel_rays_emission_cpu::params_t* params)
   {
     system->params = *params;
+
+    if (system->params.n_sources > N_MAX_SOURCES)
+      return -EMISSION_ERROR;
 
     system->host_context = {};
     system->device_context = 0;
@@ -569,7 +582,7 @@ namespace cuda_parallel_rays_emission
     system->n_mtgp_blocks = n_mtgp_blocks;
 
     context_t& host_context = system->host_context;
-    checkCudaErrors(cudaMalloc((void **)&host_context.rays, system->params.n_rays * sizeof(ray_t)));
+    checkCudaErrors(cudaMalloc((void **)&host_context.rays, calculate_total_rays(system->params) * sizeof(ray_t)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
 
@@ -603,33 +616,17 @@ namespace cuda_parallel_rays_emission
   void update_host_context(system_t* system, subject::scene_t* scene)
   {
     math::sphere_t bsphere = math::triangles_bsphere(scene->faces, scene->n_faces);
-
     float radius = bsphere.radius * 1.1f;
-    float offset = 1.3f + radius;
-    float ray_power = system->params.power * (float(M_PI) * radius * radius) / system->params.n_rays;
-
-    math::mat33 rotation = math::rotate_towards(math::make_vec3(0, 0, 1), system->params.direction);
 
     struct local_context_t
     {
-      math::mat33 rotation;
-      math::vec3 origin;
-      math::vec3 direction;
-
-      int n_rays;
+      math::vec3 origin;     
       float radius;
-      float offset;
-      float ray_power;
     };
 
     local_context_t local = {};
-    local.rotation = rotation;
     local.origin = bsphere.center;
-    local.direction = system->params.direction;
-    local.n_rays = system->params.n_rays;
     local.radius = radius;
-    local.offset = offset;
-    local.ray_power = ray_power;
     memcpy(&system->host_context, &local, sizeof(local_context_t));
   }
 
@@ -644,18 +641,19 @@ namespace cuda_parallel_rays_emission
     return EMISSION_OK;
   }
 
-  __global__ void emit_parallel_rays(context_t* ctx, ray_t* rays)
+  __global__ void emit_parallel_rays(context_t* ctx, source_params_t params, ray_t* rays)
   { 
-    const mat33 rotation = ctx->rotation;
     float3 origin = ctx->origin;
-    float3 direction = ctx->direction;
     float radius = ctx->radius;
-    float offset = ctx->offset;
+
+    float offset = 1.3f * radius;
+    const mat33 rotation = rotate_towards(make_float3(0, 0, 1), params.direction);
+    float3 direction = params.direction;
+    int n_rays = params.n_rays;
 
     curandStateMtgp32* HSGenR = &ctx->HSGenR[blockIdx.x];
     curandStateMtgp32* HSGenTheta = &ctx->HSGenTheta[blockIdx.x];
-
-    int n_rays = ctx->n_rays;
+    
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
@@ -672,24 +670,55 @@ namespace cuda_parallel_rays_emission
 
   int calculate(system_t* system, emission::task_t* task)
   {
-    int n_real_rays = system->params.n_rays;
-    int n_input_rays = task_grow(task, n_real_rays);
+    int n_total_rays = calculate_total_rays(system->params);
+    
+    ray_t* device_rays = system->host_context.rays;
+    const int n_input_rays = task_grow(task, n_total_rays);
+    
 
-    context_t& host_context = system->host_context;
+    const int n_sources = system->params.n_sources;
+    
+    // Weighted distribution of blocks among sources considering source rays count.
+    int n_blocks[N_MAX_SOURCES];
+    int n_blocks_left = system->n_mtgp_blocks;    
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
 
-    emit_parallel_rays << <system->n_mtgp_blocks, 256 >> > (system->device_context
-      , host_context.rays
-      );
+      int n_blocks_for_source = system->n_mtgp_blocks * source.n_rays / n_total_rays;
+      n_blocks[source_idx] = n_blocks_for_source;
+      n_blocks_left -= n_blocks_for_source;
+      if (source_idx == n_sources - 1)
+        n_blocks[source_idx] += n_blocks_left;
+    }
 
-    const float ray_power = system->host_context.ray_power;
-    for (int r = 0; r != n_real_rays; ++r)
-      task->power[n_input_rays + r] = ray_power;
+    // Launch kernels
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
+
+      source_params_t params = { make_float3(source.direction.x, source.direction.y, source.direction.z), source.n_rays };
+      emit_parallel_rays << <n_blocks[source_idx], 256 >> > (system->device_context, params, device_rays);
+      device_rays += source.n_rays;
+    }
+
+    // Fill ray powers
+    int n_host_rays_offset = n_input_rays;
+    float radius = system->host_context.radius;
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
+      const float ray_power = source.power * (float(M_PI) * radius * radius) / (float)source.n_rays;
+      for (int r = 0; r != source.n_rays; ++r)
+        task->power[n_host_rays_offset + r] = ray_power;
+      n_host_rays_offset += source.n_rays;
+    }
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     // Using raw memory copy because of incompatible data-types.
-    cudaMemcpy(&task->rays->ray[n_input_rays], host_context.rays, n_real_rays * sizeof(ray_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&task->rays->ray[n_input_rays], system->host_context.rays, n_total_rays * sizeof(ray_t), cudaMemcpyDeviceToHost);
 
     return EMISSION_OK;
   }

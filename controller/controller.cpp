@@ -130,10 +130,8 @@ int main(int argc, char* argv[])
   malley_cpu::params_t malley_emission_params;
   malley_emission_params.n_rays = n_rays;
 
-  parallel_rays_emission_cpu::params_t exterior_emission_params;
-  exterior_emission_params.power = 0;
-  exterior_emission_params.n_rays = n_distant_rays;
-
+  parallel_rays_emission_cpu::params_t exterior_emission_params = {};
+  
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
   thermal_solution::task_t* task = thermal_solution::task_create(0);
   task->time_delta = 0.1f;
@@ -152,17 +150,25 @@ int main(int argc, char* argv[])
       fprintf(stderr, "Failed to load task '%s'\n", input_task);
       return r;
     }
+
+    // Distribute n_rays among all sources
+    float total_power = 0;
+    for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
+      total_power += exterior_emission_params.sources[source_idx].power;
+
+    for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
+      exterior_emission_params.sources[source_idx].n_rays = (int)(exterior_emission_params.sources[source_idx].power * n_distant_rays / total_power);
   }
 
   
-  emission::system_t* interior_radiance_emitter = emission::system_create(EMISSION_MALLEY_CPU, &malley_emission_params);
+  emission::system_t* interior_radiance_emitter = emission::system_create(EMISSION_MALLEY_CUDA, &malley_emission_params);
   if (!interior_radiance_emitter)
   {
     std::cerr << "Failed to create interior emitter" << std::endl;
     return 1;
   }
   
-  emission::system_t* exterior_radiance_emitter = emission::system_create(EMISSION_PARALLEL_RAYS_CPU, &exterior_emission_params);
+  emission::system_t* exterior_radiance_emitter = emission::system_create(EMISSION_PARALLEL_RAYS_CUDA, &exterior_emission_params);
   if (!exterior_radiance_emitter)
   {
     std::cerr << "Failed to create exterior emitter" << std::endl;
@@ -183,7 +189,7 @@ int main(int argc, char* argv[])
   
   radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = emitters;
-  radiance_params.n_emitters = exterior_emission_params.power > 0 ? 2 : 1;
+  radiance_params.n_emitters = exterior_emission_params.n_sources > 0 ? 2 : 1;
   radiance_params.ray_caster = caster;
   radiance_equation::stats_t radiance_stats;
   radiance_params.stats = &radiance_stats;
