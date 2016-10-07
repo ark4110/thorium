@@ -455,8 +455,6 @@ namespace obj_import
 
   int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source)
   {
-    distant_source->power = 0;
-
     char * line = NULL;
     size_t len = 0;
     size_t read;
@@ -516,7 +514,11 @@ namespace obj_import
 
       case 'd':
       {
-        if (sscanf(line, "dstsrc %f %f %f %f", &distant_source->power, &distant_source->direction.x, &distant_source->direction.y, &distant_source->direction.z) != 4)
+        
+        distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+        parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
+        ++distant_source->n_sources;
+        if (sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) != 4)
         {
           free(line);
           return -OBJ_IMPORT_FORMAT_ERROR;
@@ -543,5 +545,78 @@ namespace obj_import
     }
 
     return (int)n;
+  }
+
+  int orbit(const char* filename, libpredict_tle::params_t* description)
+  {
+    std::ifstream file(filename);
+    if (!file.is_open())
+    {
+      fprintf(stderr, "Orbit description file '%s' not found.\n", filename);
+      return -OBJ_IMPORT_FILE_ERROR;
+    }
+
+    std::string str;
+    unsigned line = 0;
+
+    while (getline(file, str))
+    {
+      ++line;
+      if (str == "" || str[0] == '#')
+        continue;
+
+      size_t pos = str.find(' ');
+      if (pos > str.length())
+      {
+        fprintf(stderr, "Invalid orbit token %s at line %d.\n", str.c_str(), line);
+        return -OBJ_IMPORT_FILE_ERROR;
+      }
+
+      std::string token = str.substr(0, pos);
+      
+      if (token == "orbit_tle_title")
+        description->tle_header = strdup(&str[pos + 1]);
+      else if (token == "orbit_tle_line_1")
+        description->tle_line_1 = strdup(&str[pos + 1]);
+      else if (token == "orbit_tle_line_2")
+        description->tle_line_2 = strdup(&str[pos + 1]);
+      /*
+      // @todo Will be enabled with custom orientation axis support
+      else if (token == "orbit_orientation_axis")
+      {
+        char axis = tolower(str[pos + 1]);
+        switch (axis)
+        {
+        case 'x':
+        case 'y':
+        case 'z':
+          description->orientation.type = axis - 'x';
+          break;
+
+        default:
+          fprintf(stderr, "Invalid orbit orientation axis %s at line %d.\n", str.c_str(), line);
+          return -OBJ_IMPORT_FILE_ERROR;
+        }
+      }*/
+      else if (token == "orbit_orientation_type")
+      {
+        std::string type(&str[pos + 1]);
+        for (char& c : type)
+          c = tolower(c);
+        if (type == "sun")
+          description->orientation.type = ORIENTATION_TYPE_SUN;
+        else if (type == "nadir")
+          description->orientation.type = ORIENTATION_TYPE_NADIR;
+        else if (type == "orbit")
+          description->orientation.type = ORIENTATION_TYPE_ORBIT;
+        else
+        {
+          fprintf(stderr, "Invalid orbit orientation type %s at line %d.\n", str.c_str(), line);
+          return -OBJ_IMPORT_FILE_ERROR;
+        }
+      }
+    }
+
+    return OBJ_IMPORT_OK;
   }
 }

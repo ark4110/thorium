@@ -24,6 +24,7 @@
 #include "../thermal_solution/system.h"
 #include "../thermal_equation/heat_source_cpu.h"
 #include "../emission/parallel_rays_cpu.h"
+#include "../ballistics/libpredict_tle.h"
 #include <cstdio>
 
 namespace obj_import
@@ -34,6 +35,7 @@ namespace obj_import
 #define OBJ_IMPORT_MATERIAL_NOT_DEFINED 23
 #define OBJ_IMPORT_MATERIAL_NOT_ENOUGH_PARAMETERS 24
 #define OBJ_IMPORT_MATERIAL_INVALID_PARAMETER_VALUE 25
+#define OBJ_IMPORT_NOT_SUPPORTED 26
 
   /**
    * @brief Loads scene from obj-file.
@@ -54,4 +56,9 @@ namespace obj_import
       [optional] htsrc Heat source or sink (W). htsrc <mesh zero-based index> <power>.
   */
   int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source);
+
+  /**
+    @brief Load satellite orbit description.
+  */
+  int orbit(const char* filename, libpredict_tle::params_t* description);
 }
