@@ -549,6 +549,16 @@ namespace cuda_parallel_rays_emission
     checkCudaErrors(cudaMemcpy(system->device_context, &system->host_context, sizeof(context_t), cudaMemcpyHostToDevice));
   }
 
+  void align_rays_count_to_warp_size(params_t& params, int n_warp_size)
+  {
+    for (int source_idx = 0; source_idx != params.n_sources; ++source_idx)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = params.sources[source_idx];
+      int align = (n_warp_size - source.n_rays % n_warp_size) % n_warp_size;
+      source.n_rays += align;
+    }
+  }
+
   int calculate_total_rays(const params_t& params)
   {
     int n_rays = 0;
@@ -577,6 +587,8 @@ namespace cuda_parallel_rays_emission
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
     system->n_tpb = deviceProp.maxThreadsPerBlock;
     system->n_warp_size = deviceProp.warpSize;
+
+    align_rays_count_to_warp_size(system->params, system->n_warp_size);
 
     int n_mtgp_blocks = 64;
     system->n_mtgp_blocks = n_mtgp_blocks;
@@ -646,7 +658,7 @@ namespace cuda_parallel_rays_emission
     float3 origin = ctx->origin;
     float radius = ctx->radius;
 
-    float offset = 1.3f * radius;
+    float offset = 1.3f + radius;
     const mat33 rotation = rotate_towards(make_float3(0, 0, 1), params.direction);
     float3 direction = params.direction;
     int n_rays = params.n_rays;
