@@ -56,6 +56,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "optix_ray_caster", "optix_r
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_emission", "cuda_emission\cuda_emission.vcxproj", "{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpredict", "ext\libpredict\vs_build\libpredict.vcxproj", "{10F3FB91-06CE-4802-93F3-08552A64D144}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ballistics", "ballistics\ballistics.vcxproj", "{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -191,6 +195,22 @@ Global
 		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|Win32.Build.0 = Release|Win32
 		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|x64.ActiveCfg = Release|x64
 		{9A8C8CF8-F6E6-4228-A5D9-5FE3428DE7DB}.Release|x64.Build.0 = Release|x64
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Debug|Win32.ActiveCfg = Debug|Win32
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Debug|Win32.Build.0 = Debug|Win32
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Debug|x64.ActiveCfg = Debug|x64
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Debug|x64.Build.0 = Debug|x64
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Release|Win32.ActiveCfg = Release|Win32
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Release|Win32.Build.0 = Release|Win32
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Release|x64.ActiveCfg = Release|x64
+		{10F3FB91-06CE-4802-93F3-08552A64D144}.Release|x64.Build.0 = Release|x64
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Debug|Win32.Build.0 = Debug|Win32
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Debug|x64.ActiveCfg = Debug|x64
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Debug|x64.Build.0 = Debug|x64
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|Win32.ActiveCfg = Release|Win32
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|Win32.Build.0 = Release|Win32
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|x64.ActiveCfg = Release|x64
+		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

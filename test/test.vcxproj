@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="adams_solution.cpp" />
+    <ClCompile Include="ballistics.cpp" />
     <ClCompile Include="conductive_solution.cpp" />
     <ClCompile Include="emission.cpp" />
     <ClCompile Include="export.cpp" />
@@ -37,6 +38,9 @@
     <ClCompile Include="triangle_math.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ballistics\ballistics.vcxproj">
+      <Project>{52bc2630-b79c-41b3-ad12-af6cc7791ba1}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\cuda_emission\cuda_emission.vcxproj">
       <Project>{9a8c8cf8-f6e6-4228-a5d9-5fe3428de7db}</Project>
     </ProjectReference>
@@ -48,6 +52,9 @@
     </ProjectReference>
     <ProjectReference Include="..\ext\gtest\msvc\gtest-md.vcxproj">
       <Project>{c8f6c172-56f2-4e76-b5fa-c3b423b31be8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ext\libpredict\vs_build\libpredict.vcxproj">
+      <Project>{10f3fb91-06ce-4802-93f3-08552a64d144}</Project>
     </ProjectReference>
     <ProjectReference Include="..\form_factors\form_factors.vcxproj">
       <Project>{a7fdcdb0-b23d-4bba-bbca-2f714a89205a}</Project>
