@@ -101,6 +101,7 @@ namespace libpredict_tle
 
     math::vec3 sun_back = (math::rotate_towards(orientation_axis, eci_direction) * prediction->sun_position + eci_satellite_position) / 1000;
 
+    // @todo Remove calculation accuracy check
     sun_back.x -= eci_sun_position[0];
     sun_back.y -= eci_sun_position[1];
     sun_back.z -= eci_sun_position[2];
