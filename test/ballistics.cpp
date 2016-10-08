@@ -21,7 +21,8 @@
 
 using namespace testing;
 
-float earth_radius = 6.378137e6f;
+float earth_equatorial_radius = 6.378137e6f;
+float earth_polar_radius = 6.3568e6f;
 float earth_perigee = 1.4709829e11f;
 float earth_apogee = 1.52098232e11f;
 float station_perigee = 407.5e3f;
@@ -71,9 +72,8 @@ TEST_F(TleBallistics, EarthPositionAtNadirAttitude)
   ASSERT_NEAR(0, prediction.earth_position.x, 1);
   ASSERT_NEAR(0, prediction.earth_position.y, 1);
 
-  float altitude = prediction.earth_position.z - earth_radius;
-  ASSERT_LE(altitude, station_apogee);
-  ASSERT_GE(altitude, station_perigee);
+  ASSERT_LE(prediction.earth_position.z - earth_equatorial_radius, station_apogee);
+  ASSERT_GE(prediction.earth_position.z - earth_polar_radius, station_perigee);
 }
 
 TEST_F(TleBallistics, SunPositionAtSunAttitude)
@@ -97,7 +97,7 @@ TEST_F(TleBallistics, EarthPositionAtOrbitalAttitude)
 
   ASSERT_LE(fabsf(prediction.earth_position.z), 10000);
 
-  float altitude = math::norm(prediction.earth_position) - earth_radius;
-  ASSERT_LE(altitude, station_apogee);
-  ASSERT_GE(altitude, station_perigee);
+  float range = math::norm(prediction.earth_position);
+  ASSERT_LE(range - earth_equatorial_radius, station_apogee);
+  ASSERT_GE(range - earth_polar_radius, station_perigee);
 }
