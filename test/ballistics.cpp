@@ -56,10 +56,10 @@ public:
   ballistics::system_t* System;
 };
 
-TEST_F(TleBallistics, EarthNadirPosition)
+TEST_F(TleBallistics, EarthPositionAtNadirOrientration)
 {
   Create(ORIENTATION_TYPE_NADIR);
-  time_t t = time(0);
+  time_t t = time(0)-25*60;
   ballistics::prediction_t prediction = Predict(t);
   ASSERT_NEAR(0, prediction.earth_position.x, 1);
   ASSERT_NEAR(0, prediction.earth_position.y, 1);
@@ -70,4 +70,20 @@ TEST_F(TleBallistics, EarthNadirPosition)
   float altitude = prediction.earth_position.z - earth_radius;
   ASSERT_LE(altitude, apogee);
   ASSERT_GE(altitude, perigee);
+}
+
+TEST_F(TleBallistics, SunPositionAtSunOrientation)
+{
+  Create(ORIENTATION_TYPE_SUN);
+  time_t t = 1475902661; // Equinox at 2016/03/20 04:30
+  ballistics::prediction_t prediction = Predict(t);
+  
+  float accuracy = 2.5e4; // transformations on floats accuracy for sun
+  ASSERT_NEAR(0, prediction.sun_position.x, accuracy);
+  ASSERT_NEAR(0, prediction.sun_position.y, accuracy);
+  
+  float perigee = 1.4709829e11;
+  float apogee = 1.52098232e11;
+  ASSERT_LE(prediction.sun_position.z, apogee + accuracy);
+  ASSERT_GE(prediction.sun_position.z, perigee - accuracy);
 }
