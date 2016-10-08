@@ -17,8 +17,15 @@
 #include "gtest/gtest.h"
 #include "ballistics/system.h"
 #include "ballistics/libpredict_tle.h"
+#include "math/operations.h"
 
 using namespace testing;
+
+float earth_radius = 6.378137e6f;
+float earth_perigee = 1.4709829e11f;
+float earth_apogee = 1.52098232e11f;
+float station_perigee = 407.5e3f;
+float station_apogee = 416.5e3f;
 
 class TleBallistics : public Test
 {
@@ -59,17 +66,14 @@ public:
 TEST_F(TleBallistics, EarthPositionAtNadirOrientration)
 {
   Create(ORIENTATION_TYPE_NADIR);
-  time_t t = time(0)-25*60;
+  time_t t = time(0);
   ballistics::prediction_t prediction = Predict(t);
   ASSERT_NEAR(0, prediction.earth_position.x, 1);
   ASSERT_NEAR(0, prediction.earth_position.y, 1);
 
-  float earth_radius = 6.378137e6;
-  float perigee = 407.5e3;
-  float apogee = 416.5e3f;
   float altitude = prediction.earth_position.z - earth_radius;
-  ASSERT_LE(altitude, apogee);
-  ASSERT_GE(altitude, perigee);
+  ASSERT_LE(altitude, station_apogee);
+  ASSERT_GE(altitude, station_perigee);
 }
 
 TEST_F(TleBallistics, SunPositionAtSunOrientation)
@@ -78,12 +82,22 @@ TEST_F(TleBallistics, SunPositionAtSunOrientation)
   time_t t = 1475902661; // Equinox at 2016/03/20 04:30
   ballistics::prediction_t prediction = Predict(t);
   
-  float accuracy = 2.5e4; // transformations on floats accuracy for sun
-  ASSERT_NEAR(0, prediction.sun_position.x, accuracy);
-  ASSERT_NEAR(0, prediction.sun_position.y, accuracy);
+  ASSERT_NEAR(0, prediction.sun_position.x, station_perigee);
+  ASSERT_NEAR(0, prediction.sun_position.y, station_perigee);
   
-  float perigee = 1.4709829e11;
-  float apogee = 1.52098232e11;
-  ASSERT_LE(prediction.sun_position.z, apogee + accuracy);
-  ASSERT_GE(prediction.sun_position.z, perigee - accuracy);
+  ASSERT_LE(prediction.sun_position.z, earth_apogee + station_perigee);
+  ASSERT_GE(prediction.sun_position.z, earth_perigee - station_perigee);
+}
+
+TEST_F(TleBallistics, EarthPositionAtOrbitalOrientation)
+{
+  Create(ORIENTATION_TYPE_ORBIT);
+  time_t t = time(0);
+  ballistics::prediction_t prediction = Predict(t);
+
+  ASSERT_LE(fabsf(prediction.earth_position.z), 10000);
+
+  float altitude = math::norm(prediction.earth_position) - earth_radius;
+  ASSERT_LE(altitude, station_apogee);
+  ASSERT_GE(altitude, station_perigee);
 }
