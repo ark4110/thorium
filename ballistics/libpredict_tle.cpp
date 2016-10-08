@@ -97,19 +97,7 @@ namespace libpredict_tle
 
     prediction->earth_position = orientation_transformation * (-eci_satellite_position);
     prediction->sun_position = orientation_transformation * sun_position;
-    prediction->eclispse_depth = orbit.eclipsed ? orbit.eclipse_depth : 0;
-
-    math::vec3 sun_back = (math::rotate_towards(orientation_axis, eci_direction) * prediction->sun_position + eci_satellite_position) / 1000;
-
-    // @todo Remove calculation accuracy check
-    sun_back.x -= eci_sun_position[0];
-    sun_back.y -= eci_sun_position[1];
-    sun_back.z -= eci_sun_position[2];
-
-    math::vec3 sat_back = (math::rotate_towards(orientation_axis, eci_direction) * prediction->earth_position) / -1000;
-    sat_back.x -= orbit.position[0];
-    sat_back.y -= orbit.position[1];
-    sat_back.z -= orbit.position[2];
+    prediction->eclispsed = orbit.eclipsed;
 
     return BALLISTICS_OK;
   }

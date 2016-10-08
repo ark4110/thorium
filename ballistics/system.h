@@ -34,7 +34,7 @@ namespace ballistics
   {
     math::vec3 earth_position; // [m]
     math::vec3 sun_position; // [m]
-    float eclispse_depth;
+    bool eclispsed;
   };
 
   /// @brief Current clock in UTC
