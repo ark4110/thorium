@@ -59,29 +59,29 @@ namespace libpredict_tle
     double eci_sun_position[3];
     sun_predict(julian_time, eci_sun_position);
 
-    math::vec3 eci_satellite_position = math::make_vec3(orbit.position[0], orbit.position[1], orbit.position[2]) * 1000;
-    math::vec3 sun_position = math::make_vec3(eci_sun_position[0], eci_sun_position[1], eci_sun_position[2]) * 1000 - eci_satellite_position;
+    math::vec3 eci_satellite_position = math::make_vec3((float)orbit.position[0], (float)orbit.position[1], (float)orbit.position[2]) * 1000;
+    math::vec3 sun_position = math::make_vec3((float)eci_sun_position[0], (float)eci_sun_position[1], (float)eci_sun_position[2]) * 1000 - eci_satellite_position;
 
     math::vec3 eci_direction;
-    switch (system->params.orientation.type)
+    switch (system->params.attitude.type)
     {
-    case ORIENTATION_TYPE_NADIR:
+    case ATTITUDE_TYPE_NADIR:
     {
       math::vec3 earth_direction = math::normalize(-eci_satellite_position);
       eci_direction = earth_direction;
     }
     break;
 
-    case ORIENTATION_TYPE_SUN:
+    case ATTITUDE_TYPE_SUN:
     {
       math::vec3 sun_direction = math::normalize(sun_position);
       eci_direction = sun_direction;
     }
     break;
 
-    case ORIENTATION_TYPE_ORBIT:
+    case ATTITUDE_TYPE_ORBIT:
     {
-      math::vec3 velocity_direction = math::normalize(math::make_vec3(orbit.velocity[0], orbit.velocity[1], orbit.velocity[2]));
+      math::vec3 velocity_direction = math::normalize(math::make_vec3((float)orbit.velocity[0], (float)orbit.velocity[1], (float)orbit.velocity[2]));
       eci_direction = velocity_direction;
     }
     break;
@@ -90,13 +90,13 @@ namespace libpredict_tle
       return -BALLISTICS_ERROR;
     }
 
-    // @todo Support custom basis for orientation
-    math::vec3 orientation_axis = math::make_vec3(0, 0, 1);
+    // @todo Support custom basis for attitude
+    math::vec3 attitude_axis = math::make_vec3(0, 0, 1);
 
-    math::mat33 orientation_transformation = math::rotate_towards(eci_direction, orientation_axis);
+    math::mat33 attitude_transformation = math::rotate_towards(eci_direction, attitude_axis);
 
-    prediction->earth_position = orientation_transformation * (-eci_satellite_position);
-    prediction->sun_position = orientation_transformation * sun_position;
+    prediction->earth_position = attitude_transformation * (-eci_satellite_position);
+    prediction->sun_position = attitude_transformation * sun_position;
     prediction->eclispsed = orbit.eclipsed;
 
     return BALLISTICS_OK;

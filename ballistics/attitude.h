@@ -14,31 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
 
-
 #pragma once
 
-namespace satellite_orbit
+namespace ballistics
 {
-  enum orientation_axis_t
-  {
-    orientation_axis_x,
-    orientation_axis_y,
-    orientation_axis_z,
-  };
+#define ATTITUDE_TYPE_NADIR 0
+#define ATTITUDE_TYPE_SUN 1
+#define ATTITUDE_TYPE_ORBIT 2
 
-  enum orientation_type_t
+  /**
+    @brief Satellite attitude on orbit.
+    @detail Due to satellite attitude preferences it will rotate on orbit.
+    @detail Attitude axis is scene Z-axis.
+  */
+  struct attitude_t
   {
-    nadir,
-    sun,
-    orbit
-  };
-
-  struct description_t
-  {
-    char* tle_title;
-    char* tle_line_1;
-    char* tle_line_2;
-    int orientation_axis;
-    int orientation_type;
+    int type;
   };
 }

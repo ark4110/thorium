@@ -40,10 +40,10 @@ public:
     system_free(System);
   }
 
-  void Create(int orientationType)
+  void Create(int attitudeType)
   {
     libpredict_tle::params_t params;
-    params.orientation.type = orientationType;
+    params.attitude.type = attitudeType;
     params.tle_header = "ISS (ZARYA)";
     params.tle_line_1 = "1 25544U 98067A   16281.78259727  .00005772  00000-0  94529-4 0  9999";
     params.tle_line_2 = "2 25544  51.6441 216.4056 0006619  52.6341  35.2822 15.54077957 22501";
@@ -63,9 +63,9 @@ public:
   ballistics::system_t* System;
 };
 
-TEST_F(TleBallistics, EarthPositionAtNadirOrientration)
+TEST_F(TleBallistics, EarthPositionAtNadirAttitude)
 {
-  Create(ORIENTATION_TYPE_NADIR);
+  Create(ATTITUDE_TYPE_NADIR);
   time_t t = time(0);
   ballistics::prediction_t prediction = Predict(t);
   ASSERT_NEAR(0, prediction.earth_position.x, 1);
@@ -76,9 +76,9 @@ TEST_F(TleBallistics, EarthPositionAtNadirOrientration)
   ASSERT_GE(altitude, station_perigee);
 }
 
-TEST_F(TleBallistics, SunPositionAtSunOrientation)
+TEST_F(TleBallistics, SunPositionAtSunAttitude)
 {
-  Create(ORIENTATION_TYPE_SUN);
+  Create(ATTITUDE_TYPE_SUN);
   time_t t = 1475902661; // Equinox at 2016/03/20 04:30
   ballistics::prediction_t prediction = Predict(t);
   
@@ -89,9 +89,9 @@ TEST_F(TleBallistics, SunPositionAtSunOrientation)
   ASSERT_GE(prediction.sun_position.z, earth_perigee - station_perigee);
 }
 
-TEST_F(TleBallistics, EarthPositionAtOrbitalOrientation)
+TEST_F(TleBallistics, EarthPositionAtOrbitalAttitude)
 {
-  Create(ORIENTATION_TYPE_ORBIT);
+  Create(ATTITUDE_TYPE_ORBIT);
   time_t t = time(0);
   ballistics::prediction_t prediction = Predict(t);
 

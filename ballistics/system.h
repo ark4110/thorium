@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "orientation.h"
+#include "attitude.h"
 #include "../math/types.h"
 
 #include <time.h>
@@ -34,7 +34,7 @@ namespace ballistics
   {
     math::vec3 earth_position; // [m]
     math::vec3 sun_position; // [m]
-    bool eclispsed;
+    int eclispsed;
   };
 
   /// @brief Current clock in UTC
@@ -50,7 +50,7 @@ namespace ballistics
 
   struct params_t
   {
-    orientation_t orientation;
+    attitude_t attitude;
   };
 
 #define BALLISTICS_OK    0
@@ -65,7 +65,7 @@ namespace ballistics
 
 /**
   NORAD two-line elements set ballistics based on libpredict.
-  ECI (Earth-centered inertial) TEME (true equator, mean equinox) coordinates will be transformed using satellite orientation parameters.
+  ECI (Earth-centered inertial) TEME (true equator, mean equinox) coordinates will be transformed using satellite attitude parameters.
 */
 #define BALLISTICS_TLE 1 
 

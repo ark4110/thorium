@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="attitude.h" />
     <ClInclude Include="libpredict_tle.h" />
-    <ClInclude Include="orientation.h" />
     <ClInclude Include="system.h" />
   </ItemGroup>
   <ItemGroup>

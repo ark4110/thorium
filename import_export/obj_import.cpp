@@ -581,8 +581,8 @@ namespace obj_import
       else if (token == "orbit_tle_line_2")
         description->tle_line_2 = strdup(&str[pos + 1]);
       /*
-      // @todo Will be enabled with custom orientation axis support
-      else if (token == "orbit_orientation_axis")
+      // @todo Will be enabled with custom attitude axis support
+      else if (token == "orbit_attitude_axis")
       {
         char axis = tolower(str[pos + 1]);
         switch (axis)
@@ -590,28 +590,28 @@ namespace obj_import
         case 'x':
         case 'y':
         case 'z':
-          description->orientation.type = axis - 'x';
+          description->attitude.type = axis - 'x';
           break;
 
         default:
-          fprintf(stderr, "Invalid orbit orientation axis %s at line %d.\n", str.c_str(), line);
+          fprintf(stderr, "Invalid orbit attitude axis %s at line %d.\n", str.c_str(), line);
           return -OBJ_IMPORT_FILE_ERROR;
         }
       }*/
-      else if (token == "orbit_orientation_type")
+      else if (token == "orbit_attitude_type")
       {
         std::string type(&str[pos + 1]);
         for (char& c : type)
           c = tolower(c);
         if (type == "sun")
-          description->orientation.type = ORIENTATION_TYPE_SUN;
+          description->attitude.type = ATTITUDE_TYPE_SUN;
         else if (type == "nadir")
-          description->orientation.type = ORIENTATION_TYPE_NADIR;
+          description->attitude.type = ATTITUDE_TYPE_NADIR;
         else if (type == "orbit")
-          description->orientation.type = ORIENTATION_TYPE_ORBIT;
+          description->attitude.type = ATTITUDE_TYPE_ORBIT;
         else
         {
-          fprintf(stderr, "Invalid orbit orientation type %s at line %d.\n", str.c_str(), line);
+          fprintf(stderr, "Invalid orbit attitude type %s at line %d.\n", str.c_str(), line);
           return -OBJ_IMPORT_FILE_ERROR;
         }
       }
