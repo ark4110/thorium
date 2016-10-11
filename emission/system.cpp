@@ -21,6 +21,7 @@
 
 #include "malley_cpu.h"
 #include "parallel_rays_cpu.h"
+#include "planet_emission.h"
 #include "system.h"
 #include "../cuda_emission/cuda_emission.h"
 #include <cstdlib>
@@ -71,6 +72,10 @@ namespace emission
 
     case EMISSION_PARALLEL_RAYS_CUDA:
       system = cuda_parallel_rays_emission::system_create();
+      break;
+
+    case EMISSION_PLANET_CPU:
+      system = planet_emission::system_create();
       break;
 
     default:

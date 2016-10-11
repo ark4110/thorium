@@ -21,12 +21,12 @@
 
 using namespace testing;
 
-float earth_equatorial_radius = 6.378137e6f;
-float earth_polar_radius = 6.3568e6f;
-float earth_perigee = 1.4709829e11f;
-float earth_apogee = 1.52098232e11f;
-float station_perigee = 407.5e3f;
-float station_apogee = 416.5e3f;
+static const float earth_equatorial_radius = 6.378137e6f;
+static const float earth_polar_radius = 6.3568e6f;
+static const float earth_perigee = 1.4709829e11f;
+static const float earth_apogee = 1.52098232e11f;
+static const float station_perigee = 407.5e3f;
+static const float station_apogee = 416.5e3f;
 
 class TleBallistics : public Test
 {

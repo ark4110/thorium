@@ -18,13 +18,13 @@
 #include "test_scene.h"
 #include "emission/malley_cpu.h"
 #include "emission/parallel_rays_cpu.h"
+#include "emission/planet_emission.h"
 #include "thermal_solution/system.h"
 #include "thermal_equation/system.h"
 #include "thermal_equation/radiance_cpu.h"
 #include "math/operations.h"
 #include "math/triangle.h"
 #include "subject/objects.h"
-
 
 using math::vec3;
 using math::make_vec3;
@@ -233,4 +233,64 @@ TYPED_TEST(ParallelEmission, TwoSkewSource)
 
   float diff = GetTemperatureDiff();
   ASSERT_NEAR(10, diff, 0.2f);
+}
+
+class PlanetEmission : public Test
+{
+public:
+  PlanetEmission()
+  {
+    planet_emission::params_t params;
+
+    params.n_subdisivion = 100;
+    params.n_rays = 1000;
+    params.planet.albedo = 0.34f;
+    params.planet.radius = 6.3568e6f; // polar radius
+    params.solar_flux = 1358;
+    params.predictor = &static_predictor;
+    params.predicator_param = &Prediction;
+
+    Emitter = emission::system_create(EMISSION_PLANET_CPU, &params);
+
+    Scene = ToSubjectScene(MakeFloorScene());
+    AddMaterial(Scene, subject::black_body());
+    AddMesh(Scene, { 0, 2, 0 });
+
+    system_set_scene(Emitter, Scene);
+  }
+
+  ~PlanetEmission()
+  {
+    system_free(Emitter);
+    scene_free(Scene);
+  }
+
+  static ballistics::prediction_t static_predictor(void* coords)
+  {
+    return *static_cast<ballistics::prediction_t*>(coords);
+  }
+
+  emission::system_t* Emitter;
+  subject::scene_t* Scene;
+  ballistics::prediction_t Prediction;
+};
+
+static const float earth_polar_radius = 6.3568e6f;
+
+TEST_F(PlanetEmission, UnitSphere)
+{
+  const float altitude = 1300e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
+  Prediction.sun_position = math::make_vec3(0, 0, sun_distance - altitude);
+  Prediction.eclispsed = 0;
+
+  auto task = emission::task_create();
+  float b[2] = { 1000.f, 1000.f };
+  task->mesh_emission = b;
+  task->mesh_temperatures = b;
+  system_calculate(Emitter, task);
+  ASSERT_TRUE(task->rays != 0);
+  ASSERT_EQ(4, task->rays->n_tasks);
 }
