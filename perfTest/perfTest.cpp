@@ -34,6 +34,7 @@
 #include "../thermal_equation/system.h"
 #include "../thermal_equation/radiance_cpu.h"
 #include "../subject/generator.h"
+#include "../import_export/csv_export.h"
 #include "../import_export/obj_export.h"
 #include "../import_export/obj_import.h"
 
@@ -49,10 +50,20 @@ scene_t* MakeConfettiScene(int n_faces, float radius, subject::generator_t* gene
   *scene = { n_faces, faces };
   for (int i = 0; i != n_faces; ++i)
   {
+    math::vec3 scale_factor;
+    generator_volume_point(generator, 1, &scale_factor);
+    float factor = math::norm(scale_factor);
+
     face_t& f = faces[i];
     generator_surface_point(generator, 3, f.points);
+
+    f.points[0] *= 1 + 2 * factor;
+    f.points[1] *= 1 + 2 * factor;
+    f.points[2] *= 1 + 2 * factor;
+
     math::vec3 position;
     generator_volume_point(generator, 1, &position);
+
     position *= radius;
     f.points[0] += position;
     f.points[1] += position;
@@ -237,8 +248,6 @@ int main(int argc, char* argv[])
     return -1;
   }
 
-  
-
   int systemsToCheck[RAY_CASTER_SYSTEMS_COUNT] = {};
 
   if (argc > 2)
@@ -256,7 +265,7 @@ int main(int argc, char* argv[])
     systemsToCheck[RAY_CASTER_OPTIX] = 1; 
   }
 
-  system_t* systems[RAY_CASTER_SYSTEMS_COUNT];
+  system_t* systems[RAY_CASTER_SYSTEMS_COUNT] = {};
   for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
     if (systemsToCheck[s])
       systems[s] = system_create(s);
@@ -270,7 +279,7 @@ int main(int argc, char* argv[])
     bool no_cpu = false;
     bool no_radiance = false;
 
-    float radius = pow(n_faces, 0.3);
+    float radius = pow(n_faces, 0.5);
     
     subject::generator_t* generator = subject::generator_create_spherical();
     // Create random scene for ray caster.
@@ -358,7 +367,76 @@ int main(int argc, char* argv[])
 
     printErrorStatsTable<double*>(systemsToCheck, timings, "\nTimings:", [](double* timings, int i, int j, char* buf) {
       sprintf(buf, "%f", timings[i] / timings[j]);
-    }); 
+    });
+
+    if (false)
+    {
+      subject::scene_t te_scene;
+      te_scene.n_faces = scene->n_faces;
+      te_scene.faces = scene->faces;
+
+      int n_meshes = scene->n_faces;
+      te_scene.n_meshes = n_meshes;
+      te_scene.meshes = (subject::mesh_t*)malloc(n_meshes * sizeof(subject::mesh_t));
+      float* temperatures = (float*)malloc(n_meshes * sizeof(float));
+
+      for (int m = 0; m != n_meshes; ++m)
+      {
+        subject::mesh_t& mesh = te_scene.meshes[m];
+        mesh.first_idx = m;
+        mesh.n_faces = 1;
+        mesh.material_idx = 0;
+
+        temperatures[m] = 300;
+      }
+
+      subject::material_t materials[1] = { subject::black_body() };
+      te_scene.n_materials = 1;
+      te_scene.materials = materials;
+
+      thermal_solution::task_t* task = thermal_solution::task_create(te_scene.n_meshes);
+      task->time_delta = 0.1f;
+
+      FILE* scene_dump = fopen("perf_test_scene.obj", "w");
+      obj_export::scene(scene_dump, &te_scene);
+      fclose(scene_dump);
+
+      scene_dump = fopen("perf_test_areas.txt", "w");
+      for (int f = 0; f != n_faces; ++f)
+        fprintf(scene_dump, "%f\n", math::triangle_area(scene->faces[f]));
+      fclose(scene_dump);
+
+      form_factors::params_t params;
+      for (auto s : systems)
+      {
+        if (s)
+        {
+          params.caster = s;
+          break;
+        }
+      }
+      form_factors::system_t* calculator = system_create(FORM_FACTORS_CPU, &params);
+      form_factors::system_set_scene(calculator, &te_scene);
+
+      float* factors = (float*)calloc(n_faces * n_faces, sizeof(float));
+      form_factors::task_t fftask = { 1000000, factors };
+      form_factors::system_calculate(calculator, &fftask);
+      csv_export::export_csv("perf_test_form_factors_1e6_rays.csv", &te_scene, &fftask);
+
+      fftask = { 10000000, factors };
+      form_factors::system_calculate(calculator, &fftask);
+      csv_export::export_csv("perf_test_form_factors_1e7_rays.csv", &te_scene, &fftask);
+
+      fftask = { 50000000, factors };
+      form_factors::system_calculate(calculator, &fftask);
+      csv_export::export_csv("perf_test_form_factors_5e7_rays.csv", &te_scene, &fftask);
+
+      free(factors);
+      system_free(calculator);
+
+      free(temperatures);
+      free(te_scene.meshes);
+    }
 
     scene_free(rs);
     scene_free(ss);
