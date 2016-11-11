@@ -76,13 +76,7 @@ scene_t* MakeConfettiScene(int n_faces, float radius, subject::generator_t* gene
 /// @brief Creates task with n_rays rays from sphere's surface towards center.
 task_t* MakeCollapsingRays(int n_rays, float radius, subject::generator_t* generator)
 {
-  math::ray_t* rays = (math::ray_t*)malloc(n_rays * sizeof(math::ray_t));
-  if (rays == 0)
-    throw std::out_of_range("not enough memory to allocate rays");
-  face_t** hit_face = (face_t**)malloc(n_rays * sizeof(face_t*));
-  math::vec3* hit_point = (math::vec3*)malloc(n_rays * sizeof(math::vec3));
-  task_t* task = (task_t*)malloc(sizeof(task_t));
-  *task = { n_rays, rays, hit_face, hit_point };
+  task_t* task = task_create(n_rays);
   for (int i = 0; i != n_rays; ++i)
   { 
     math::vec3 direction;
@@ -90,7 +84,7 @@ task_t* MakeCollapsingRays(int n_rays, float radius, subject::generator_t* gener
     direction *= (2 + radius);
     // Origin is scaled by 10% to direction - rays directed towards zero.
     math::vec3 origin = direction * 1.1f;
-    rays[i] = { origin, direction - origin };
+    task->ray[i] = { origin, direction - origin };
   }
 
   return task;
