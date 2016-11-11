@@ -53,7 +53,11 @@ int main(int argc, char* argv[])
   int n_distant_rays = 50000;
   int n_steps = 10000;
   float report_interval = 1.f;
+#if !(defined _WIN32 && !defined _WIN64)
   int type = RAY_CASTER_OPTIX;
+#else
+  int type = RAY_CASTER_NAIVE_CPU;
+#endif
   bool binary_output = false;
 
   for (int i = 1; i < argc; ++i)
