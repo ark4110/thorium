@@ -35,12 +35,8 @@ namespace radiance_equation
     subject::scene_t* scene;
 
     emission::task_t* emission_task;
+    emission::task_t* postponed_task;
     
-    int postponed_free;
-    int postponed_alloc;
-    math::ray_t* postponed_rays;
-    float* postponed_powers;
-
     int* face_to_mesh_index;
 
     std::mt19937 HitGen;        
@@ -56,10 +52,7 @@ namespace radiance_equation
 
     system->scene = 0;
     system->emission_task = 0;
-    system->postponed_free = 0;
-    system->postponed_alloc = 0;
-    system->postponed_rays = 0;
-    system->postponed_powers = 0;
+    system->postponed_task = 0;
     system->face_to_mesh_index = 0;
 
     system->HitGen = std::mt19937(1);    
@@ -75,6 +68,9 @@ namespace radiance_equation
 
     emission::task_free(system->emission_task);
     system->emission_task = 0;
+
+    emission::task_free(system->postponed_task);
+    system->postponed_task = 0;
 
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
@@ -103,6 +99,9 @@ namespace radiance_equation
 
     emission::task_free(system->emission_task);
     system->emission_task = emission::task_create();
+
+    emission::task_free(system->postponed_task);
+    system->postponed_task = emission::task_create();
 
     // @todo Move face->mesh index to scene?
     build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
@@ -138,18 +137,7 @@ namespace radiance_equation
 
   void postpone(cpu_system_t* system, math::ray_t ray, float power)
   {
-    if (system->postponed_free == 0)
-    { 
-      int grow = std::max<int>(1024, system->postponed_alloc);
-      system->postponed_rays = (math::ray_t*)realloc(system->postponed_rays, (system->postponed_alloc + grow) * sizeof(math::ray_t));
-      system->postponed_powers = (float*)realloc(system->postponed_powers, (system->postponed_alloc + grow) * sizeof(float));
-      system->postponed_free = grow;
-    }
-
-    system->postponed_rays[system->postponed_alloc] = ray;
-    system->postponed_powers[system->postponed_alloc] = power;
-    ++system->postponed_alloc;
-    --system->postponed_free;
+    task_add(system->postponed_task, ray, power);    
   }
 
   /**
@@ -158,20 +146,9 @@ namespace radiance_equation
   int calculate(cpu_system_t* system, thermal_equation::task_t* task)
   {
     // Prepare emission task
+    std::swap(system->emission_task, system->postponed_task);
+    task_reset(system->postponed_task);
     emission::task_t* emission_task = system->emission_task;
-
-    if (emission_task->rays)
-    {
-      // @todo Simplify code/logic and optimize: looks like there are a lot of false reallocs to zero.
-      int n_allocated = task_reset(emission_task->rays);
-
-      std::swap(emission_task->rays->ray, system->postponed_rays);
-      std::swap(emission_task->power, system->postponed_powers);
-      emission_task->rays->n_tasks = system->postponed_alloc;
-      task_realloc(emission_task->rays, system->postponed_alloc);
-      system->postponed_alloc = 0;
-      system->postponed_free = n_allocated;
-    }
 
     if (system->params.stats)
       *system->params.stats = stats_t();
@@ -270,7 +247,7 @@ namespace radiance_equation
     }
 
     if (system->params.stats)
-      system->params.stats->quants.named.n_postponed = system->postponed_alloc;
+      system->params.stats->quants.named.n_postponed = task_get_n_tasks(system->postponed_task->rays);
 
     return THERMAL_EQUATION_OK;
   }

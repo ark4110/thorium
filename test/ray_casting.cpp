@@ -125,7 +125,7 @@ TYPED_TEST(RayCaster, ProcessAllRays)
   vec3 origin1 = center1 + make_vec3(0.f, 0.f, -1.f);
   ray[1] = ray_to_triangle(origin1, floorScene->faces[1]);
 
-  task_t task = { 2, ray, hit_face, hit_point };
+  task_t task = task_static(2, ray, hit_face, hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
 
@@ -147,7 +147,7 @@ TYPED_TEST(RayCaster, JustWorks)
   ray_t ray = ray_to_triangle(origin, floorScene->faces[0]);
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
   
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3
@@ -169,7 +169,7 @@ TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
   ray_t ray = { origin, direction };
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3
@@ -190,7 +190,7 @@ TYPED_TEST(RayCaster, FindNearestTriangle)
   ray_t ray = ray_to_triangle(origin, stackScene->faces[0]);
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3
@@ -212,7 +212,7 @@ TYPED_TEST(RayCaster, SkipTriangleNearButInOppositeDirection)
   ray_t ray = ray_to_triangle(origin, stackScene->faces[1]);
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3
@@ -234,7 +234,7 @@ TYPED_TEST(RayCaster, IntersectTriganglesNotPlanes)
   ray_t ray = ray_to_triangle(origin, stackScene->faces[1]);
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3
@@ -269,7 +269,7 @@ TYPED_TEST(RayCaster, ProcessLargeScene)
   ray_t ray = ray_to_triangle(origin, largeScene.faces[0]);
   face_t* hit_face = 0;
   vec3 hit_point;
-  task_t task = { 1, &ray, &hit_face, &hit_point };
+  task_t task = task_static(1, &ray, &hit_face, &hit_point);
 
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, &task));
   // @todo Provide gtest comparison overloads for vec3

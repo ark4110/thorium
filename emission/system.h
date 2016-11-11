@@ -73,6 +73,9 @@ namespace emission
   /// @brief Add more rays to task result.
   /// @return Previous rays count.
   int task_grow(task_t* task, int n_rays);
+  int task_reserve(task_t* task, int n_rays);
+  void task_reset(task_t* task);
+  void task_add(task_t* task, const ray_caster::ray_t& ray, float power);
 
   /**
    * @brief Emission system.   

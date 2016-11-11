@@ -25,6 +25,8 @@
 #include "../cuda_ray_caster/cuda_system.h"
 #include "../optix_ray_caster/optix_system.h"
 #include <stdlib.h>
+#include <stdexcept>
+	
 
 namespace ray_caster
 {
@@ -46,23 +48,78 @@ namespace ray_caster
   {
     task_t* task = (task_t*) malloc(sizeof(task_t));
     task->n_tasks = n_rays;
+    task->n_reserved = n_rays;
     task->ray = (math::ray_t*)     malloc(n_rays * sizeof(math::ray_t));
     task->hit_face = (face_t**)    malloc(n_rays * sizeof(ray_caster::face_t*));
     task->hit_point = (math::vec3*)malloc(n_rays * sizeof(math::vec3));
     return task;
   }
 
-  task_t* task_realloc(task_t* task, int n_rays)
+  task_t task_static(int n_rays, ray_t* ray, face_t** hit_face, math::vec3* hit_point)
   {
-    if (!task)
-      return task_create(n_rays);
+    return{ n_rays, -1, ray, hit_face, hit_point };
+  }
 
-    task->n_tasks = n_rays;
-    task->ray = (math::ray_t*)realloc(task->ray, n_rays * sizeof(math::ray_t));
-    task->hit_face = (face_t**)realloc(task->hit_face, n_rays * sizeof(ray_caster::face_t*));
-    task->hit_point = (math::vec3*)realloc(task->hit_point, n_rays * sizeof(math::vec3));
+  int task_grow(task_t** task, int n_rays)
+  {
+    if (!*task)
+    {
+      *task = task_create(n_rays);
+      return 0;
+    }
 
-    return task;
+    task_t* valid_task = *task;
+
+    if (valid_task->n_reserved < 0)
+      throw std::invalid_argument("Can't grow static task.");
+
+    int n_prev = valid_task->n_tasks;
+    valid_task->n_tasks += n_rays;
+
+    if (valid_task->n_reserved < valid_task->n_tasks)
+    {
+      valid_task->n_reserved = valid_task->n_tasks;
+      valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_tasks * sizeof(math::ray_t));
+      valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_tasks * sizeof(ray_caster::face_t*));
+      valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_tasks * sizeof(math::vec3));
+    }
+
+    return n_prev;
+  }
+
+  int task_reserve(task_t** task, int n_rays)
+  {
+    if (!*task)
+    {
+      *task = task_create(n_rays);
+      (*task)->n_tasks = 0;
+      return n_rays;
+    }
+
+    task_t* valid_task = *task;
+
+    if (valid_task->n_reserved < 0)
+      throw std::invalid_argument("Can't grow static task.");
+
+    int n_prev = valid_task->n_reserved - valid_task->n_tasks;
+    if (n_prev >= n_rays)
+      return n_prev;
+
+    valid_task->n_reserved = valid_task->n_tasks + n_rays;
+    valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
+    valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_reserved * sizeof(ray_caster::face_t*));
+    valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
+    return n_rays;
+  }
+
+  int task_get_reserve(task_t* task)
+  {
+    return task ? (task->n_reserved - task->n_tasks) : 0;
+  }
+
+  int task_get_n_tasks(task_t* task)
+  {
+    return task ? task->n_tasks : 0;
   }
 
   int task_reset(task_t* task)
@@ -77,7 +134,7 @@ namespace ray_caster
 
   void task_free(task_t* task)
   {
-    if (task)
+    if (task && task->n_reserved >= 0)
     {
       free(task->ray);
       free(task->hit_face);

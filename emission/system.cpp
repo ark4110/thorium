@@ -47,10 +47,38 @@ namespace emission
 
   int task_grow(task_t* task, int n_rays)
   {
-    int n_input_rays = task->rays ? task->rays->n_tasks : 0;    
-    task->rays = ray_caster::task_realloc(task->rays, n_input_rays + n_rays);
-    task->power = (float*)realloc(task->power, (n_input_rays + n_rays) * sizeof(float));
+    int n_prev_reserved = task_get_reserve(task->rays);
+    int n_input_rays = ray_caster::task_grow(&task->rays, n_rays);
+    int n_total = task->rays->n_tasks;
+    if (n_total > n_prev_reserved)
+      task->power = (float*)realloc(task->power, n_total * sizeof(float));
     return n_input_rays;
+  }
+
+  int task_reserve(task_t* task, int n_rays)
+  {
+    int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
+    int n_current_reserve = ray_caster::task_reserve(&task->rays, n_rays);
+    int n_target_reserve = task->rays->n_tasks + n_rays;
+    if (n_prev_reserved < n_target_reserve)
+      task->power = (float*)realloc(task->power, n_target_reserve * sizeof(float));
+    return n_current_reserve;
+  }
+
+  void task_reset(task_t* task)
+  {
+    task_reset(task->rays);
+  }
+
+  void task_add(task_t* task, const ray_caster::ray_t& ray, float power)
+  {
+    if (task_get_reserve(task->rays) == 0)
+      task_reserve(task, 1024);
+
+    int& n_rays = task->rays->n_tasks;
+    task->rays->ray[n_rays] = ray;
+    task->power[n_rays] = power;
+    ++n_rays;
   }
 
   system_t* system_create(int type, const params_t* params)
