@@ -30,22 +30,18 @@
 
 namespace planet_emission
 {
-  struct planet_t
-  {
-    float radius;
-    float albedo;
-  };
-
-  typedef ballistics::prediction_t(*predictor_t)(void*);
-
   struct params_t : emission::params_t
   {
-    planet_t planet;
-    float solar_flux;
-    predictor_t predictor;
-    void* predicator_param;
+    float planet_radius; // [m]
+    float planet_albedo; // [na]
+    float solar_flux; // [W/m^2]
+
+    ballistics::predictor_t predictor;
+
     int n_subdisivion;
     int n_rays;
+
+    int parallel_rays_emitter_type;
   };
    
   emission::system_t* system_create();

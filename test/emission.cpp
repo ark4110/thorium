@@ -242,13 +242,15 @@ public:
   {
     planet_emission::params_t params;
 
-    params.n_subdisivion = 100;
-    params.n_rays = 1000;
-    params.planet.albedo = 0.34f;
-    params.planet.radius = 6.3568e6f; // polar radius
-    params.solar_flux = 1358;
-    params.predictor = &static_predictor;
-    params.predicator_param = &Prediction;
+    params.planet_albedo = 0.34f;
+    params.planet_radius = 6.3568e6f; // polar radius
+    params.solar_flux = 1353;
+
+    params.predictor = { &static_predictor, &Prediction };
+
+    params.n_subdisivion = 5;
+    params.n_rays = 10000;
+    params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CPU;
 
     Emitter = emission::system_create(EMISSION_PLANET_CPU, &params);
 
@@ -270,6 +272,25 @@ public:
     return *static_cast<ballistics::prediction_t*>(coords);
   }
 
+  float calculate_flux()
+  {
+    auto task = emission::task_create();
+    float b[2] = { 1000.f, 1000.f };
+    task->mesh_emission = b;
+    task->mesh_temperatures = b;
+    system_calculate(Emitter, task);
+    float total_flux = 0;
+    for (int i = 0; i != task->rays->n_tasks; ++i)
+      total_flux += task->power[i];
+
+    math::sphere_t sphere = math::triangles_bsphere(Scene->faces, Scene->n_faces);
+    float bsphere_scale = parallel_rays_emission_cpu::scene_bsphere_emission_scale;
+    float effective_area = M_PI * sphere.radius * sphere.radius * bsphere_scale * bsphere_scale;
+    float flux = total_flux / effective_area;
+
+    return flux;
+  }
+
   emission::system_t* Emitter;
   subject::scene_t* Scene;
   ballistics::prediction_t Prediction;
@@ -277,7 +298,7 @@ public:
 
 static const float earth_polar_radius = 6.3568e6f;
 
-TEST_F(PlanetEmission, UnitSphere)
+TEST_F(PlanetEmission, Alt1300Theta0)
 {
   const float altitude = 1300e3;
   const float sun_distance = 1.495978e11f;
@@ -286,11 +307,58 @@ TEST_F(PlanetEmission, UnitSphere)
   Prediction.sun_position = math::make_vec3(0, 0, sun_distance - altitude);
   Prediction.eclispsed = 0;
 
-  auto task = emission::task_create();
-  float b[2] = { 1000.f, 1000.f };
-  task->mesh_emission = b;
-  task->mesh_temperatures = b;
-  system_calculate(Emitter, task);
-  ASSERT_TRUE(task->rays != 0);
-  ASSERT_EQ(4, task->rays->n_tasks);
+  float flux = calculate_flux();
+  ASSERT_NEAR(400, flux, 10.f);
+}
+
+TEST_F(PlanetEmission, Alt1690Theta30)
+{
+  const float altitude = 1690e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
+  Prediction.sun_position = math::make_vec3(sinf(M_PI / 6.f) * (sun_distance - altitude), 0, cosf(M_PI / 6.f) * (sun_distance - altitude));
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(300, flux, 10.f);
+}
+
+TEST_F(PlanetEmission, Alt200Theta60)
+{
+  const float altitude = 200e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sinf(M_PI / 3.f) * (sun_distance - altitude), 0, cosf(M_PI / 3.f) * (sun_distance - altitude));
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(350, flux, 10.f);
+}
+
+TEST_F(PlanetEmission, Alt3200Theta60)
+{
+  const float altitude = 3200e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sinf(M_PI / 3.f) * sun_distance, 0, cosf(M_PI / 3.f) * sun_distance - earth_polar_radius - altitude);
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(110, flux, 10.f);
+}
+
+TEST_F(PlanetEmission, Alt400Theta80)
+{
+  const float altitude = 400e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sinf(M_PI / 180 * 80) * sun_distance, 0, cosf(M_PI / 180 * 80) * sun_distance - earth_polar_radius - altitude);
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(100, flux, 10.f);
 }

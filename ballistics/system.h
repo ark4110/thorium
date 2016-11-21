@@ -37,6 +37,17 @@ namespace ballistics
     int eclispsed;
   };
 
+  struct predictor_t
+  {
+    prediction_t(*func)(void*);
+    void* func_param;
+  };
+
+  inline prediction_t predict(predictor_t params)
+  {
+    return params.func(params.func_param);
+  }  
+
   /// @brief Current clock in UTC
   struct clock_t
   {

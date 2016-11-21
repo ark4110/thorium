@@ -15,6 +15,7 @@
 // along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "planet_emission.h"
+#include "parallel_rays_cpu.h"
 #include <stdlib.h>
 #include "../math/operations.h"
 #include "../math/triangle.h"
@@ -26,10 +27,11 @@ namespace planet_emission
   struct system_t : emission::system_t
   {
     params_t params;
+    
+    parallel_rays_emission_cpu::params_t element_params;
+    emission::system_t* element_emitter;
 
-    subject::scene_t* scene;
-
-    math::sphere_t bsphere;
+    subject::scene_t* scene;    
   };
 
   /// @brief Initializes system with given ray caster after creation.
@@ -38,12 +40,25 @@ namespace planet_emission
     system->params = *params;
     system->scene = 0;
 
+    int n_elements = (2 * params->n_subdisivion - 1) * (2 * params->n_subdisivion - 1);
+    system->element_params.n_sources = n_elements;
+    system->element_params.sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)calloc(n_elements, sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+    system->element_emitter = system_create(params->parallel_rays_emitter_type, &system->element_params);
+
     return EMISSION_OK;
   }
 
   /// @brief Shutdowns calculator system prior to free memory.
   int shutdown(system_t* system)
   {
+    int r = 0;
+    if ((r = system_shutdown(system->element_emitter)) < 0)
+      return r;
+
+    system_free(system->element_emitter);
+    free(system->element_params.sources);
+    system->element_params = {};
+
     system->scene = 0;
     return EMISSION_OK;
   }
@@ -55,7 +70,10 @@ namespace planet_emission
       return -EMISSION_ERROR;
 
     system->scene = scene;
-    system->bsphere = math::triangles_bsphere(scene->faces, scene->n_faces);
+
+    int r = 0;
+    if ((r = system_set_scene(system->element_emitter, scene)) < 0)
+      return r;
 
     return EMISSION_OK;
   }
@@ -73,14 +91,13 @@ namespace planet_emission
     int n_elements = (2 * params.n_subdisivion - 1) * (2 * params.n_subdisivion - 1);
     int n_element_rays =  std::max<int>(1, params.n_rays / n_elements);
     int n_rays = n_element_rays * n_elements;
-    int n_initial_rays = task_grow(task, n_rays);
 
     float inverse_na = 1.f / n_elements;
     
-    const float Re = params.planet.radius;
+    const float Re = params.planet_radius;
     const float iRe = 1.f / Re;
 
-    ballistics::prediction_t prediction = params.predictor(params.predicator_param);
+    ballistics::prediction_t prediction = predict(params.predictor);
 
     // Distance to earth
     float R = math::norm(prediction.earth_position);
@@ -89,6 +106,7 @@ namespace planet_emission
 
     // Local 1-2-3 coordinate system and transformation from attitude coords to local.
     math::mat33 local_transform = math::rotate_towards(math::normalize(prediction.earth_position), math::make_vec3(0, 0, -1));
+    math::mat33 global_transform = math::rotate_towards(math::make_vec3(0, 0, -1), math::normalize(prediction.earth_position));
 
     // s - unit vector from Earth to Sun in local 1-2-3 coordinate system.
     math::vec3 s = math::normalize(local_transform * (prediction.sun_position - prediction.earth_position));
@@ -98,11 +116,22 @@ namespace planet_emission
     float cos_alpha_max = sqrtf(1 - Re * Re / R / R);
     float Amax = float(M_2PI) * (1 - cos_alpha_max);
     float Ai = Amax * inverse_na;
-    float dFlux = params.solar_flux * params.planet.albedo * Ai / float(M_PI);
+    float dFlux = params.solar_flux * params.planet_albedo * Ai / float(M_PI);
 
     // Init with central element
     float factor0 = dot(s, math::make_vec3(0, 0, 1));
     float total_flux = factor0 > 0 ? factor0 * dFlux : 0;
+
+    int n_element = 0;
+    parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_element];
+    source.n_rays = 0;
+    if (factor0 > 0)
+    {
+      source.n_rays = n_element_rays;
+      source.power = factor0 * dFlux;
+      source.direction = global_transform * math::make_vec3(0, 0, 1);
+    }
+    ++n_element;
 
     int k = 0;
     for (int i = 2; i <= params.n_subdisivion; ++i)
@@ -114,7 +143,7 @@ namespace planet_emission
       float sin_gamma = sinf(acosf(cos_gamma)); // safe to acos because quadrant sign is not a problem (< pi)
       int m = 8 * (i - 1); // circle subdivisions count
       float theta = float(M_2PI) / m;
-      for (int j = 1; j <= m; ++j, ++k)
+      for (int j = 1; j <= m; ++j, ++k, ++n_element)
       {
         float delta = theta * j - theta / 2.f;
         float cos_delta = cosf(delta);
@@ -136,8 +165,21 @@ namespace planet_emission
         // On sun lit territory
         if (factor > 0)
           total_flux += factor * dFlux;
+
+        parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_element];
+        source.n_rays = 0;
+        if (factor > 0)
+        {
+          source.n_rays = n_element_rays;
+          source.power = factor * dFlux;
+          source.direction = global_transform * (-u);
+        }
       }
     }
+
+    int r = 0;
+    if ((r = system_calculate(system->element_emitter, task)) < 0)
+      return r;
 
     return EMISSION_OK;
   }

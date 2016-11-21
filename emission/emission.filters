@@ -4,10 +4,12 @@
     <ClInclude Include="system.h" />
     <ClInclude Include="malley_cpu.h" />
     <ClInclude Include="parallel_rays_cpu.h" />
+    <ClInclude Include="planet_emission.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="system.cpp" />
     <ClCompile Include="malley_cpu.cpp" />
     <ClCompile Include="parallel_rays_cpu.cpp" />
+    <ClInclude Include="planet_emission.cpp" />
   </ItemGroup>
 </Project>
