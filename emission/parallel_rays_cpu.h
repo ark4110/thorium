@@ -24,6 +24,14 @@
 
 namespace parallel_rays_emission_cpu
 {
+  /**
+    @brief Effective area of rays emission.
+    @detail Parallel rays emitter calculates scene bounding sphere and scale it by this factor.
+        It is required to ensure that all parts of the scene may be hit by emitted rays.
+    @todo Reduce factor below 1.1 because it means that 10% of rays are emitted to empty space by definition.
+  */
+  const float scene_bsphere_emission_scale = 1.1f;
+
   struct parallel_rays_source_t
   {
     int n_rays;

@@ -89,7 +89,7 @@ namespace parallel_rays_emission_cpu
       int n_rays = source.n_rays;
       int n_input_rays = task_grow(task, n_rays);
 
-      float radius = system->bsphere.radius * 1.1f;
+      float radius = system->bsphere.radius * scene_bsphere_emission_scale;
       float offset = 1.3f + radius;
       float ray_power = source.power * (float(M_PI) * radius * radius) / n_rays;
 
