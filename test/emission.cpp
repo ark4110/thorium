@@ -297,7 +297,7 @@ public:
 
     math::sphere_t sphere = math::triangles_bsphere(Scene->faces, Scene->n_faces);
     float bsphere_scale = parallel_rays_emission_cpu::scene_bsphere_emission_scale;
-    float effective_area = M_PI * sphere.radius * sphere.radius * bsphere_scale * bsphere_scale;
+    float effective_area = float(M_PI) * sphere.radius * sphere.radius * bsphere_scale * bsphere_scale;
     float flux = total_flux / effective_area;
 
     return flux;
@@ -329,7 +329,7 @@ TEST_F(PlanetEmission, Alt1690Theta30)
   const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
-  Prediction.sun_position = math::make_vec3(sinf(M_PI / 6.f) * (sun_distance - altitude), 0, cosf(M_PI / 6.f) * (sun_distance - altitude));
+  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 6.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 6.f) * (sun_distance - altitude));
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
@@ -342,7 +342,7 @@ TEST_F(PlanetEmission, Alt200Theta60)
   const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(M_PI / 3.f) * (sun_distance - altitude), 0, cosf(M_PI / 3.f) * (sun_distance - altitude));
+  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 3.f) * (sun_distance - altitude));
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
@@ -355,7 +355,7 @@ TEST_F(PlanetEmission, Alt3200Theta60)
   const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(M_PI / 3.f) * sun_distance, 0, cosf(M_PI / 3.f) * sun_distance - earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * sun_distance, 0, cosf(float(M_PI) / 3.f) * sun_distance - earth_polar_radius - altitude);
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
@@ -368,7 +368,7 @@ TEST_F(PlanetEmission, Alt400Theta80)
   const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(M_PI / 180 * 80) * sun_distance, 0, cosf(M_PI / 180 * 80) * sun_distance - earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 180 * 80) * sun_distance, 0, cosf(float(M_PI) / 180 * 80) * sun_distance - earth_polar_radius - altitude);
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
