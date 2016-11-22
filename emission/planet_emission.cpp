@@ -102,7 +102,7 @@ namespace planet_emission
     // Distance to earth
     float R = math::norm(prediction.earth_position);
     float a = R - Re;
-    float RRe_square = (R - Re) * (R - Re);
+    float R2Re2 = (R * R- Re * Re);
 
     // Local 1-2-3 coordinate system and transformation from attitude coords to local.
     math::mat33 local_transform = math::rotate_towards(math::normalize(prediction.earth_position), math::make_vec3(0, 0, -1));
@@ -115,8 +115,8 @@ namespace planet_emission
     float alpha_max = asinf(Re / R);
     float cos_alpha_max = sqrtf(1 - Re * Re / R / R);
     float Amax = float(M_2PI) * (1 - cos_alpha_max);
-    float Ai = Amax * inverse_na;
-    float dFlux = params.solar_flux * params.planet_albedo * Ai / float(M_PI);
+    float A1 = Amax * inverse_na;
+    float dFlux = params.solar_flux * params.planet_albedo * A1 / float(M_PI);
 
     // Init with central element
     float factor0 = dot(s, math::make_vec3(0, 0, 1));
@@ -140,6 +140,11 @@ namespace planet_emission
       float cos_alpha = (n_elements - ri_square + ri_square * cos_alpha_max) * inverse_na; // circle center angle
       float cos_gamma = cos_alpha;
       float base = R * cos_gamma;
+      float deter = sqrtf(base * base - R2Re2);
+
+      // base = -R * u3, gamma may be > pi/2, so cos_gamma may be negative
+      float d = base < 0 ? base + deter : base - deter; // select nearest point
+
       float sin_gamma = sinf(acosf(cos_gamma)); // safe to acos because quadrant sign is not a problem (< pi)
       int m = 8 * (i - 1); // circle subdivisions count
       float theta = float(M_2PI) / m;
@@ -151,11 +156,6 @@ namespace planet_emission
 
         // u - unit vector from satellite to earth surface element dA in satellite 1-2-3 coordinate system
         math::vec3 u = math::make_vec3(sin_gamma * cos_delta, sin_gamma * sin_delta, -cos_gamma);
-
-        float deter = sqrtf(base * base - RRe_square);
-        
-        // base = -R * u3, gamma may be > pi/2, so cos_gamma may be negative
-        float d = base < 0 ? base + deter : base - deter; // select nearest point
 
         // ne - unit vector of normal of earth surface element dA 
         math::vec3 ne = normalize(iRe * (math::make_vec3(0, 0, R) + d * u)); // Believe in compiler optimization

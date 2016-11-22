@@ -248,7 +248,7 @@ public:
 
     params.predictor = { &static_predictor, &Prediction };
 
-    params.n_subdisivion = 5;
+    params.n_subdisivion = 30;
     params.n_rays = 10000;
     params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CPU;
 
@@ -272,6 +272,19 @@ public:
     return *static_cast<ballistics::prediction_t*>(coords);
   }
 
+  float kahan_summation(const float* begin, const float* end) {
+    float result = 0.f;
+
+    float c = 0.f;
+    for (; begin != end; ++begin) {
+      float y = *begin - c;
+      float t = result + y;
+      c = (t - result) - y;
+      result = t;
+    }
+    return result;
+  }
+
   float calculate_flux()
   {
     auto task = emission::task_create();
@@ -279,9 +292,8 @@ public:
     task->mesh_emission = b;
     task->mesh_temperatures = b;
     system_calculate(Emitter, task);
-    float total_flux = 0;
-    for (int i = 0; i != task->rays->n_tasks; ++i)
-      total_flux += task->power[i];
+
+    float total_flux = kahan_summation(task->power, task->power + task->rays->n_tasks);
 
     math::sphere_t sphere = math::triangles_bsphere(Scene->faces, Scene->n_faces);
     float bsphere_scale = parallel_rays_emission_cpu::scene_bsphere_emission_scale;
@@ -308,7 +320,7 @@ TEST_F(PlanetEmission, Alt1300Theta0)
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(400, flux, 10.f);
+  ASSERT_NEAR(400, flux, 5.f);
 }
 
 TEST_F(PlanetEmission, Alt1690Theta30)
@@ -321,7 +333,7 @@ TEST_F(PlanetEmission, Alt1690Theta30)
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(300, flux, 10.f);
+  ASSERT_NEAR(300, flux, 5.f);
 }
 
 TEST_F(PlanetEmission, Alt200Theta60)
@@ -334,7 +346,7 @@ TEST_F(PlanetEmission, Alt200Theta60)
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(350, flux, 10.f);
+  ASSERT_NEAR(350, flux, 5.f);
 }
 
 TEST_F(PlanetEmission, Alt3200Theta60)
@@ -347,7 +359,7 @@ TEST_F(PlanetEmission, Alt3200Theta60)
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(110, flux, 10.f);
+  ASSERT_NEAR(110, flux, 5.f);
 }
 
 TEST_F(PlanetEmission, Alt400Theta80)
@@ -360,5 +372,18 @@ TEST_F(PlanetEmission, Alt400Theta80)
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(100, flux, 10.f);
+  ASSERT_NEAR(101, flux, 5.f);
+}
+
+TEST_F(PlanetEmission, Alt2000Theta90)
+{
+  const float altitude = 2000e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(21, flux, 5.f);
 }
