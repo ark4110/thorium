@@ -34,6 +34,7 @@ namespace planet_emission
   {
     float planet_radius; // [m]
     float planet_albedo; // [na]
+    float planet_temperature; // [K]
     float solar_flux; // [W/m^2]
 
     ballistics::predictor_t predictor;

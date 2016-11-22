@@ -238,13 +238,14 @@ TYPED_TEST(ParallelEmission, TwoSkewSource)
 class PlanetEmission : public Test
 {
 public:
-  PlanetEmission()
+  PlanetEmission(float planet_albedo, float planet_temperature, float planet_radius, float solar_flux)
   {
     planet_emission::params_t params;
 
-    params.planet_albedo = 0.34f;
-    params.planet_radius = 6.3568e6f; // polar radius
-    params.solar_flux = 1353;
+    params.planet_albedo = planet_albedo;
+    params.planet_temperature = planet_temperature;
+    params.planet_radius = planet_radius;
+    params.solar_flux = solar_flux;
 
     params.predictor = { &static_predictor, &Prediction };
 
@@ -310,7 +311,25 @@ public:
 
 static const float earth_polar_radius = 6.3568e6f;
 
-TEST_F(PlanetEmission, Alt1300Theta0)
+class SolarIrradiance : public PlanetEmission
+{
+public:
+  SolarIrradiance()
+    : PlanetEmission(0.34f, 0, earth_polar_radius, 1353)
+  {
+  }
+};
+
+class EarthSelfEmission : public PlanetEmission
+{
+public:
+  EarthSelfEmission()
+    : PlanetEmission(0.34f, 273 + 15, earth_polar_radius, 0)
+  {
+  }
+};
+
+TEST_F(SolarIrradiance, Alt1300Theta0)
 {
   const float altitude = 1300e3;
   const float sun_distance = 1.495978e11f;
@@ -323,7 +342,7 @@ TEST_F(PlanetEmission, Alt1300Theta0)
   ASSERT_NEAR(400, flux, 5.f);
 }
 
-TEST_F(PlanetEmission, Alt1690Theta30)
+TEST_F(SolarIrradiance, Alt1690Theta30)
 {
   const float altitude = 1690e3;
   const float sun_distance = 1.495978e11f;
@@ -336,7 +355,7 @@ TEST_F(PlanetEmission, Alt1690Theta30)
   ASSERT_NEAR(300, flux, 5.f);
 }
 
-TEST_F(PlanetEmission, Alt200Theta60)
+TEST_F(SolarIrradiance, Alt200Theta60)
 {
   const float altitude = 200e3;
   const float sun_distance = 1.495978e11f;
@@ -349,7 +368,7 @@ TEST_F(PlanetEmission, Alt200Theta60)
   ASSERT_NEAR(350, flux, 5.f);
 }
 
-TEST_F(PlanetEmission, Alt3200Theta60)
+TEST_F(SolarIrradiance, Alt3200Theta60)
 {
   const float altitude = 3200e3;
   const float sun_distance = 1.495978e11f;
@@ -362,7 +381,7 @@ TEST_F(PlanetEmission, Alt3200Theta60)
   ASSERT_NEAR(110, flux, 5.f);
 }
 
-TEST_F(PlanetEmission, Alt400Theta80)
+TEST_F(SolarIrradiance, Alt400Theta80)
 {
   const float altitude = 400e3;
   const float sun_distance = 1.495978e11f;
@@ -375,7 +394,7 @@ TEST_F(PlanetEmission, Alt400Theta80)
   ASSERT_NEAR(101, flux, 5.f);
 }
 
-TEST_F(PlanetEmission, Alt2000Theta90)
+TEST_F(SolarIrradiance, Alt2000Theta90)
 {
   const float altitude = 2000e3;
   const float sun_distance = 1.495978e11f;
@@ -386,4 +405,17 @@ TEST_F(PlanetEmission, Alt2000Theta90)
 
   float flux = calculate_flux();
   ASSERT_NEAR(21, flux, 5.f);
+}
+
+TEST_F(EarthSelfEmission, Alt600)
+{
+  const float altitude = 600e3;
+  const float sun_distance = 1.495978e11f;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(460, flux, 5.f);
 }

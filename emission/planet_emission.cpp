@@ -118,6 +118,10 @@ namespace planet_emission
     float A1 = Amax * inverse_na;
     float dFlux = params.solar_flux * params.planet_albedo * A1 / float(M_PI);
 
+    const float sigma = 5.670400e-8f;
+    float ePower = sigma * params.planet_temperature * params.planet_temperature * params.planet_temperature * params.planet_temperature;
+    float eFlux = ePower * A1 / float(M_PI);
+
     // Init with central element
     float factor0 = dot(s, math::make_vec3(0, 0, 1));
     float total_flux = factor0 > 0 ? factor0 * dFlux : 0;
@@ -160,18 +164,15 @@ namespace planet_emission
         // ne - unit vector of normal of earth surface element dA 
         math::vec3 ne = normalize(iRe * (math::make_vec3(0, 0, R) + d * u)); // Believe in compiler optimization
 
-        float factor = math::dot(ne, s);
-
-        // On sun lit territory
-        if (factor > 0)
-          total_flux += factor * dFlux;
+        float dFactor = math::dot(ne, s);
 
         parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_element];
         source.n_rays = 0;
-        if (factor > 0)
+        // On sun lit territory
+        if (dFactor > 0 || eFlux > 0)
         {
           source.n_rays = n_element_rays;
-          source.power = factor * dFlux;
+          source.power = (dFactor > 0 ? dFactor : 0.f) * dFlux + eFlux;
           source.direction = global_transform * (-u);
         }
       }
