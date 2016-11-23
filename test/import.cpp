@@ -61,3 +61,13 @@ TEST(ObjImport, ParseMaterials)
   ASSERT_NEAR(2.4, m.rear.transmittance, 0.01);
   ASSERT_NEAR(2.5, m.rear.emissivity, 0.01);
 }
+
+TEST(ObjImport, Orbit)
+{
+  libpredict_tle::params_t params;
+  ASSERT_EQ(OBJ_IMPORT_OK, obj_import::orbit("models/zarya.orbit", &params));
+  ASSERT_STREQ("ISS (ZARYA)", params.tle_header);
+  ASSERT_STREQ("1 25544U 98067A   16281.78259727  .00005772  00000-0  94529-4 0  9999", params.tle_line_1);
+  ASSERT_STREQ("2 25544  51.6441 216.4056 0006619  52.6341  35.2822 15.54077957 22501", params.tle_line_2);
+  ASSERT_EQ(ATTITUDE_TYPE_ORBIT, params.attitude.type);
+}
