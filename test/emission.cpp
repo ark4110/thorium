@@ -310,6 +310,7 @@ public:
 };
 
 static const float earth_polar_radius = 6.3568e6f;
+static const float sun_distance = 1.495978e11f;
 
 class SolarIrradiance : public PlanetEmission
 {
@@ -324,7 +325,7 @@ class EarthSelfEmission : public PlanetEmission
 {
 public:
   EarthSelfEmission()
-    : PlanetEmission(0.34f, 273 + 15, earth_polar_radius, 0)
+    : PlanetEmission(0.34f, 250, earth_polar_radius, 0)
   {
   }
 };
@@ -332,7 +333,6 @@ public:
 TEST_F(SolarIrradiance, Alt1300Theta0)
 {
   const float altitude = 1300e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
   Prediction.sun_position = math::make_vec3(0, 0, sun_distance - altitude);
@@ -345,7 +345,6 @@ TEST_F(SolarIrradiance, Alt1300Theta0)
 TEST_F(SolarIrradiance, Alt1690Theta30)
 {
   const float altitude = 1690e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
   Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 6.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 6.f) * (sun_distance - altitude));
@@ -358,7 +357,6 @@ TEST_F(SolarIrradiance, Alt1690Theta30)
 TEST_F(SolarIrradiance, Alt200Theta60)
 {
   const float altitude = 200e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
   Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 3.f) * (sun_distance - altitude));
@@ -371,7 +369,6 @@ TEST_F(SolarIrradiance, Alt200Theta60)
 TEST_F(SolarIrradiance, Alt3200Theta60)
 {
   const float altitude = 3200e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
   Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * sun_distance, 0, cosf(float(M_PI) / 3.f) * sun_distance - earth_polar_radius - altitude);
@@ -384,7 +381,6 @@ TEST_F(SolarIrradiance, Alt3200Theta60)
 TEST_F(SolarIrradiance, Alt400Theta80)
 {
   const float altitude = 400e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
   Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 180 * 80) * sun_distance, 0, cosf(float(M_PI) / 180 * 80) * sun_distance - earth_polar_radius - altitude);
@@ -397,7 +393,6 @@ TEST_F(SolarIrradiance, Alt400Theta80)
 TEST_F(SolarIrradiance, Alt2000Theta90)
 {
   const float altitude = 2000e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
   Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
@@ -410,12 +405,11 @@ TEST_F(SolarIrradiance, Alt2000Theta90)
 TEST_F(EarthSelfEmission, Alt600)
 {
   const float altitude = 600e3;
-  const float sun_distance = 1.495978e11f;
 
   Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
   Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
   Prediction.eclispsed = 0;
 
   float flux = calculate_flux();
-  ASSERT_NEAR(460, flux, 5.f);
+  ASSERT_NEAR(260, flux, 5.f);
 }
