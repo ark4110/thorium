@@ -164,10 +164,10 @@ namespace ray_caster
       break;
 
     case RAY_CASTER_OPTIX:
-    {
 #if !defined _WIN32 || defined _WIN64
       return RAY_CASTER_OPTIX;
 #else
+    {
       fprintf(stderr, "No Optix engine in 32-bit. Fallback NAIVE CUDA.\n");
       return cpu_fallback(RAY_CASTER_NAIVE_CUDA);
     }
