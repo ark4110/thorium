@@ -25,6 +25,7 @@
 #include "../cuda_ray_caster/cuda_system.h"
 #include "../optix_ray_caster/optix_system.h"
 #include <stdlib.h>
+#include <cstdlib>
 #include <stdexcept>
 	
 
@@ -143,8 +144,45 @@ namespace ray_caster
     }
   }
 
+  int cpu_fallback(int type)
+  {
+    if (cuda_ray_caster::is_supported())
+      return type;
+
+    fprintf(stderr, "No CUDA detected. Fallback ray caster to CPU.\n");
+
+    switch (type)
+    {
+    case RAY_CASTER_NAIVE_CPU:
+    case RAY_CASTER_NAIVE_CUDA:
+      return RAY_CASTER_NAIVE_CPU;      
+      break;
+
+    case RAY_CASTER_ZGRID_CPU:
+    case RAY_CASTER_ZGRID_CUDA:
+      return RAY_CASTER_ZGRID_CPU;
+      break;
+
+    case RAY_CASTER_OPTIX:
+    {
+#if !defined _WIN32 || defined _WIN64
+      return RAY_CASTER_OPTIX;
+#else
+      fprintf(stderr, "No Optix engine in 32-bit. Fallback NAIVE CUDA.\n");
+      return cpu_fallback(RAY_CASTER_NAIVE_CUDA);
+    }
+    break;
+#endif    
+
+    default:
+      return type;
+    }
+  }
+
   system_t* system_create(int type)
   {
+    type = cpu_fallback(type);
+
     system_t* system = 0;
     switch (type)
     {
@@ -164,12 +202,15 @@ namespace ray_caster
       system = zgrid_cuda_ray_caster::system_create();
       break;
 
-#if !(defined _WIN32 && !defined _WIN64)
     case RAY_CASTER_OPTIX:
+#if !defined _WIN32 || defined _WIN64
       system = optix_ray_caster::system_create();
-      break;    
 #endif
-    }    
+      break;
+
+    default:
+      fprintf(stderr, "Unknown ray caster system type %d.\n", type);
+    }
 
     system_init(system);
     

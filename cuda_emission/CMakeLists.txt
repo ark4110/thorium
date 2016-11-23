@@ -16,6 +16,7 @@ include_directories("/usr/local/cuda/samples/common/inc")
 
 set(SOURCE_FILES
     cuda_emission.h
+    cuda_emission.cpp
     system.cuh
     system.cu
     )

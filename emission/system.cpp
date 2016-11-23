@@ -25,6 +25,7 @@
 #include "system.h"
 #include "../cuda_emission/cuda_emission.h"
 #include <cstdlib>
+#include <cstdio>
 
 namespace emission
 {
@@ -81,8 +82,38 @@ namespace emission
     ++n_rays;
   }
 
+  int cpu_fallback(int type)
+  {
+    if (cuda_emission::is_supported())
+      return type;
+
+    fprintf(stderr, "No CUDA detected. Fallback emission to CPU.\n");
+
+    switch (type)
+    {
+    case EMISSION_MALLEY_CPU:
+    case EMISSION_MALLEY_CUDA:
+      return EMISSION_MALLEY_CPU;
+      break;
+
+    case EMISSION_PARALLEL_RAYS_CPU:
+    case EMISSION_PARALLEL_RAYS_CUDA:
+      return EMISSION_PARALLEL_RAYS_CPU;
+      break;
+
+    case EMISSION_PLANET_CPU:
+      return EMISSION_PLANET_CPU;
+      break;
+
+    default:
+      return -1;
+    }
+  }
+
   system_t* system_create(int type, const params_t* params)
   {
+    type = cpu_fallback(type);
+
     system_t* system = 0;
     switch (type)
     {

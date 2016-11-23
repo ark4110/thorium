@@ -22,6 +22,11 @@
 
 #include "../ray_caster/system.h"
 
+namespace cuda_ray_caster
+{
+  bool is_supported();
+}
+
 namespace naive_cuda_ray_caster
 {
   /** 

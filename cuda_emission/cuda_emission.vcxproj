@@ -182,6 +182,9 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     <ClInclude Include="cuda_emission.h" />
     <ClInclude Include="system.cuh" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cuda_emission.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 8.0.targets" />

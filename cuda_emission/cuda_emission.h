@@ -20,6 +20,11 @@
 #include "../emission/malley_cpu.h"
 #include "../emission/parallel_rays_cpu.h"
 
+namespace cuda_emission
+{
+  bool is_supported();
+}
+
 namespace cuda_malley_emission
 {
   using malley_cpu::params_t;

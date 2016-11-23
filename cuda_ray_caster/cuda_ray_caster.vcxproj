@@ -33,6 +33,9 @@
       <Project>{1ee5de7f-60f6-4bb0-a5a0-b1a0a4d2c990}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cuda_system.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{558B0343-7BD0-43F8-86EC-660021B420FE}</ProjectGuid>
     <RootNamespace>cuda_ray_caster</RootNamespace>

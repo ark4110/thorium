@@ -16,6 +16,7 @@ include_directories("/usr/local/cuda/samples/common/inc")
 
 set(SOURCE_FILES
     cuda_system.h
+    cuda_system.cpp
     system.cuh
     system.cu
     )
