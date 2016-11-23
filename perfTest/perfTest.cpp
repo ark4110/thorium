@@ -167,7 +167,7 @@ int align(int pos, int column, const int* columns)
   char buf[32];
   memset(buf, ' ', sizeof(buf));
   buf[columns[column] - pos] = 0;
-  printf(buf);
+  printf("%s", buf);
   return columns[column];
 }
 
