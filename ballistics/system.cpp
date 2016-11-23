@@ -59,9 +59,4 @@ namespace ballistics
   {
     return system->methods->predict_orbit(system, clock, prediction);
   }
-
-  prediction_t predict(predictor_t params)
-  {
-    return params.func(params.func_param);
-  }
 }
