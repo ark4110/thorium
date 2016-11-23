@@ -13,9 +13,11 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 set(SOURCE_FILES
   malley_cpu.cpp
   parallel_rays_cpu.cpp
+  planet_emission.cpp
   system.cpp
   malley_cpu.h
   parallel_rays_cpu.h
+  planet_emission.h
   system.h
 )
 
