@@ -50,7 +50,7 @@ public:
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
 
-    system_set_scene(Emitter, Scene);
+    system_set_scene(this->Emitter, Scene);
   }
 
   ~MalleyEmission()
@@ -73,7 +73,7 @@ TYPED_TEST(MalleyEmission, AllocateRaycasterTask)
   float b[2] = { 1000.f, 1000.f };
   task->mesh_emission = b;
   task->mesh_temperatures = b;
-  system_calculate(Emitter, task);
+  system_calculate(this->Emitter, task);
   ASSERT_TRUE(task->rays != 0);
   ASSERT_EQ(4, task->rays->n_tasks);
 }
@@ -85,8 +85,8 @@ TYPED_TEST(MalleyEmission, ReallocateRaycasterTask)
   task->mesh_emission = b;
   task->mesh_temperatures = b;
 
-  system_calculate(Emitter, task);
-  system_calculate(Emitter, task);
+  system_calculate(this->Emitter, task);
+  system_calculate(this->Emitter, task);
   ASSERT_TRUE(task->rays != 0);
   ASSERT_EQ(8, task->rays->n_tasks);
 }
@@ -114,10 +114,10 @@ TYPED_TEST(MalleyEmission, DISABLED_LargeObject)
     temperatures[i] = 300.f * i /size / size;
   }
   
-  system_set_scene(Emitter, scene);
+  system_set_scene(this->Emitter, scene);
   for (int i = 0; i != 3; ++i)
   {
-    system_calculate(Emitter, task);
+    system_calculate(this->Emitter, task);
     task_reset(task->rays);
   }
 
@@ -259,7 +259,7 @@ public:
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
 
-    system_set_scene(Emitter, Scene);
+    system_set_scene(this->Emitter, Scene);
   }
 
   ~PlanetEmission()
@@ -292,7 +292,7 @@ public:
     float b[2] = { 1000.f, 1000.f };
     task->mesh_emission = b;
     task->mesh_temperatures = b;
-    system_calculate(Emitter, task);
+    system_calculate(this->Emitter, task);
 
     float total_flux = kahan_summation(task->power, task->power + task->rays->n_tasks);
 
