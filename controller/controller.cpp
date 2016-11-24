@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
   if (r < scene->n_meshes)
   {
     std::cerr << "There are not enough object temperatues defined in task. Initializing to default values." << std::endl;
-    realloc(task->temperatures, scene->n_meshes * sizeof(float));
+    task->temperatures = (float*)realloc(task->temperatures, scene->n_meshes * sizeof(float));
     for (; r != scene->n_meshes; ++r)
       task->temperatures[r] = 300;
   }
