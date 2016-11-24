@@ -203,8 +203,8 @@ TYPED_TEST(ParallelEmission, TopSource)
   source.power = 10;
   source.direction = math::make_vec3(0, 0, -1);
 
-  AddSource(source);
-  float diff = GetTemperatureDiff();
+  this->AddSource(source);
+  float diff = this->GetTemperatureDiff();
   ASSERT_NEAR(10, diff, 0.2f);
 }
 
@@ -215,8 +215,8 @@ TYPED_TEST(ParallelEmission, SkewSource)
   source.power = 10;
   source.direction = math::make_vec3(0, -1, -1);
 
-  AddSource(source);
-  float diff = GetTemperatureDiff();
+  this->AddSource(source);
+  float diff = this->GetTemperatureDiff();
   ASSERT_NEAR(5, diff, 0.2f);
 }
 
@@ -226,12 +226,12 @@ TYPED_TEST(ParallelEmission, TwoSkewSource)
   source.n_rays = 10000;
   source.power = 10;
   source.direction = math::make_vec3(0, -1, -1);
-  AddSource(source);
+  this->AddSource(source);
 
   source.direction = math::make_vec3(-1, 0, 1);
-  AddSource(source);
+  this->AddSource(source);
 
-  float diff = GetTemperatureDiff();
+  float diff = this->GetTemperatureDiff();
   ASSERT_NEAR(10, diff, 0.2f);
 }
 
