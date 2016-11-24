@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(ballistics)
 
+include_directories(${LIBPREDICT_INCLUDE_DIR})
+
 set(SOURCE_FILES
   attitude.h
   libpredict_tle.cpp

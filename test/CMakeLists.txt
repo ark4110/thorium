@@ -7,6 +7,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 set(SOURCE_FILES
   adams_solution.cpp
+  ballistics.cpp
   conductive_solution.cpp
   emission.cpp
   export.cpp
@@ -28,6 +29,7 @@ set(SOURCE_FILES
 add_executable(tests ${SOURCE_FILES})
 
 target_link_libraries(tests ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(tests ray_caster cuda_ray_caster optix_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission)
+target_link_libraries(tests ballistics ray_caster cuda_ray_caster optix_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission)
+target_link_libraries(tests predict_static)
 target_link_libraries(tests ${CUDA_LIBRARIES})
 target_link_libraries(tests ${optix_prime_LIBRARY})
