@@ -6,8 +6,16 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-find_package(OptiX REQUIRED)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(".")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 
+find_package(CUDA REQUIRED)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_30,code=sm_30)
+find_package(OptiX REQUIRED)
 include_directories("/usr/local/cuda/samples/common/inc")
 
 add_subdirectory("emission")
