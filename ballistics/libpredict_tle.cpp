@@ -35,7 +35,7 @@ namespace libpredict_tle
   {
     system->params = *params;
 
-    char *tle[2] = { const_cast<char*>(params->tle_line_1), const_cast<char*>(params->tle_line_2) };
+    char *tle[2] = { const_cast<char*>(params->tle.line_1), const_cast<char*>(params->tle.line_2) };
     system->elements = predict_parse_tle(tle);
 
     return BALLISTICS_OK;

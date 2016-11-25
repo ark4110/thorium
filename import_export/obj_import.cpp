@@ -243,6 +243,28 @@ namespace obj_import
       case 's':
         continue;
 
+      case 't':
+      {
+        std::string::size_type pos = str.find_first_of(" \t");
+        if (pos == std::string::npos)
+        {
+          fprintf(stderr, "Failed to parse line %d '%s'\n", line, str.c_str());
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+
+        std::string token = str.substr(0, pos);
+        if (token == "tle_orbit")
+        {
+          std::string filename = str.substr(pos + 1);
+        }
+        else
+        {
+          fprintf(stderr, "Invalid tle orbit token at line %d '%s'\n", line, str.c_str());
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+      }
+        break;
+
       case 'o':
       case 'g':
       { 
@@ -267,21 +289,23 @@ namespace obj_import
         }
 
         std::string token = str.substr(0, pos);
-        if (token != "usemtl")
+        if (token == "usemtl")
+        {
+          std::string name = str.substr(pos + 1);
+          MaterialMap::const_iterator found = material2IndexMap.find(name);
+          if (found == material2IndexMap.end())
+          {
+            fprintf(stderr, "Failed to find material reference '%s' at line %d\n", name.c_str(), line);
+            return -OBJ_IMPORT_MATERIAL_NOT_DEFINED;
+          }
+
+          meshes.back().material_idx = found->second;
+        }        
+        else
         {
           fprintf(stderr, "Invalid material token at line %d '%s'\n", line, str.c_str());
           return -OBJ_IMPORT_FORMAT_ERROR;
         }
-
-        std::string name = str.substr(pos + 1);
-        MaterialMap::const_iterator found = material2IndexMap.find(name);
-        if (found == material2IndexMap.end())
-        {
-          fprintf(stderr, "Failed to find material reference '%s' at line %d\n", name.c_str(), line);
-          return -OBJ_IMPORT_MATERIAL_NOT_DEFINED;
-        }
-
-        meshes.back().material_idx = found->second;
       }
       break;
 
@@ -575,11 +599,11 @@ namespace obj_import
       std::string token = str.substr(0, pos);
       
       if (token == "orbit_tle_title")
-        description->tle_header = strdup(&str[pos + 1]);
+        description->tle.header = strdup(&str[pos + 1]);
       else if (token == "orbit_tle_line_1")
-        description->tle_line_1 = strdup(&str[pos + 1]);
+        description->tle.line_1 = strdup(&str[pos + 1]);
       else if (token == "orbit_tle_line_2")
-        description->tle_line_2 = strdup(&str[pos + 1]);
+        description->tle.line_2 = strdup(&str[pos + 1]);
       /*
       // @todo Will be enabled with custom attitude axis support
       else if (token == "orbit_attitude_axis")

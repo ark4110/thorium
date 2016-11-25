@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../math/types.h"
+#include "../ballistics/libpredict_tle.h"
 
 namespace subject
 {

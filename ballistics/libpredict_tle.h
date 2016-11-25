@@ -17,14 +17,13 @@
 #pragma once
 
 #include "system.h"
+#include "tle_orbit.h"
 
 namespace libpredict_tle
 {
   struct params_t : ballistics::params_t
   {
-    char* tle_header;
-    char* tle_line_1;
-    char* tle_line_2;
+    ballistics::tle_orbit_t tle;
   };
 
   ballistics::system_t* system_create();
