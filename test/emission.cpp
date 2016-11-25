@@ -25,6 +25,7 @@
 #include "math/operations.h"
 #include "math/triangle.h"
 #include "subject/objects.h"
+#include "ballistics/static_prediction.h"
 
 using math::vec3;
 using math::make_vec3;
@@ -247,7 +248,10 @@ public:
     params.planet_radius = planet_radius;
     params.solar_flux = solar_flux;
 
-    params.predictor = { &static_predictor, &Prediction };
+    ballistics_static::params_t bparams = {};
+    bparams.predictor_func = &static_predictor;
+    bparams.func_param = &Prediction;
+    params.predictor = ballistics::system_create(BALLISTICS_STATIC, &bparams);
 
     params.n_subdisivion = 30;
     params.n_rays = 10000;

@@ -37,21 +37,11 @@ namespace ballistics
     int eclispsed;
   };
 
-  struct predictor_t
-  {
-    prediction_t(*func)(void*);
-    void* func_param;
-  };
-
-  inline prediction_t predict(predictor_t params)
-  {
-    return params.func(params.func_param);
-  }
-
-  /// @brief Current clock in UTC
+  /// @brief Clock report current time in UTC.
   struct clock_t
   {
-    time_t utc;
+    time_t(*func)(void* param);
+    void* param;
   };
 
   struct system_t
@@ -61,6 +51,7 @@ namespace ballistics
 
   struct params_t
   {
+    clock_t clock;
     attitude_t attitude;
   };
 
@@ -71,19 +62,22 @@ namespace ballistics
   {
     int(*init)(system_t* system, const params_t* params);
     int(*shutdown)(system_t* system);
-    int(*predict_orbit)(system_t* system, const clock_t* clock, prediction_t* prediction);
+    int(*predict_orbit)(system_t* system, prediction_t* prediction);
   };
 
 /**
   NORAD two-line elements set ballistics based on libpredict.
   ECI (Earth-centered inertial) TEME (true equator, mean equinox) coordinates will be transformed using satellite attitude parameters.
 */
-#define BALLISTICS_TLE 1 
+#define BALLISTICS_TLE 1
+
+/// @note Static prediction params_t does not inherit base ballistics::params_t!
+#define BALLISTICS_STATIC 2
 
   system_t* system_create(int type, const params_t* params);
 
   void system_free(system_t* system);
   int system_init(system_t* system, const params_t* params);
   int system_shutdown(system_t* system);
-  int predict_orbit(system_t* system, const clock_t* clock, prediction_t* prediction);
+  int predict_orbit(system_t* system, prediction_t* prediction);
 }

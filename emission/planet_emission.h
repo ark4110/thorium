@@ -37,7 +37,7 @@ namespace planet_emission
     float planet_temperature; // [K]
     float solar_flux; // [W/m^2]
 
-    ballistics::predictor_t predictor;
+    ballistics::system_t* predictor;
 
     int n_subdisivion;
     int n_rays;

@@ -44,6 +44,7 @@ public:
   void Create(int attitudeType)
   {
     libpredict_tle::params_t params;
+    params.clock = { &fixed_clock, &Time };
     params.attitude.type = attitudeType;
     params.tle_header = "ISS (ZARYA)";
     params.tle_line_1 = "1 25544U 98067A   16281.78259727  .00005772  00000-0  94529-4 0  9999";
@@ -53,15 +54,20 @@ public:
 
   ballistics::prediction_t Predict(time_t time)
   {
-    ballistics::clock_t clock;
-    clock.utc = time;
+    Time = time;
 
     ballistics::prediction_t prediction;
-    ballistics::predict_orbit(System, &clock, &prediction);
+    ballistics::predict_orbit(System, &prediction);
     return prediction;
   }
 
+  static time_t fixed_clock(void* param)
+  {
+    return *static_cast<time_t*>(param);
+  }
+
   ballistics::system_t* System;
+  time_t Time;
 };
 
 TEST_F(TleBallistics, EarthPositionAtNadirAttitude)

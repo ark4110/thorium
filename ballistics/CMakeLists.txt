@@ -7,6 +7,8 @@ set(SOURCE_FILES
   attitude.h
   libpredict_tle.cpp
   libpredict_tle.h
+  static_prediction.cpp
+  static_prediction.h
   system.cpp
   system.h
 )

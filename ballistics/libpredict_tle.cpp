@@ -49,9 +49,10 @@ namespace libpredict_tle
     return BALLISTICS_OK;
   }
 
-  int predict_orbit(system_t* system, const clock_t* clock, prediction_t* prediction)
+  int predict_orbit(system_t* system, prediction_t* prediction)
   {
-    predict_julian_date_t julian_time = predict_to_julian(clock->utc);
+    time_t time = system->params.clock.func(system->params.clock.param);
+    predict_julian_date_t julian_time = predict_to_julian(time);
 
     struct predict_orbit orbit;
     ::predict_orbit(system->elements, &orbit, julian_time);
@@ -106,7 +107,7 @@ namespace libpredict_tle
   {
     (int(*)(ballistics::system_t* system, const ballistics::params_t*))&init,
     (int(*)(ballistics::system_t* system))&shutdown,
-    (int(*)(ballistics::system_t* system, const clock_t* clock, prediction_t* prediction))&predict_orbit
+    (int(*)(ballistics::system_t* system, prediction_t* prediction))&predict_orbit
   };
 
   ballistics::system_t* system_create()

@@ -4,9 +4,11 @@
     <ClInclude Include="system.h" />
     <ClInclude Include="libpredict_tle.h" />
     <ClInclude Include="attitude.h" />
+    <ClInclude Include="static_prediction.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="system.cpp" />
     <ClCompile Include="libpredict_tle.cpp" />
+    <ClCompile Include="static_prediction.cpp" />
   </ItemGroup>
 </Project>

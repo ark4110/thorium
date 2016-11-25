@@ -21,10 +21,12 @@
   <ItemGroup>
     <ClInclude Include="attitude.h" />
     <ClInclude Include="libpredict_tle.h" />
+    <ClInclude Include="static_prediction.h" />
     <ClInclude Include="system.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libpredict_tle.cpp" />
+    <ClCompile Include="static_prediction.cpp" />
     <ClCompile Include="system.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

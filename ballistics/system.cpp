@@ -16,6 +16,7 @@
 
 #include "system.h"
 #include "libpredict_tle.h"
+#include "static_prediction.h"
 
 #include <stdlib.h>
 
@@ -28,6 +29,10 @@ namespace ballistics
     {
     case BALLISTICS_TLE:
       system = libpredict_tle::system_create();
+      break;
+
+    case BALLISTICS_STATIC:
+      system = ballistics_static::system_create();
       break;
 
     default:
@@ -55,8 +60,8 @@ namespace ballistics
     return system->methods->shutdown(system);
   }
 
-  int predict_orbit(system_t* system, const clock_t* clock, prediction_t* prediction)
+  int predict_orbit(system_t* system, prediction_t* prediction)
   {
-    return system->methods->predict_orbit(system, clock, prediction);
+    return system->methods->predict_orbit(system, prediction);
   }
 }

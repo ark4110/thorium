@@ -87,6 +87,8 @@ namespace planet_emission
   */
   int calculate(system_t* system, emission::task_t* task)
   {
+    int r = 0;
+
     const params_t& params = system->params;
     int n_elements = (2 * params.n_subdisivion - 1) * (2 * params.n_subdisivion - 1);
     int n_element_rays =  std::max<int>(1, params.n_rays / n_elements);
@@ -97,7 +99,9 @@ namespace planet_emission
     const float Re = params.planet_radius;
     const float iRe = 1.f / Re;
 
-    ballistics::prediction_t prediction = predict(params.predictor);
+    ballistics::prediction_t prediction;
+    if ((r = predict_orbit(params.predictor, &prediction)) < 0)
+      return r;
 
     // Distance to earth
     float R = math::norm(prediction.earth_position);
@@ -177,8 +181,7 @@ namespace planet_emission
         }
       }
     }
-
-    int r = 0;
+    
     if ((r = system_calculate(system->element_emitter, task)) < 0)
       return r;
 
