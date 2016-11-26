@@ -11,6 +11,7 @@ set(SOURCE_FILES
   static_prediction.h
   system.cpp
   system.h
+  tle_orbit.cpp
   tle_orbit.h
 )
 

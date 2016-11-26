@@ -5,10 +5,12 @@
     <ClInclude Include="libpredict_tle.h" />
     <ClInclude Include="attitude.h" />
     <ClInclude Include="static_prediction.h" />
+    <ClInclude Include="tle_orbit.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="system.cpp" />
     <ClCompile Include="libpredict_tle.cpp" />
     <ClCompile Include="static_prediction.cpp" />
+    <ClCompile Include="tle_orbit.cpp" />
   </ItemGroup>
 </Project>

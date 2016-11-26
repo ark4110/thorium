@@ -60,5 +60,5 @@ namespace obj_import
   /**
     @brief Load satellite orbit description.
   */
-  int orbit(const char* filename, libpredict_tle::params_t* description);
+  int orbit(const char* filename, ballistics::tle_orbit_t** description);
 }

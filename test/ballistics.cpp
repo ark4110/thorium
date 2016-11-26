@@ -45,10 +45,10 @@ public:
   {
     libpredict_tle::params_t params;
     params.clock = { &fixed_clock, &Time };
-    params.attitude.type = attitudeType;
-    params.tle.header = "ISS (ZARYA)";
-    params.tle.line_1 = "1 25544U 98067A   16281.78259727  .00005772  00000-0  94529-4 0  9999";
-    params.tle.line_2 = "2 25544  51.6441 216.4056 0006619  52.6341  35.2822 15.54077957 22501";
+    params.orbit.attitude.type = attitudeType;
+    params.orbit.tle.header = "ISS (ZARYA)";
+    params.orbit.tle.line_1 = "1 25544U 98067A   16281.78259727  .00005772  00000-0  94529-4 0  9999";
+    params.orbit.tle.line_2 = "2 25544  51.6441 216.4056 0006619  52.6341  35.2822 15.54077957 22501";
     System = ballistics::system_create(BALLISTICS_TLE, &params);
   }
 

@@ -16,12 +16,22 @@
 
 #pragma once
 
+#include "attitude.h"
+
 namespace ballistics
 {
-  struct tle_orbit_t
+  struct tle_t
   {
     char* header;
     char* line_1;
     char* line_2;
   };
+
+  struct tle_orbit_t
+  {
+    attitude_t attitude;
+    tle_t tle;
+  };
+
+  void tle_orbit_free(tle_orbit_t* o);
 }

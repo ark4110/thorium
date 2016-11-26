@@ -176,6 +176,9 @@ xcopy /Q /I /Y "..\shaders\*" "$(TargetDir)\shaders\"</Command>
     <None Include="..\shaders\simple.frag" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ballistics\ballistics.vcxproj">
+      <Project>{52bc2630-b79c-41b3-ad12-af6cc7791ba1}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\import_export\import_export.vcxproj">
       <Project>{01b5d59c-ad62-424b-8b03-727fb9118b82}</Project>
     </ProjectReference>

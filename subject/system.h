@@ -22,7 +22,7 @@
 #pragma once
 
 #include "../math/types.h"
-#include "../ballistics/libpredict_tle.h"
+#include "../ballistics/tle_orbit.h"
 
 namespace subject
 {
@@ -85,6 +85,8 @@ namespace subject
     mesh_t* meshes; ///< Meshes array.    
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
+
+    ballistics::tle_orbit_t* tle_orbit;
   };
 
   /// @brief Allocate memory for scene.

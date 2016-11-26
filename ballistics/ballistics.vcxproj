@@ -23,11 +23,13 @@
     <ClInclude Include="libpredict_tle.h" />
     <ClInclude Include="static_prediction.h" />
     <ClInclude Include="system.h" />
+    <ClInclude Include="tle_orbit.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libpredict_tle.cpp" />
     <ClCompile Include="static_prediction.cpp" />
     <ClCompile Include="system.cpp" />
+    <ClCompile Include="tle_orbit.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}</ProjectGuid>

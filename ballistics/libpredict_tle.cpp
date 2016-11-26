@@ -35,7 +35,7 @@ namespace libpredict_tle
   {
     system->params = *params;
 
-    char *tle[2] = { const_cast<char*>(params->tle.line_1), const_cast<char*>(params->tle.line_2) };
+    char *tle[2] = { const_cast<char*>(params->orbit.tle.line_1), const_cast<char*>(params->orbit.tle.line_2) };
     system->elements = predict_parse_tle(tle);
 
     return BALLISTICS_OK;
@@ -64,7 +64,7 @@ namespace libpredict_tle
     math::vec3 sun_position = math::make_vec3((float)eci_sun_position[0], (float)eci_sun_position[1], (float)eci_sun_position[2]) * 1000 - eci_satellite_position;
 
     math::vec3 eci_direction;
-    switch (system->params.attitude.type)
+    switch (system->params.orbit.attitude.type)
     {
     case ATTITUDE_TYPE_NADIR:
     {

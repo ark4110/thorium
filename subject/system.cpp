@@ -43,6 +43,7 @@ namespace subject
         free(scene->meshes[m].name);
       free(scene->meshes);
       free(scene->materials);
+      tle_orbit_free(scene->tle_orbit);
       free(scene);
     }
   }

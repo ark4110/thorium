@@ -37,7 +37,7 @@ namespace ballistics
     int eclispsed;
   };
 
-  /// @brief Clock report current time in UTC.
+  /// @brief Clock report simulation time in UTC.
   struct clock_t
   {
     time_t(*func)(void* param);
@@ -52,7 +52,6 @@ namespace ballistics
   struct params_t
   {
     clock_t clock;
-    attitude_t attitude;
   };
 
 #define BALLISTICS_OK    0

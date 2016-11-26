@@ -23,7 +23,7 @@ namespace libpredict_tle
 {
   struct params_t : ballistics::params_t
   {
-    ballistics::tle_orbit_t tle;
+    ballistics::tle_orbit_t orbit;
   };
 
   ballistics::system_t* system_create();

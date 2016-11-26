@@ -181,6 +181,7 @@ namespace obj_import
     std::vector<subject::material_t> materials;
     typedef std::map<std::string, int> MaterialMap;
     MaterialMap material2IndexMap;
+    ballistics::tle_orbit_t* tle_orbit = 0;
     std::string str;
     unsigned line = 0;
 
@@ -256,6 +257,8 @@ namespace obj_import
         if (token == "tle_orbit")
         {
           std::string filename = str.substr(pos + 1);
+          if (int r = orbit(filename.c_str(), &tle_orbit))
+            return r;
         }
         else
         {
@@ -354,6 +357,8 @@ namespace obj_import
     // Preparing scene.
     subject::scene_t* result = subject::scene_create();
     *scene = result;
+
+    result->tle_orbit = tle_orbit;
 
     // Triangulation to vertices from face indices.
     result->n_faces = (int)faces.size();
@@ -571,7 +576,7 @@ namespace obj_import
     return (int)n;
   }
 
-  int orbit(const char* filename, libpredict_tle::params_t* description)
+  int orbit(const char* filename, ballistics::tle_orbit_t** target)
   {
     std::ifstream file(filename);
     if (!file.is_open())
@@ -579,6 +584,10 @@ namespace obj_import
       fprintf(stderr, "Orbit description file '%s' not found.\n", filename);
       return -OBJ_IMPORT_FILE_ERROR;
     }
+
+    if (!*target)
+      *target = (ballistics::tle_orbit_t*)calloc(1, sizeof(ballistics::tle_orbit_t));
+    ballistics::tle_orbit_t* description = *target;
 
     std::string str;
     unsigned line = 0;
