@@ -41,8 +41,8 @@ namespace planet_emission
     system->scene = 0;
 
     int n_elements = (2 * params->n_subdisivion - 1) * (2 * params->n_subdisivion - 1);
-    system->element_params.n_sources = n_elements;
-    system->element_params.sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)calloc(n_elements, sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+    system->element_params.n_sources = 1 + n_elements; // +1 for solar flux
+    system->element_params.sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)calloc(system->element_params.n_sources, sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
     system->element_emitter = system_create(params->parallel_rays_emitter_type, &system->element_params);
 
     return EMISSION_OK;
@@ -103,6 +103,16 @@ namespace planet_emission
     if ((r = predict_orbit(params.predictor, &prediction)) < 0)
       return r;
 
+    float total_flux = 0;
+    if (params.n_solar_rays > 0 && params.solar_flux > 0)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_elements];
+      source.n_rays = params.n_solar_rays;
+      source.power = params.solar_flux;
+      source.direction = math::normalize(-prediction.sun_position);
+      total_flux += params.solar_flux;
+    }
+
     // Distance to earth
     float R = math::norm(prediction.earth_position);
     float a = R - Re;
@@ -128,7 +138,7 @@ namespace planet_emission
 
     // Init with central element
     float factor0 = dot(s, math::make_vec3(0, 0, 1));
-    float total_flux = factor0 > 0 ? factor0 * dFlux : 0;
+    total_flux += factor0 > 0 ? factor0 * dFlux : 0;
 
     int n_element = 0;
     parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_element];
@@ -176,7 +186,9 @@ namespace planet_emission
         if (dFactor > 0 || eFlux > 0)
         {
           source.n_rays = n_element_rays;
-          source.power = (dFactor > 0 ? dFactor : 0.f) * dFlux + eFlux;
+          float flux = (dFactor > 0 ? dFactor : 0.f) * dFlux + eFlux;
+          total_flux += flux;
+          source.power = flux;
           source.direction = global_transform * (-u);
         }
       }

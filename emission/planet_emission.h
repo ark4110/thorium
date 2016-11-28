@@ -41,6 +41,7 @@ namespace planet_emission
 
     int n_subdisivion;
     int n_rays;
+    int n_solar_rays;
 
     int parallel_rays_emitter_type;
   };

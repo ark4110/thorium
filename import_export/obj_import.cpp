@@ -563,17 +563,18 @@ namespace obj_import
         {
           fprintf(stderr, "Ignored planet emission '%s'\n", line);
         }
-        else if (sscanf(line, "emsplnt %f %f %f %f %d %d %d",
+        else if (sscanf(line, "emsplnt %f %f %f %f %d %d %d %d",
           &planet_emission_params->planet_radius,
           &planet_emission_params->planet_albedo,
           &planet_emission_params->planet_temperature,
           &planet_emission_params->solar_flux,
           &planet_emission_params->n_subdisivion,
           &planet_emission_params->n_rays,
-          &planet_emission_params->parallel_rays_emitter_type) != 7)
+          &planet_emission_params->n_solar_rays,
+          &planet_emission_params->parallel_rays_emitter_type) != 8)
         {
-          fprintf(stderr, "Failed to parse planet emission format emsplnt planet_radius planet_albedo planet_temperature solar_flux n_subdisivion "
-            " n_rays parallel_rays_emitter_type in:\n  '%s'\n", line);
+          fprintf(stderr, "Failed to parse planet emission format emsplnt planet_radius planet_albedo planet_temperature solar_flux n_subdisivion"
+            " n_rays n_solar_rays parallel_rays_emitter_type in:\n  '%s'\n", line);
           free(line);
           return -OBJ_IMPORT_FORMAT_ERROR;
         }

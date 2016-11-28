@@ -1,6 +1,7 @@
 # Blender v2.77 (sub 0) OBJ File for Thorium: 'reflector.blend'
 # www.blender.org
 mtllib reflector.mtl
+tle_orbit zarya.orbit
 o Text.002
 v 0.450000 0.594000 8.000000
 v 0.016000 0.000000 8.000000

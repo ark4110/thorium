@@ -239,9 +239,9 @@ TYPED_TEST(ParallelEmission, TwoSkewSource)
 class PlanetEmission : public Test
 {
 public:
-  PlanetEmission(float planet_albedo, float planet_temperature, float planet_radius, float solar_flux)
+  PlanetEmission(float planet_albedo, float planet_temperature, float planet_radius, float solar_flux, int n_solar_rays)
   {
-    planet_emission::params_t params;
+    planet_emission::params_t params = {};
 
     params.planet_albedo = planet_albedo;
     params.planet_temperature = planet_temperature;
@@ -255,6 +255,7 @@ public:
 
     params.n_subdisivion = 30;
     params.n_rays = 10000;
+    params.n_solar_rays = n_solar_rays;
     params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CPU;
 
     Emitter = emission::system_create(EMISSION_PLANET_CPU, &params);
@@ -320,7 +321,7 @@ class SolarIrradiance : public PlanetEmission
 {
 public:
   SolarIrradiance()
-    : PlanetEmission(0.34f, 0, earth_polar_radius, 1353)
+    : PlanetEmission(0.34f, 0, earth_polar_radius, 1353, 0)
   {
   }
 };
@@ -329,7 +330,16 @@ class EarthSelfEmission : public PlanetEmission
 {
 public:
   EarthSelfEmission()
-    : PlanetEmission(0.34f, 250, earth_polar_radius, 0)
+    : PlanetEmission(0.34f, 250, earth_polar_radius, 0, 0)
+  {
+  }
+};
+
+class SolarRadiance : public PlanetEmission
+{
+public:
+  SolarRadiance()
+    : PlanetEmission(0.f, 0, earth_polar_radius, 1353, 100)
   {
   }
 };
@@ -416,4 +426,16 @@ TEST_F(EarthSelfEmission, Alt600)
 
   float flux = calculate_flux();
   ASSERT_NEAR(260, flux, 5.f);
+}
+
+TEST_F(SolarRadiance, IsConsidered)
+{
+  const float altitude = 600e3;
+
+  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  Prediction.eclispsed = 0;
+
+  float flux = calculate_flux();
+  ASSERT_NEAR(1353, flux, 1.f);
 }
