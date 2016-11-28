@@ -26,6 +26,7 @@
     <ClInclude Include="tle_orbit.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="attitude.cpp" />
     <ClCompile Include="libpredict_tle.cpp" />
     <ClCompile Include="static_prediction.cpp" />
     <ClCompile Include="system.cpp" />

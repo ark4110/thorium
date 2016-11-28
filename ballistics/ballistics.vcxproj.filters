@@ -12,5 +12,6 @@
     <ClCompile Include="libpredict_tle.cpp" />
     <ClCompile Include="static_prediction.cpp" />
     <ClCompile Include="tle_orbit.cpp" />
+    <ClCompile Include="attitude.cpp" />
   </ItemGroup>
 </Project>
