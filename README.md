@@ -7,14 +7,14 @@ Thorium is a set of libraries and tools used to solve radiance and conductive th
 ## Running on Windows
 Download repository and go /bin directory. There are 64-bit version of Thorium binaries and corresponding .dll
 
-Please notice that [Visual Studio 2015 Redistributable](https://www.microsoft.com/download/details.aspx?id=48145) may be required.
+[Visual Studio 2015 Redistributable](https://www.microsoft.com/download/details.aspx?id=48145) may be required.
 
 
 ## Building on Windows
 
 1. Install [Visual Studio 2015](https://www.visualstudio.com/downloads/). Community Edition is enough.
 
-2. Install Nvidia [CUDA](https://developer.nvidia.com/cuda-downloads). Please notice that Nvidia developer program registration is required for download.
+2. Install Nvidia [CUDA](https://developer.nvidia.com/cuda-downloads). Nvidia developer program registration is required for download.
 
 3. Install Nvidia [OptiX](https://developer.nvidia.com/designworks/optix/download). Define OPTIX_INCLUDE_DIR and OPTIX_LIB_X64_DIR environment variables. Default installation directory for OptiX is C:\ProgramData\NVIDIA Corporation\OptiX SDK 4.0.1
 
