@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <stdexcept>
+#include <algorithm>
 	
 
 namespace ray_caster
@@ -79,10 +80,14 @@ namespace ray_caster
 
     if (valid_task->n_reserved < valid_task->n_tasks)
     {
-      valid_task->n_reserved = valid_task->n_tasks;
-      valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_tasks * sizeof(math::ray_t));
-      valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_tasks * sizeof(ray_caster::face_t*));
-      valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_tasks * sizeof(math::vec3));
+      int n_from = valid_task->n_reserved;
+      valid_task->n_reserved = std::min<int>(valid_task->n_tasks * 2, valid_task->n_tasks + 100000);
+      if (valid_task->n_reserved > 100000)
+        fprintf(stderr, "Task grow from %d to %d rays\n", n_from, valid_task->n_reserved);
+      
+      valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
+      valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_reserved * sizeof(ray_caster::face_t*));
+      valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
     }
 
     return n_prev;

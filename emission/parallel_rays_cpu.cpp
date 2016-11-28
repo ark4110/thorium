@@ -81,8 +81,22 @@ namespace parallel_rays_emission_cpu
     return EMISSION_OK;
   }
 
+  int get_total_rays(cpu_system_t* system)
+  {
+    int result = 0;
+    for (int source_idx = 0; source_idx != system->params.n_sources; ++source_idx)
+    {
+      parallel_rays_source_t& source = system->params.sources[source_idx];
+      result += source.n_rays;
+    }
+    return result;
+  }
+
   int calculate(cpu_system_t* system, emission::task_t* task)
   {
+    int n_total_rays = get_total_rays(system);
+    task_reserve(task, n_total_rays);
+    
     for (int source_idx = 0; source_idx != system->params.n_sources; ++source_idx)
     {
       parallel_rays_source_t& source = system->params.sources[source_idx];

@@ -48,11 +48,11 @@ namespace emission
 
   int task_grow(task_t* task, int n_rays)
   {
-    int n_prev_reserved = task_get_reserve(task->rays);
+    int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_input_rays = ray_caster::task_grow(&task->rays, n_rays);
     int n_total = task->rays->n_tasks;
-    if (n_total > n_prev_reserved)
-      task->power = (float*)realloc(task->power, n_total * sizeof(float));
+    if (n_prev_reserved != task->rays->n_reserved)
+      task->power = (float*)realloc(task->power, task->rays->n_reserved * sizeof(float));
     return n_input_rays;
   }
 
