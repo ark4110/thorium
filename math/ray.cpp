@@ -51,7 +51,7 @@ namespace math
     math::vec3 normal = normalize(triangle_normal(triangle));
     math::vec3 v = normalize(ray.direction);
     float angle = dot(normal, v);
-    math::vec3 reflection = v - 2 * angle * normalize(normal);
+    math::vec3 reflection = v - 2 * angle * normal;
     return{ hit_point + reflection * 0.0001f, reflection };
   }
 
