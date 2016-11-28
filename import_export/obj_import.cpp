@@ -256,8 +256,24 @@ namespace obj_import
         std::string token = str.substr(0, pos);
         if (token == "tle_orbit")
         {
-          std::string filename = str.substr(pos + 1);
-          if (int r = orbit(filename.c_str(), &tle_orbit))
+          std::string library_name = str.substr(10);
+          std::string library_path = library_name;
+
+          if (library_name.find("/\\") > library_name.length())
+          {
+            std::string base_name(filename);
+            size_t dir_pos = base_name.find_last_of("/\\");
+            if (dir_pos < base_name.length())
+              base_name = base_name.substr(0, dir_pos + 1);
+            else
+              base_name = "";
+            std::string library_name = str.substr(10);
+            library_path = base_name + library_name;
+          }
+
+          fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
+
+          if (int r = orbit(library_path.c_str(), &tle_orbit))
             return r;
         }
         else
@@ -482,7 +498,7 @@ namespace obj_import
   }
 #endif
 
-  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source)
+  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source, planet_emission::params_t* planet_emission_params)
   {
     char * line = NULL;
     size_t len = 0;
@@ -538,6 +554,48 @@ namespace obj_import
 
         heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
         heat_source->sources[heat_source->n_sources++] = source;
+      }
+      break;
+
+      case 'p':
+      {
+        if (!planet_emission_params)
+        {
+          fprintf(stderr, "Ignored planet emission '%s'\n", line);
+        }
+        else if (sscanf(line, "plntems %f %f %f %f %d %d %d",
+          &planet_emission_params->planet_radius,
+          &planet_emission_params->planet_albedo,
+          &planet_emission_params->planet_temperature,
+          &planet_emission_params->solar_flux,
+          &planet_emission_params->n_subdisivion,
+          &planet_emission_params->n_rays,
+          &planet_emission_params->parallel_rays_emitter_type) != 7)
+        {
+          fprintf(stderr, "Failed to parse planet emission format plntems planet_radius planet_albedo planet_temperature solar_flux n_subdisivion "
+            " n_rays parallel_rays_emitter_type in:\n  '%s'\n", line);
+          free(line);
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+        else
+        {
+          fprintf(stderr, "Loaded planet emission:\n"
+            "  radius\t%f\n"
+            "  albedo\t%f\n"
+            "  temper\t%f\n"
+            "  solar\t%f\n"
+            "  n_subdiv\t%d\n"
+            "  n_rays\t%d\n"
+            "  type\t%d\n",
+            planet_emission_params->planet_radius,
+            planet_emission_params->planet_albedo,
+            planet_emission_params->planet_temperature,
+            planet_emission_params->solar_flux,
+            planet_emission_params->n_subdisivion,
+            planet_emission_params->n_rays,
+            planet_emission_params->parallel_rays_emitter_type
+          );
+        }
       }
       break;
 

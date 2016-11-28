@@ -20,6 +20,7 @@
  */
 
 #include "../import_export/obj_import.h"
+#include "../ballistics/system.h"
 #include "../ray_caster/system.h"
 #include "../thermal_solution/system.h"
 #include "../thermal_equation/system.h"
@@ -36,6 +37,11 @@
 void PrintUsage()
 {
   std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <report interval [1]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
+}
+
+time_t WallClock(void*)
+{
+  return time(0);
 }
 
 int main(int argc, char* argv[])
@@ -131,10 +137,27 @@ int main(int argc, char* argv[])
     return r;
   }
 
+  ballistics::system_t* predictor = 0;
+  if (scene->tle_orbit)
+  {
+    libpredict_tle::params_t params;
+    params.orbit = *(scene->tle_orbit);
+    params.clock = { &WallClock, 0 };
+    predictor = ballistics::system_create(BALLISTICS_TLE, &params);
+
+    std::cerr << "Initialized TLE ballistics:\n" 
+      << params.orbit.tle.header << "\n" 
+      << params.orbit.tle.line_1 << "\n" 
+      << params.orbit.tle.line_2 << "\n"
+      << "attitude type " << ballistics::attitude_get_name(params.orbit.attitude.type) << std::endl;
+  }
+
   malley_cpu::params_t malley_emission_params;
   malley_emission_params.n_rays = n_rays;
 
   parallel_rays_emission_cpu::params_t exterior_emission_params = {};
+  planet_emission::params_t planet_emission_params = {};
+  planet_emission_params.predictor = predictor;
   
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
   thermal_solution::task_t* task = thermal_solution::task_create(0);
@@ -147,7 +170,7 @@ int main(int argc, char* argv[])
   }
   else
   {
-    r = obj_import::task(task_file, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params);
+    r = obj_import::task(task_file, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params);
     fclose(task_file);
     if (r < 0)
     {
@@ -164,7 +187,6 @@ int main(int argc, char* argv[])
       exterior_emission_params.sources[source_idx].n_rays = (int)(exterior_emission_params.sources[source_idx].power * n_distant_rays / total_power);
   }
 
-  
   emission::system_t* interior_radiance_emitter = emission::system_create(EMISSION_MALLEY_CUDA, &malley_emission_params);
   if (!interior_radiance_emitter)
   {
@@ -179,6 +201,16 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  emission::system_t* planet_emitter = 0;
+  if (planet_emission_params.n_subdisivion > 0 && !predictor)
+  {
+    std::cerr << "Ignoring planet emission because no orbit defined!" << std::endl;
+  }
+  else if (planet_emission_params.n_subdisivion > 0)
+  {
+    planet_emitter = emission::system_create(EMISSION_PLANET_CPU, &planet_emission_params);
+  }
+
   if (r < scene->n_meshes)
   {
     std::cerr << "There are not enough object temperatues defined in task. Initializing to default values." << std::endl;
@@ -187,13 +219,22 @@ int main(int argc, char* argv[])
       task->temperatures[r] = 300;
   }
 
-  emission::system_t* emitters[2] = { interior_radiance_emitter , exterior_radiance_emitter };
-
   thermal_equation::system_t* equations[3];
   
+  emission::system_t* emitters[3] = { interior_radiance_emitter, 0, 0};
   radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = emitters;
-  radiance_params.n_emitters = exterior_emission_params.n_sources > 0 ? 2 : 1;
+  radiance_params.n_emitters = 1;
+  if (exterior_emission_params.n_sources > 0)
+  {
+    emitters[radiance_params.n_emitters] = exterior_radiance_emitter;
+    ++radiance_params.n_emitters;
+  }
+  if (planet_emitter)
+  {
+    emitters[radiance_params.n_emitters] = planet_emitter;
+    ++radiance_params.n_emitters;
+  }
   radiance_params.ray_caster = caster;
   radiance_equation::stats_t radiance_stats;
   radiance_params.stats = &radiance_stats;
