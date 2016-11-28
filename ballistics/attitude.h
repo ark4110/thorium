@@ -31,4 +31,6 @@ namespace ballistics
   {
     int type;
   };
+
+  const char* attitude_get_name(int type);
 }

@@ -4,6 +4,7 @@ project(ballistics)
 include_directories(${LIBPREDICT_INCLUDE_DIR})
 
 set(SOURCE_FILES
+  attitude.cpp
   attitude.h
   libpredict_tle.cpp
   libpredict_tle.h
