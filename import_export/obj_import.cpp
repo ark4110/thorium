@@ -505,11 +505,21 @@ namespace obj_import
     size_t read;
     size_t n = 0;
     size_t left = 0;
+
+    t->current_time = 0;
     
     while (n_meshes > 0 && (read = getline(&line, &len, in)) != -1)
     {
       switch (line[0])
       {
+      case 'c':
+        if (sscanf(line, "current_time %lf", &t->current_time) != 1)
+        {
+          free(line);
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+        break;
+
       case 'n':
         left += n;
         n = 0;
@@ -587,6 +597,7 @@ namespace obj_import
             "  solar\t%f\n"
             "  n_subdiv\t%d\n"
             "  n_rays\t%d\n"
+            "  n_solar_rays\t%d\n"
             "  type\t%d\n",
             planet_emission_params->planet_radius,
             planet_emission_params->planet_albedo,
@@ -594,6 +605,7 @@ namespace obj_import
             planet_emission_params->solar_flux,
             planet_emission_params->n_subdisivion,
             planet_emission_params->n_rays,
+            planet_emission_params->n_solar_rays,
             planet_emission_params->parallel_rays_emitter_type
           );
         }

@@ -39,10 +39,6 @@ void PrintUsage()
   std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <report interval [1]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
 }
 
-time_t WallClock(void*)
-{
-  return time(0);
-}
 
 int main(int argc, char* argv[])
 {
@@ -137,12 +133,14 @@ int main(int argc, char* argv[])
     return r;
   }
 
+  thermal_solution::task_t* task = thermal_solution::task_create(0);
+
   ballistics::system_t* predictor = 0;
   if (scene->tle_orbit)
   {
     libpredict_tle::params_t params;
     params.orbit = *(scene->tle_orbit);
-    params.clock = { &WallClock, 0 };
+    params.clock = { &thermal_solution::task_clock, task };
     predictor = ballistics::system_create(BALLISTICS_TLE, &params);
 
     std::cerr << "Initialized TLE ballistics:\n" 
@@ -160,7 +158,7 @@ int main(int argc, char* argv[])
   planet_emission_params.predictor = predictor;
   
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
-  thermal_solution::task_t* task = thermal_solution::task_create(0);
+  
   task->time_delta = 0.1f;
   FILE* task_file = fopen(input_task, "r");
   if (!task_file)
@@ -176,6 +174,16 @@ int main(int argc, char* argv[])
     {
       fprintf(stderr, "Failed to load task '%s'\n", input_task);
       return r;
+    }
+
+    if (task->current_time == 0)
+    {
+      task->current_time = (double)time(0);
+      fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
+    }
+    else
+    {
+      fprintf(stderr, "Start time is %lf\n", task->current_time);
     }
 
     // Distribute n_rays among all sources

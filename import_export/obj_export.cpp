@@ -91,6 +91,7 @@ namespace obj_export
   {
     fprintf(out, "newfrm frame_%d\n", task->n_step);
     fprintf(out, "step %f\n", task->time_delta);
+    fprintf(out, "current_time %lf\n", task->current_time);
     const float* f = task->temperatures;
     const subject::mesh_t* m = scene->meshes;
     for (int m = 0; m != scene->n_meshes; ++m)

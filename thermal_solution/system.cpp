@@ -42,6 +42,11 @@ namespace thermal_solution
     free(task);
   }
 
+  time_t task_clock(void* task)
+  {
+    return time_t(static_cast<thermal_solution::task_t*>(task)->current_time);
+  }
+
   system_t* system_create(int type, params_t* params)
   {
     system_t* system = 0;

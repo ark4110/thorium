@@ -21,6 +21,7 @@
 #pragma once
 
 #include "../subject/system.h"
+#include <time.h>
 
 namespace thermal_equation
 {
@@ -44,10 +45,12 @@ namespace thermal_solution
     int n_step; ///< Current integration step.
     float time_delta; ///< @todo Most integration techniques use fixed time delta. Move to init() or set_scene().
     float* temperatures;  ///< Result temperatures.
+    double current_time;
   };
 
   task_t* task_create(int n_meshes);
   void task_free(task_t* task);
+  time_t task_clock(void* task);
 
   /**
    * @brief Form factors calculator type.

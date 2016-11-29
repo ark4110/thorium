@@ -179,6 +179,8 @@ namespace cpu_adams
     float* Tnext = get_step_temperatures(system, n + 1);
     memcpy(Tnext, Tresult, sizeof(float) * n_meshes);
     task->n_step = ++system->n_step;
+
+    task->current_time += task->time_delta;
  
     return THERMAL_SOLUTION_OK;
   }
