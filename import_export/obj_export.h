@@ -22,6 +22,7 @@
 
 #include "../subject/system.h"
 #include "../thermal_solution/system.h"
+#include "../ballistics/system.h"
 #include <cstdio>
 
 namespace obj_export
@@ -30,6 +31,7 @@ namespace obj_export
   int scene(FILE* out, const subject::scene_t* scene);
 
   /// @brief Exports solution task in OBJ format.
-  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task);
+  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task, const ballistics::prediction_t* p);
   int task_binary(FILE* out, int n_meshes, const thermal_solution::task_t* task);
+  int prediction(FILE* out, const ballistics::prediction_t& p);
 }

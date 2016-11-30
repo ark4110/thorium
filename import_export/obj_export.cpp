@@ -87,11 +87,13 @@ namespace obj_export
     return 0;
   }
 
-  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task)
+  int task(FILE* out, const subject::scene_t* scene, const thermal_solution::task_t* task, const ballistics::prediction_t* p)
   {
     fprintf(out, "newfrm frame_%d\n", task->n_step);
     fprintf(out, "step %f\n", task->time_delta);
     fprintf(out, "current_time %lf\n", task->current_time);
+    if (p)
+      prediction(out, *p);
     const float* f = task->temperatures;
     const subject::mesh_t* m = scene->meshes;
     for (int m = 0; m != scene->n_meshes; ++m)
@@ -103,6 +105,7 @@ namespace obj_export
     
     fprintf(out, "\n");
     fflush(out);
+
     return 0;
   }
 
@@ -114,6 +117,13 @@ namespace obj_export
     fwrite((const char*)task->temperatures, 1, sizeof(float) * n_meshes, out);
     fprintf(out, "\n");
     fflush(out);
+    return 0;
+  }
+
+  int prediction(FILE* out, const ballistics::prediction_t& p)
+  {
+    fprintf(out, "earth_position %E %E %E\n", p.earth_position.x, p.earth_position.y, p.earth_position.z);
+    fprintf(out, "sun_position %E %E %E\n", p.sun_position.x, p.sun_position.y, p.sun_position.z);
     return 0;
   }
 }

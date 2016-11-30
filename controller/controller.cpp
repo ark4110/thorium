@@ -135,6 +135,7 @@ int main(int argc, char* argv[])
 
   thermal_solution::task_t* task = thermal_solution::task_create(0);
 
+  ballistics::prediction_t prediction;
   ballistics::system_t* predictor = 0;
   if (scene->tle_orbit)
   {
@@ -281,7 +282,10 @@ int main(int argc, char* argv[])
   float time = 0;
   float temp = task->time_delta;
   task->time_delta = 0;
-  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
+  if (predictor)
+    ballistics::predict_orbit(predictor, &prediction);
+  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
+
   task->time_delta = temp;
   
   StopWatchInterface *hTimer;
@@ -312,7 +316,10 @@ int main(int argc, char* argv[])
       // Pain, meet ugly. Ugly, pain.
       float temp = task->time_delta;
       task->time_delta = time - prev_report_time;
-      binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
+      if (predictor)
+        ballistics::predict_orbit(predictor, &prediction);
+      binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
+      
       task->time_delta = temp;
 
       time -= report_interval;
@@ -322,8 +329,10 @@ int main(int argc, char* argv[])
 
   if (prev_report_time != time)
   {
+    if (predictor)
+      ballistics::predict_orbit(predictor, &prediction);
     task->time_delta = time - prev_report_time;
-    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task);
+    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
   }
   
   sdkStopTimer(&hTimer);
