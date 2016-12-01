@@ -26,6 +26,14 @@ namespace math
   {
     return near_enough(l, r);
   }
+
+  bool operator==(const mat33& l, const mat33& r)
+  {
+    float diff = 0;
+    for (int i = 0; i != 9; ++i)
+        diff += fabsf(l.p[i] - r.p[i]);
+    return diff < FLT_EPSILON;
+  }
 }
 
 TEST(rotate_towards, Collinear)
@@ -62,4 +70,17 @@ TEST(rotate_towards, NotNormalizedTarget)
   mat33 rotation = rotate_towards(from, to);
   vec3 result = rotation * from;
   ASSERT_EQ(to, result);
+}
+
+TEST(MatrixMultiplication, ByIdentity)
+{
+  mat33 result = IDENTITY_33 * IDENTITY_33;
+  ASSERT_EQ(IDENTITY_33, result);
+
+  mat33 sample = make_mat33(0.0f, 0.1f, 0.2f, 1.0f, 1.1f, 1.2f, 2.0f, 2.1f, 2.2f);
+  result = sample * IDENTITY_33;
+  ASSERT_EQ(sample, result);
+
+  result = IDENTITY_33 * sample;
+  ASSERT_EQ(sample, result);
 }
