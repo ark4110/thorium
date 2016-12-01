@@ -104,13 +104,18 @@ namespace planet_emission
       return r;
 
     float total_flux = 0;
-    if (params.n_solar_rays > 0 && params.solar_flux > 0)
-    {
-      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->element_params.sources[n_elements];
-      source.n_rays = params.n_solar_rays;
-      source.power = params.solar_flux;
-      source.direction = math::normalize(-prediction.sun_position);
+    parallel_rays_emission_cpu::parallel_rays_source_t& solar_source = system->element_params.sources[n_elements];
+    if (params.n_solar_rays > 0 && params.solar_flux > 0 && !prediction.eclispsed)
+    { 
+      solar_source.n_rays = params.n_solar_rays;
+      solar_source.power = params.solar_flux;
+      solar_source.direction = math::normalize(-prediction.sun_position);
       total_flux += params.solar_flux;
+    }
+    else
+    {
+      solar_source.n_rays = 0;
+      solar_source.power = 0;
     }
 
     // Distance to earth
