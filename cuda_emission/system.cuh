@@ -34,9 +34,26 @@ namespace cuda_math
     float3 direction;
   };
 
-  struct mat33
+  union mat33
   {
-    float p[3][3];
+    struct
+    {
+      float _11, _12, _13;
+      float _21, _22, _23;
+      float _31, _32, _33;
+    };
+
+    point_t& element(int i, int j)
+    {
+      return p[i * 3 + j];
+    }
+
+    point_t operator()(int i, int j) const
+    {
+      return p[i * 3 + j];
+    }
+
+    point_t p[9];
   };
 
   inline __device__ void convert_face_to_uv(face_t& face)
@@ -59,7 +76,8 @@ namespace cuda_math
 
   inline __device__ mat33 make_mat33(float a00, float a01, float a02, float a10, float a11, float a12, float a20, float a21, float a22)
   {
-    return{ { { a00, a01, a02 },{ a10, a11, a12 },{ a20, a21, a22 } } };
+    mat33 result = { a00, a01, a02, a10, a11, a12, a20, a21, a22 };
+    return result;
   }
 
   inline __device__ mat33 make_identity()
@@ -76,61 +94,48 @@ namespace cuda_math
   /// @brief 3x3 matrix to matrix multiplication.
   inline __device__ mat33 operator * (mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][0] * b.p[0][0] + a.p[0][1] * b.p[1][0] + a.p[0][2] * b.p[2][0],
-      a.p[1][0] * b.p[0][0] + a.p[1][1] * b.p[1][0] + a.p[1][2] * b.p[2][0],
-      a.p[2][0] * b.p[0][0] + a.p[2][1] * b.p[1][0] + a.p[2][2] * b.p[2][0],
-      a.p[0][0] * b.p[0][1] + a.p[0][1] * b.p[1][1] + a.p[0][2] * b.p[2][1],
-      a.p[1][0] * b.p[0][1] + a.p[1][1] * b.p[1][1] + a.p[1][2] * b.p[2][1],
-      a.p[2][0] * b.p[0][1] + a.p[2][1] * b.p[1][1] + a.p[2][2] * b.p[2][1],
-      a.p[0][0] * b.p[0][2] + a.p[0][1] * b.p[1][2] + a.p[0][2] * b.p[2][2],
-      a.p[1][0] * b.p[0][2] + a.p[1][1] * b.p[1][2] + a.p[1][2] * b.p[2][2],
-      a.p[2][0] * b.p[0][2] + a.p[2][1] * b.p[1][2] + a.p[2][2] * b.p[2][2]
-    );
+    mat33 r = {};
+
+    for (int i = 0; i != 3; i++)
+      for (int j = 0; j != 3; j++)
+        for (int c = 0; c != 3; c++)
+        {
+          r.element(i, j) += a(i, c) * b(c, j);
+        }
+
+    return r;
   }
 
   inline __device__ float3 operator * (mat33 mat, float3 vec)
   {
     return make_float3(
-      (mat.p[0][0] * vec.x) + (mat.p[1][0] * vec.y) + (mat.p[2][0] * vec.z),
-      (mat.p[0][1] * vec.x) + (mat.p[1][1] * vec.y) + (mat.p[2][1] * vec.z),
-      (mat.p[0][2] * vec.x) + (mat.p[1][2] * vec.y) + (mat.p[2][2] * vec.z)
+      (mat._11 * vec.x + mat._12 * vec.y + mat._13 * vec.z),
+      (mat._21 * vec.x + mat._22 * vec.y + mat._23 * vec.z),
+      (mat._31 * vec.x + mat._32 * vec.y + mat._33 * vec.z)
     );
   }
 
   /// @brief 3x3 matrices sum.
   inline __device__ mat33 operator + (mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][0] + b.p[0][0], a.p[1][0] + b.p[1][0], a.p[2][0] + b.p[2][0],
-      a.p[0][1] + b.p[0][1], a.p[1][1] + b.p[1][1], a.p[2][1] + b.p[2][1],
-      a.p[0][2] + b.p[0][2], a.p[1][2] + b.p[1][2], a.p[2][2] + b.p[2][2]
-    );
+    mat33 r;
+    for (int i = 0; i != 9; ++i)
+      r.p[i] = a.p[i] + b.p[i];
+    return r;
   }
 
   /// @brief Matrix to scalar multiplication.
   inline __device__ mat33 operator * (mat33 a, float b)
   {
-    return make_mat33(
-      a.p[0][0] * b, a.p[1][0] * b, a.p[2][0] * b,
-      a.p[0][1] * b, a.p[1][1] * b, a.p[2][1] * b,
-      a.p[0][2] * b, a.p[1][2] * b, a.p[2][2] * b
-    );
+    mat33 r;
+    for (int i = 0; i != 9; ++i)
+      r.p[i] = a.p[i] * b;
+    return r;
   }
 
   inline __device__ mat33 ssc_mul(mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][1] * b.p[1][0] + a.p[0][2] * b.p[2][0],
-      a.p[1][2] * b.p[2][0],
-      a.p[2][1] * b.p[1][0],
-      a.p[0][1] * b.p[1][1] + a.p[0][2] * b.p[2][1],
-      a.p[1][0] * b.p[0][1] + a.p[1][2] * b.p[2][1],
-      a.p[2][0] * b.p[0][1],
-      a.p[0][1] * b.p[1][2],
-      a.p[1][0] * b.p[0][2],
-      a.p[2][0] * b.p[0][2] + a.p[2][1] * b.p[1][2]
-    );
+    return a * b;
   }
 
   inline __device__ mat33 rotate_towards(float3 subject, float3 to)
@@ -143,7 +148,7 @@ namespace cuda_math
 
     if (s2 > FLT_MIN)
     {
-      mat33 ssc = make_mat33(0, v.z, -v.y, -v.z, 0, v.x, v.y, -v.x, 0);
+      mat33 ssc = make_mat33(0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0);
       mat33 ssc2 = ssc_mul(ssc, ssc);
       ssc2 = ssc2 * ((1 - c) / s2);
       rot = rot + ssc + ssc2;
