@@ -81,15 +81,32 @@ namespace math
   }
 
   /// @brief 3x3 matrix type.
-  struct mat33
+  union mat33
   {
-    point_t p[3][3]; ///< 3 rows of 3 columns each
+    struct
+    {
+      float _11, _12, _13;
+      float _21, _22, _23;
+      float _31, _32, _33;
+    };
+
+    point_t& element(int i, int j)
+    {
+      return p[i * 3 + j];
+    }
+
+    point_t operator()(int i, int j) const
+    {
+      return p[i * 3 + j];
+    }
+
+    point_t p[9];
   };
 
   /// @brief Creates 3x3 matrix from 3 scalar points
   inline mat33 make_mat33(point_t a00, point_t a01, point_t a02, point_t a10, point_t a11, point_t a12, point_t a20, point_t a21, point_t a22)
   {
-    mat33 result = { { { a00, a01, a02 }, { a10, a11, a12 }, { a20, a21, a22 } } };
+    mat33 result = { a00, a01, a02, a10, a11, a12, a20, a21, a22 };
     return result;
   }
 

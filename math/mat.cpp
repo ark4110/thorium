@@ -32,7 +32,7 @@ namespace math
 
     if (s2 > FLT_MIN)
     {
-      mat33 ssc = make_mat33(0, v.z, -v.y, -v.z, 0, v.x, v.y, -v.x, 0);
+      mat33 ssc = make_mat33(0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0);
       mat33 ssc2 = ssc_mul(ssc, ssc);
       ssc2 = ssc2 * ((1 - c) / s2);
       rot = rot + ssc + ssc2;

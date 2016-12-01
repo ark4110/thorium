@@ -30,26 +30,25 @@ namespace math
   inline vec3 operator * (mat33 mat, vec3 vec)
   {
     return make_vec3(
-      (mat.p[0][0] * vec.x) + (mat.p[1][0] * vec.y) + (mat.p[2][0] * vec.z),
-      (mat.p[0][1] * vec.x) + (mat.p[1][1] * vec.y) + (mat.p[2][1] * vec.z),
-      (mat.p[0][2] * vec.x) + (mat.p[1][2] * vec.y) + (mat.p[2][2] * vec.z)
+      (mat._11 * vec.x + mat._12 * vec.y + mat._13 * vec.z),
+      (mat._21 * vec.x + mat._22 * vec.y + mat._23 * vec.z),
+      (mat._31 * vec.x + mat._32 * vec.y + mat._33 * vec.z)
       );
   }
 
   /// @brief 3x3 matrix to matrix multiplication.
   inline mat33 operator * (mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][0] * b.p[0][0] + a.p[0][1] * b.p[1][0] + a.p[0][2] * b.p[2][0],
-      a.p[1][0] * b.p[0][0] + a.p[1][1] * b.p[1][0] + a.p[1][2] * b.p[2][0],
-      a.p[2][0] * b.p[0][0] + a.p[2][1] * b.p[1][0] + a.p[2][2] * b.p[2][0],
-      a.p[0][0] * b.p[0][1] + a.p[0][1] * b.p[1][1] + a.p[0][2] * b.p[2][1],
-      a.p[1][0] * b.p[0][1] + a.p[1][1] * b.p[1][1] + a.p[1][2] * b.p[2][1],
-      a.p[2][0] * b.p[0][1] + a.p[2][1] * b.p[1][1] + a.p[2][2] * b.p[2][1],
-      a.p[0][0] * b.p[0][2] + a.p[0][1] * b.p[1][2] + a.p[0][2] * b.p[2][2],
-      a.p[1][0] * b.p[0][2] + a.p[1][1] * b.p[1][2] + a.p[1][2] * b.p[2][2],
-      a.p[2][0] * b.p[0][2] + a.p[2][1] * b.p[1][2] + a.p[2][2] * b.p[2][2]
-      );
+    mat33 r = {};
+
+    for (int i = 0; i != 3; i++)
+      for (int j = 0; j != 3; j++)
+        for (int c = 0; c != 3; c++)
+        {
+          r.element(i, j) += a(i, c) * b(c, j);
+        }
+
+    return r;
   }
 
   /**
@@ -63,37 +62,25 @@ namespace math
    */
   inline mat33 ssc_mul(mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][1] * b.p[1][0] + a.p[0][2] * b.p[2][0],
-      a.p[1][2] * b.p[2][0],
-      a.p[2][1] * b.p[1][0],
-      a.p[0][1] * b.p[1][1] + a.p[0][2] * b.p[2][1],
-      a.p[1][0] * b.p[0][1] + a.p[1][2] * b.p[2][1],
-      a.p[2][0] * b.p[0][1],
-      a.p[0][1] * b.p[1][2],
-      a.p[1][0] * b.p[0][2],
-      a.p[2][0] * b.p[0][2] + a.p[2][1] * b.p[1][2]
-      );
+    return a * b;
   }
 
   /// @brief 3x3 matrices sum.
   inline mat33 operator + (mat33 a, mat33 b)
   {
-    return make_mat33(
-      a.p[0][0] + b.p[0][0], a.p[1][0] + b.p[1][0], a.p[2][0] + b.p[2][0],
-      a.p[0][1] + b.p[0][1], a.p[1][1] + b.p[1][1], a.p[2][1] + b.p[2][1],
-      a.p[0][2] + b.p[0][2], a.p[1][2] + b.p[1][2], a.p[2][2] + b.p[2][2]
-      );
+    mat33 r;
+    for (int i = 0; i != 9; ++i)
+      r.p[i] = a.p[i] + b.p[i];
+    return r;
   }
 
   /// @brief Matrix to scalar multiplication.
   inline mat33 operator * (mat33 a, point_t b)
   {
-    return make_mat33(
-      a.p[0][0] * b, a.p[1][0] * b, a.p[2][0] * b,
-      a.p[0][1] * b, a.p[1][1] * b, a.p[2][1] * b,
-      a.p[0][2] * b, a.p[1][2] * b, a.p[2][2] * b
-      );
+    mat33 r;
+    for (int i = 0; i != 9; ++i)
+      r.p[i] = a.p[i] * b;
+    return r;
   }
 
   /// @brief Identity diagonal 3x3 matrix.
