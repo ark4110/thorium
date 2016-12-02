@@ -43,17 +43,17 @@ namespace cuda_math
       float _31, _32, _33;
     };
 
-    point_t& element(int i, int j)
+    __device__ float& element(int i, int j)
     {
       return p[i * 3 + j];
     }
 
-    point_t operator()(int i, int j) const
+    __device__ float operator()(int i, int j) const
     {
       return p[i * 3 + j];
     }
 
-    point_t p[9];
+    float p[9];
   };
 
   inline __device__ void convert_face_to_uv(face_t& face)
