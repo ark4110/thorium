@@ -287,17 +287,17 @@ int main(int argc, char* argv[])
   binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
 
   task->time_delta = temp;
-  
-  StopWatchInterface *hTimer;
-  sdkCreateTimer(&hTimer);
-  sdkResetTimer(&hTimer);
-  sdkStartTimer(&hTimer);
 
   if ((r = system_set_scene(solution, scene, task->temperatures)) < 0)
   {
     printf("Failed to set thermal solution scene.");
     return r;
   }
+
+  StopWatchInterface *hTimer;
+  sdkCreateTimer(&hTimer);
+  sdkResetTimer(&hTimer);
+  sdkStartTimer(&hTimer);
 
   float prev_report_time = time;
   for (int step = 0; step < n_steps; ++step)
@@ -337,7 +337,7 @@ int main(int argc, char* argv[])
   
   sdkStopTimer(&hTimer);
   double cpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-  printf("#Done in %fs.\n\n", cpuTime);  
+  printf("#Done in %fs. Per step %fs\n\n", cpuTime, cpuTime / n_steps);
 
   if (result_name[0] != '-')
     fclose(result_file);
