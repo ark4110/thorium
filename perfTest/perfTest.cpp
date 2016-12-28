@@ -285,6 +285,44 @@ int main(int argc, char* argv[])
     rs = MakeConfettiScene(n_faces, radius, generator);
     scene = rs;
 
+    subject::scene_t te_scene = {};
+    te_scene.n_faces = scene->n_faces;
+    te_scene.faces = scene->faces;
+
+    int n_meshes = scene->n_faces;
+    te_scene.n_meshes = n_meshes;
+    te_scene.meshes = (subject::mesh_t*)malloc(n_meshes * sizeof(subject::mesh_t));
+    float* temperatures = (float*)malloc(n_meshes * sizeof(float));
+
+    for (int m = 0; m != n_meshes; ++m)
+    {
+      subject::mesh_t& mesh = te_scene.meshes[m];
+      mesh.first_idx = m;
+      mesh.n_faces = 1;
+      mesh.material_idx = 0;
+
+      temperatures[m] = 300;
+    }
+
+    subject::material_t materials[1] = { subject::black_body() };
+    te_scene.n_materials = 1;
+    te_scene.materials = materials;
+
+    printf("Dumping scene...");
+    char scene_name[256];
+    char areas_name[256];
+    sprintf(scene_name, "confetti_%d.obj", n_faces);
+    sprintf(areas_name, "confetti_areas_%d.txt", n_faces);
+    FILE* scene_dump = fopen(scene_name, "w");
+    obj_export::scene(scene_dump, &te_scene);
+    fclose(scene_dump);
+
+    scene_dump = fopen(areas_name, "w");
+    for (int f = 0; f != n_faces; ++f)
+      fprintf(scene_dump, "%f\n", math::triangle_area(scene->faces[f]));
+    fclose(scene_dump);
+    printf(" done.\n");
+
     /*{
       printf("Loading scene from '%s'...\n", argv[1]);
       if (int r = obj_import::scene(argv[1], &ss))
@@ -391,11 +429,15 @@ int main(int argc, char* argv[])
       thermal_solution::task_t* task = thermal_solution::task_create(te_scene.n_meshes);
       task->time_delta = 0.1f;
 
-      FILE* scene_dump = fopen("perf_test_scene.obj", "w");
+      char scene_name[256];
+      char areas_name[256];
+      sprintf(scene_name, "confetti_%d.obj", n_faces);
+      sprintf(areas_name, "confetti_areas_%d.txt", n_faces);
+      FILE* scene_dump = fopen(scene_name, "w");
       obj_export::scene(scene_dump, &te_scene);
       fclose(scene_dump);
 
-      scene_dump = fopen("perf_test_areas.txt", "w");
+      scene_dump = fopen(areas_name, "w");
       for (int f = 0; f != n_faces; ++f)
         fprintf(scene_dump, "%f\n", math::triangle_area(scene->faces[f]));
       fclose(scene_dump);
@@ -434,6 +476,9 @@ int main(int argc, char* argv[])
 
     scene_free(rs);
     scene_free(ss);
+
+    free(temperatures);
+    free(te_scene.meshes);
 
     free(baseTask->ray);
     for (int s = 0; s != RAY_CASTER_SYSTEMS_COUNT; ++s)
