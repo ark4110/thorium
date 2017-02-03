@@ -236,6 +236,7 @@ TYPED_TEST(ParallelEmission, TwoSkewSource)
   ASSERT_NEAR(10, diff, 0.2f);
 }
 
+template <typename EngineType>
 class PlanetEmission : public Test
 {
 public:
@@ -256,7 +257,7 @@ public:
     params.n_subdisivion = 30;
     params.n_rays = 10000;
     params.n_solar_rays = n_solar_rays;
-    params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CPU;
+    params.parallel_rays_emitter_type = EngineType::ID;
 
     Emitter = emission::system_create(EMISSION_PLANET_CPU, &params);
 
@@ -317,7 +318,8 @@ public:
 static const float earth_polar_radius = 6.3568e6f;
 static const float sun_distance = 1.495978e11f;
 
-class SolarIrradiance : public PlanetEmission
+template <typename EngineType>
+class SolarIrradiance : public PlanetEmission<EngineType>
 {
 public:
   SolarIrradiance()
@@ -326,7 +328,8 @@ public:
   }
 };
 
-class EarthSelfEmission : public PlanetEmission
+template <typename EngineType>
+class EarthSelfEmission : public PlanetEmission<EngineType>
 {
 public:
   EarthSelfEmission()
@@ -335,7 +338,8 @@ public:
   }
 };
 
-class SolarRadiance : public PlanetEmission
+template <typename EngineType>
+class SolarRadiance : public PlanetEmission<EngineType>
 {
 public:
   SolarRadiance()
@@ -344,7 +348,11 @@ public:
   }
 };
 
-TEST_F(SolarIrradiance, Alt1300Theta0)
+TYPED_TEST_CASE(SolarIrradiance, ParallelEmissionTypes);
+TYPED_TEST_CASE(EarthSelfEmission, ParallelEmissionTypes);
+TYPED_TEST_CASE(SolarRadiance, ParallelEmissionTypes);
+
+TYPED_TEST(SolarIrradiance, Alt1300Theta0)
 {
   const float altitude = 1300e3;
 
@@ -356,7 +364,7 @@ TEST_F(SolarIrradiance, Alt1300Theta0)
   ASSERT_NEAR(400, flux, 5.f);
 }
 
-TEST_F(SolarIrradiance, Alt1690Theta30)
+TYPED_TEST(SolarIrradiance, Alt1690Theta30)
 {
   const float altitude = 1690e3;
 
@@ -368,7 +376,7 @@ TEST_F(SolarIrradiance, Alt1690Theta30)
   ASSERT_NEAR(300, flux, 5.f);
 }
 
-TEST_F(SolarIrradiance, Alt200Theta60)
+TYPED_TEST(SolarIrradiance, Alt200Theta60)
 {
   const float altitude = 200e3;
 
@@ -380,7 +388,7 @@ TEST_F(SolarIrradiance, Alt200Theta60)
   ASSERT_NEAR(350, flux, 5.f);
 }
 
-TEST_F(SolarIrradiance, Alt3200Theta60)
+TYPED_TEST(SolarIrradiance, Alt3200Theta60)
 {
   const float altitude = 3200e3;
 
@@ -392,7 +400,7 @@ TEST_F(SolarIrradiance, Alt3200Theta60)
   ASSERT_NEAR(110, flux, 5.f);
 }
 
-TEST_F(SolarIrradiance, Alt400Theta80)
+TYPED_TEST(SolarIrradiance, Alt400Theta80)
 {
   const float altitude = 400e3;
 
@@ -404,7 +412,7 @@ TEST_F(SolarIrradiance, Alt400Theta80)
   ASSERT_NEAR(101, flux, 5.f);
 }
 
-TEST_F(SolarIrradiance, Alt2000Theta90)
+TYPED_TEST(SolarIrradiance, Alt2000Theta90)
 {
   const float altitude = 2000e3;
 
@@ -416,7 +424,7 @@ TEST_F(SolarIrradiance, Alt2000Theta90)
   ASSERT_NEAR(21, flux, 5.f);
 }
 
-TEST_F(EarthSelfEmission, Alt600)
+TYPED_TEST(EarthSelfEmission, Alt600)
 {
   const float altitude = 600e3;
 
@@ -428,7 +436,7 @@ TEST_F(EarthSelfEmission, Alt600)
   ASSERT_NEAR(260, flux, 5.f);
 }
 
-TEST_F(SolarRadiance, IsConsidered)
+TYPED_TEST(SolarRadiance, IsConsidered)
 {
   const float altitude = 600e3;
 
