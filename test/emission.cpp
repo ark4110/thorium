@@ -323,7 +323,7 @@ class SolarIrradiance : public PlanetEmission<EngineType>
 {
 public:
   SolarIrradiance()
-    : PlanetEmission(0.34f, 0, earth_polar_radius, 1353, 0)
+    : PlanetEmission<EngineType>(0.34f, 0, earth_polar_radius, 1353, 0)
   {
   }
 };
@@ -333,7 +333,7 @@ class EarthSelfEmission : public PlanetEmission<EngineType>
 {
 public:
   EarthSelfEmission()
-    : PlanetEmission(0.34f, 250, earth_polar_radius, 0, 0)
+    : PlanetEmission<EngineType>(0.34f, 250, earth_polar_radius, 0, 0)
   {
   }
 };
@@ -343,7 +343,7 @@ class SolarRadiance : public PlanetEmission<EngineType>
 {
 public:
   SolarRadiance()
-    : PlanetEmission(0.f, 0, earth_polar_radius, 1353, 100)
+    : PlanetEmission<EngineType>(0.f, 0, earth_polar_radius, 1353, 100)
   {
   }
 };
@@ -356,11 +356,11 @@ TYPED_TEST(SolarIrradiance, Alt1300Theta0)
 {
   const float altitude = 1300e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
-  Prediction.sun_position = math::make_vec3(0, 0, sun_distance - altitude);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
+  this->Prediction.sun_position = math::make_vec3(0, 0, sun_distance - altitude);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(400, flux, 5.f);
 }
 
@@ -368,11 +368,11 @@ TYPED_TEST(SolarIrradiance, Alt1690Theta30)
 {
   const float altitude = 1690e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
-  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 6.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 6.f) * (sun_distance - altitude));
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);  
+  this->Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 6.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 6.f) * (sun_distance - altitude));
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(300, flux, 5.f);
 }
 
@@ -380,11 +380,11 @@ TYPED_TEST(SolarIrradiance, Alt200Theta60)
 {
   const float altitude = 200e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 3.f) * (sun_distance - altitude));
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * (sun_distance - altitude), 0, cosf(float(M_PI) / 3.f) * (sun_distance - altitude));
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(350, flux, 5.f);
 }
 
@@ -392,11 +392,11 @@ TYPED_TEST(SolarIrradiance, Alt3200Theta60)
 {
   const float altitude = 3200e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * sun_distance, 0, cosf(float(M_PI) / 3.f) * sun_distance - earth_polar_radius - altitude);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 3.f) * sun_distance, 0, cosf(float(M_PI) / 3.f) * sun_distance - earth_polar_radius - altitude);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(110, flux, 5.f);
 }
 
@@ -404,11 +404,11 @@ TYPED_TEST(SolarIrradiance, Alt400Theta80)
 {
   const float altitude = 400e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 180 * 80) * sun_distance, 0, cosf(float(M_PI) / 180 * 80) * sun_distance - earth_polar_radius - altitude);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sinf(float(M_PI) / 180 * 80) * sun_distance, 0, cosf(float(M_PI) / 180 * 80) * sun_distance - earth_polar_radius - altitude);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(101, flux, 5.f);
 }
 
@@ -416,11 +416,11 @@ TYPED_TEST(SolarIrradiance, Alt2000Theta90)
 {
   const float altitude = 2000e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(21, flux, 5.f);
 }
 
@@ -428,11 +428,11 @@ TYPED_TEST(EarthSelfEmission, Alt600)
 {
   const float altitude = 600e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(260, flux, 5.f);
 }
 
@@ -440,10 +440,10 @@ TYPED_TEST(SolarRadiance, IsConsidered)
 {
   const float altitude = 600e3;
 
-  Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
-  Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
-  Prediction.eclispsed = 0;
+  this->Prediction.earth_position = math::make_vec3(0, 0, -earth_polar_radius - altitude);
+  this->Prediction.sun_position = math::make_vec3(sun_distance, 0, 0);
+  this->Prediction.eclispsed = 0;
 
-  float flux = calculate_flux();
+  float flux = this->calculate_flux();
   ASSERT_NEAR(1353, flux, 1.f);
 }
