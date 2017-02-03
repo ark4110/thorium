@@ -567,15 +567,10 @@ namespace cuda_parallel_rays_emission
     return n_rays;
   }
 
-  const int N_MAX_SOURCES = 4;
-
   /// @brief Initializes system with given ray caster after creation.
   int init(system_t* system, const parallel_rays_emission_cpu::params_t* params)
   {
     system->params = *params;
-
-    if (system->params.n_sources > N_MAX_SOURCES)
-      return -EMISSION_ERROR;
 
     system->host_context = {};
     system->device_context = 0;
@@ -590,7 +585,7 @@ namespace cuda_parallel_rays_emission
 
     align_rays_count_to_warp_size(system->params, system->n_warp_size);
 
-    int n_mtgp_blocks = 64;
+    int n_mtgp_blocks = 24;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
     context_t& host_context = system->host_context;
@@ -686,23 +681,7 @@ namespace cuda_parallel_rays_emission
     
     ray_t* device_rays = system->host_context.rays;
     const int n_input_rays = task_grow(task, n_total_rays);
-    
-
     const int n_sources = system->params.n_sources;
-    
-    // Weighted distribution of blocks among sources considering source rays count.
-    int n_blocks[N_MAX_SOURCES];
-    int n_blocks_left = system->n_mtgp_blocks;    
-    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
-    {
-      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
-
-      int n_blocks_for_source = system->n_mtgp_blocks * source.n_rays / n_total_rays;
-      n_blocks[source_idx] = n_blocks_for_source;
-      n_blocks_left -= n_blocks_for_source;
-      if (source_idx == n_sources - 1)
-        n_blocks[source_idx] += n_blocks_left;
-    }
 
     // Launch kernels
     for (int source_idx = 0; source_idx != n_sources; ++source_idx)
@@ -710,7 +689,7 @@ namespace cuda_parallel_rays_emission
       parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
 
       source_params_t params = { make_float3(source.direction.x, source.direction.y, source.direction.z), source.n_rays };
-      emit_parallel_rays << <n_blocks[source_idx], 256 >> > (system->device_context, params, device_rays);
+      emit_parallel_rays << <system->n_mtgp_blocks, 256 >> > (system->device_context, params, device_rays);
       device_rays += source.n_rays;
     }
 
