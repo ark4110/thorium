@@ -29,6 +29,7 @@ namespace conductive_equation
     subject::scene_t* scene;
     subject::face_graph_index_t* graph;
     int* face_to_mesh_index;
+    math::vec3* mesh_centers;
   };
 
   int init(cpu_system_t* system, params_t* params)
@@ -38,6 +39,7 @@ namespace conductive_equation
     system->scene = 0;
     system->graph = 0;
     system->face_to_mesh_index = 0;
+    system->mesh_centers = 0;
     
     return THERMAL_EQUATION_OK;
   }
@@ -51,24 +53,11 @@ namespace conductive_equation
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
 
-    return THERMAL_EQUATION_OK;
-  }
-
-  int set_scene(cpu_system_t* system, subject::scene_t* scene)
-  {
-    system->scene = scene;
-    system->graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
-
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index); 
+    free(system->mesh_centers);
+    system->mesh_centers = 0;
 
     return THERMAL_EQUATION_OK;
   }
-
-  struct graph_walker_param_t
-  {
-    cpu_system_t* system;
-    thermal_equation::task_t* task;
-  };
 
   math::vec3 mesh_center(const subject::scene_t* scene, int mesh_idx)
   {
@@ -79,6 +68,26 @@ namespace conductive_equation
     center /= (float)mesh.n_faces;
     return center;
   }
+
+  int set_scene(cpu_system_t* system, subject::scene_t* scene)
+  {
+    system->scene = scene;
+    system->graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
+
+    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index); 
+
+    system->mesh_centers = (math::vec3*) calloc(scene->n_meshes, sizeof(math::vec3));
+    for (int m = 0; m != scene->n_meshes; ++m)
+      system->mesh_centers[m] = mesh_center(scene, m);
+
+    return THERMAL_EQUATION_OK;
+  }
+
+  struct graph_walker_param_t
+  {
+    cpu_system_t* system;
+    thermal_equation::task_t* task;
+  };  
 
   int graph_walker(int l, int r, int vertex_mapping, bool have_more, graph_walker_param_t* param)
   {
@@ -97,15 +106,16 @@ namespace conductive_equation
       return 0;
 
     subject::scene_t* scene = param->system->scene;
+    const math::vec3* mesh_centers = param->system->mesh_centers;
 
     const subject::face_t& l_face = scene->faces[l];
     float edge_length = norm(l_face.points[lp[0]] - l_face.points[lp[1]]);
     math::vec3 median = (l_face.points[lp[0]] + l_face.points[lp[1]]) / 2.f;
-    math::vec3 l_center = mesh_center(scene, l_mesh_idx);
+    const math::vec3& l_center = mesh_centers[l_mesh_idx];
     float l_dist = norm(median - l_center);
 
     const subject::face_t& r_face = scene->faces[r];
-    math::vec3 r_center = mesh_center(scene, r_mesh_idx);
+    const math::vec3& r_center = mesh_centers[r_mesh_idx];
     float r_dist = norm(median - r_center);
 
     const subject::material_t& l_matertial = mesh_material(scene, l_mesh_idx);

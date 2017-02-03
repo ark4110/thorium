@@ -74,7 +74,7 @@ namespace emission
   void task_add(task_t* task, const ray_caster::ray_t& ray, float power)
   {
     if (task_get_reserve(task->rays) == 0)
-      task_reserve(task, 1024);
+      task_reserve(task, 1024*128);
 
     int& n_rays = task->rays->n_tasks;
     task->rays->ray[n_rays] = ray;
