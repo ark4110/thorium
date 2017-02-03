@@ -244,6 +244,7 @@ namespace cuda_parallel_rays_emission
     float3 origin; // bounding sphere center
     float radius; // bounding sphere radius
 
+    int n_allocated;
     ray_t* rays;
 
     curandStateMtgp32* HSGenR;

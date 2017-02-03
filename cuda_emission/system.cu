@@ -585,11 +585,12 @@ namespace cuda_parallel_rays_emission
 
     align_rays_count_to_warp_size(system->params, system->n_warp_size);
 
-    int n_mtgp_blocks = 24;
+    int n_mtgp_blocks = 64;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
     context_t& host_context = system->host_context;
-    checkCudaErrors(cudaMalloc((void **)&host_context.rays, calculate_total_rays(system->params) * sizeof(ray_t)));
+    host_context.n_allocated = calculate_total_rays(system->params);
+    checkCudaErrors(cudaMalloc((void **)&host_context.rays, host_context.n_allocated * sizeof(ray_t)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
 
@@ -677,6 +678,16 @@ namespace cuda_parallel_rays_emission
 
   int calculate(system_t* system, emission::task_t* task)
   {
+    align_rays_count_to_warp_size(system->params, system->n_warp_size);
+    int n_rays = calculate_total_rays(system->params);
+    context_t& host_context = system->host_context;
+    if (host_context.n_allocated != n_rays)
+    {
+      checkCudaErrors(cudaFree(host_context.rays));
+      host_context.n_allocated = n_rays;
+      checkCudaErrors(cudaMalloc((void **)&host_context.rays, host_context.n_allocated * sizeof(ray_t)));
+    }
+
     int n_total_rays = calculate_total_rays(system->params);
     
     ray_t* device_rays = system->host_context.rays;
@@ -687,6 +698,8 @@ namespace cuda_parallel_rays_emission
     for (int source_idx = 0; source_idx != n_sources; ++source_idx)
     {
       parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
+      if (source.n_rays == 0)
+        continue;
 
       source_params_t params = { make_float3(source.direction.x, source.direction.y, source.direction.z), source.n_rays };
       emit_parallel_rays << <system->n_mtgp_blocks, 256 >> > (system->device_context, params, device_rays);
