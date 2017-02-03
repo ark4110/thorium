@@ -679,17 +679,15 @@ namespace cuda_parallel_rays_emission
   int calculate(system_t* system, emission::task_t* task)
   {
     align_rays_count_to_warp_size(system->params, system->n_warp_size);
-    int n_rays = calculate_total_rays(system->params);
+    int n_total_rays = calculate_total_rays(system->params);
     context_t& host_context = system->host_context;
-    if (host_context.n_allocated != n_rays)
+    if (host_context.n_allocated != n_total_rays)
     {
       checkCudaErrors(cudaFree(host_context.rays));
-      host_context.n_allocated = n_rays;
+      host_context.n_allocated = n_total_rays;
       checkCudaErrors(cudaMalloc((void **)&host_context.rays, host_context.n_allocated * sizeof(ray_t)));
     }
 
-    int n_total_rays = calculate_total_rays(system->params);
-    
     ray_t* device_rays = system->host_context.rays;
     const int n_input_rays = task_grow(task, n_total_rays);
     const int n_sources = system->params.n_sources;
