@@ -19,8 +19,7 @@
 #include <stdio.h>
 #include <memory>
 #include <optix_prime/optix_prime.h>
-#include "../math/operations.h"
-#include "../math/triangle.h"
+#include "../cuda_misc/optix_hit_converter.h"
 
 namespace optix_ray_caster
 {
@@ -31,6 +30,8 @@ namespace optix_ray_caster
     RTPcontext context;
     RTPbufferdesc vertices;
     RTPmodel model;
+
+    optix_hit_converter::state_t* converter_state;
   };
 
   int init(system_t* system)
@@ -53,10 +54,11 @@ namespace optix_ray_caster
       if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
         return -RAY_CASTER_ERROR;
     }
-     
 
     system->vertices = {};
     system->model = {};
+
+    system->converter_state = 0;
 
     return RAY_CASTER_OK;
   }
@@ -66,6 +68,9 @@ namespace optix_ray_caster
     if (system->context)
       rtpContextDestroy(system->context);
     system->context = 0;
+
+    state_free(system->converter_state);
+    system->converter_state = 0;
 
     return RAY_CASTER_OK;
   }
@@ -108,6 +113,8 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
     if (rtpModelFinish(system->model) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
+    
+    system->converter_state = optix_hit_converter::state_init(scene);
 
     return RAY_CASTER_OK;
   }
@@ -133,20 +140,14 @@ namespace optix_ray_caster
     if (rtpBufferDescSetRange(rays, 0, task->n_tasks) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
 
-    struct optix_hit
-    {
-      float distance;
-      int triangle_id;
-      float u;
-      float v;
-    };    
-
-    optix_hit* hits_buffer = (optix_hit*)malloc(task->n_tasks * sizeof(optix_hit));
+    optix_hit_converter::state_t* converter = system->converter_state;
+    state_prepare(converter, task);
 
     RTPbufferdesc hits;
     if (rtpBufferDescCreate(system->context,
       RTP_BUFFER_FORMAT_HIT_T_TRIID_U_V,
-      RTP_BUFFER_TYPE_HOST, hits_buffer, &hits) != RTP_SUCCESS)
+      RTPbuffertype(converter->optix_buffer_type),
+      converter->hits, &hits) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
     if (rtpBufferDescSetRange(hits, 0, task->n_tasks) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
@@ -158,24 +159,12 @@ namespace optix_ray_caster
     rtpQueryExecute(query, 0);
     rtpQueryDestroy(query);
 
-    for (int r = 0; r != task->n_tasks; ++r)
-    {
-      if (hits_buffer[r].distance < 0)
-        task->hit_face[r] = 0;
-      else
-      {        
-        const optix_hit& hit = hits_buffer[r];
-        task->hit_face[r] = system->scene->faces + hit.triangle_id;
-        task->hit_point[r] = triangle_uv_to_point(system->scene->faces[hit.triangle_id], hit.u, hit.v);
-      }
-    }
+    int r = convert(converter, task);
 
     rtpBufferDescDestroy(hits);
     rtpBufferDescDestroy(rays);
-
-    free(hits_buffer);
-
-    return RAY_CASTER_OK;
+   
+    return r;
   }
 
   const ray_caster::system_methods_t methods =

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj", "{0C15E81E-9F1A-4AEE-AF3B-5C77C77846C0}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -57,6 +57,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpredict", "ext\libpredict\vs_build\libpredict.vcxproj", "{10F3FB91-06CE-4802-93F3-08552A64D144}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ballistics", "ballistics\ballistics.vcxproj", "{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_misc", "cuda_misc\cuda_misc.vcxproj", "{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -202,6 +204,14 @@ Global
 		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|Win32.Build.0 = Release|Win32
 		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|x64.ActiveCfg = Release|x64
 		{52BC2630-B79C-41B3-AD12-AF6CC7791BA1}.Release|x64.Build.0 = Release|x64
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Debug|Win32.ActiveCfg = Debug|Win32
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Debug|Win32.Build.0 = Debug|Win32
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Debug|x64.ActiveCfg = Debug|x64
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Debug|x64.Build.0 = Debug|x64
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|Win32.ActiveCfg = Release|Win32
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|Win32.Build.0 = Release|Win32
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|x64.ActiveCfg = Release|x64
+		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

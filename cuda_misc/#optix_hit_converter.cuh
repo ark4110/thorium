@@ -1,0 +1,37 @@
+// Copyright (c) 2015-2016 Contributors as noted in the AUTHORS file.
+// This file is part of Thorium.
+//
+// form_factors is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// form_factors is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma once
+
+#include <helper_math.h>
+
+namespace optix_hit_converter
+{
+  struct face_t
+  {
+    float3 points[3];
+  };
+
+  struct optix_hit_t
+  {
+    float distance;
+    int triangle_id;
+    float u;
+    float v;
+  };
+
+  __global__ void prepare_context(const optix_hit_t* hits, float3* hit_point, face_t const** hit_face, const face_t* faces, int n_rays);
+}

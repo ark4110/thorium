@@ -24,6 +24,11 @@
   <ItemGroup>
     <ClInclude Include="optix_system.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\cuda_misc\cuda_misc.vcxproj">
+      <Project>{49d7c7cb-eb0d-4f9e-927f-9916389ecf95}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{61E56691-939B-434F-BCA1-57AA150B00AC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
