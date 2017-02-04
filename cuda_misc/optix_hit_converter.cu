@@ -42,7 +42,7 @@ namespace optix_hit_converter
 
     bool supported = is_supported();
 
-    state->optix_buffer_type = supported ? 257 : 512; // RTP_CONTEXT_TYPE_CUDA : RTP_BUFFER_TYPE_HOST
+    state->optix_buffer_type = supported ? 0x201 : 0x200; // RTP_BUFFER_TYPE_CUDA_LINEAR : RTP_BUFFER_TYPE_HOST
 
     state->host_faces = scene->faces;
     if (supported)
@@ -74,7 +74,7 @@ namespace optix_hit_converter
 
   void state_prepare(state_t* state, ray_caster::task_t* task)
   {
-    if (state->n_hits == task->n_tasks)
+    if (state->n_hits >= task->n_tasks)
       return;
 
     state->n_hits = task->n_tasks;
