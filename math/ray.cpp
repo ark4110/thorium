@@ -111,6 +111,6 @@ namespace math
     // Rotate ray towards face's normal
     math::vec3 relative_dist = rotation * malley;
 
-    return { origin + relative_dist * 0.0001f, origin + relative_dist };
+    return { origin + relative_dist * 0.0001f, relative_dist };
   }
 }
