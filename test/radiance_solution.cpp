@@ -125,39 +125,39 @@ TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
 TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
 {
   using namespace thermal_solution;
-  Scene.n_faces = 12;
-  Scene.n_meshes = 1;
+  this->Scene.n_faces = 12;
+  this->Scene.n_meshes = 1;
 
-  const float initialEnergy = Temperatures[0];
+  const float initialEnergy = this->Temperatures[0];
   int r = 0;
-  r = system_set_scene(System, &Scene, Temperatures);
+  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 50; ++step)
   {
-    r = system_calculate(System, Task);
+    r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
-  r = system_calculate(System, Task);
+  r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  ASSERT_NEAR(1.f, Task->temperatures[0] / initialEnergy, Accuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
 }
 
 TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
 {
   using namespace thermal_solution;
-  const float initialEnergy = Temperatures[0] * Scale * Scale + Temperatures[1];
+  const float initialEnergy = this->Temperatures[0] * this->Scale * this->Scale + this->Temperatures[1];
 
   int r = 0;
-  r = system_set_scene(System, &Scene, Temperatures);
+  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 100; ++step)
   {
-    r = system_calculate(System, Task);
+    r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
-  r = system_calculate(System, Task);
+  r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 
-  float resultEnergy = Task->temperatures[0] * Scale * Scale + Task->temperatures[1];
+  float resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
   ASSERT_NEAR(1.f, resultEnergy / initialEnergy, Accuracy);
 }
