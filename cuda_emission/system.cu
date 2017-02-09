@@ -35,8 +35,12 @@
 #include <thrust/scan.h>
 #include <thrust/execution_policy.h>
 
+#include <iostream>
+
+namespace {
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+}
 
 #define CURAND_CALL(x) do { if((x) != CURAND_STATUS_SUCCESS) { \
   printf("Error at %s:%d\n",__FILE__,__LINE__); \
@@ -349,17 +353,6 @@ namespace cuda_malley_emission
     return face.points[0] + a * face.points[1] + b * face.points[2];
   }
 
-  __device__ float3 pick_uniform_ray(context_t* ctx)
-  {
-    float r = curand_uniform(&ctx->HSGenR[blockIdx.x]);
-    float theta = M_2PI * curand_uniform(&ctx->HSGenTheta[blockIdx.x]);
-    
-    float rad = sqrtf(r);
-    float s, c;
-    sincos(theta, &s, &c);
-    return make_float3(rad * c, rad * s, sqrtf(1 - r));
-  }
-
   __global__ void emit_malley_rays(context_t* ctx, ray_t* rays, float* mesh_emissions, float* rays_power)
   {
     int face_idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -381,7 +374,7 @@ namespace cuda_malley_emission
       for (int j = threadIdx.y; j < n_rays.x; j += blockDim.y)
       {
         rays_power[face_ray_offset + j] = ray_power;
-        float3 relative_dist = rotation * pick_uniform_ray(ctx);
+        float3 relative_dist = rotation * malley_cuda::pick_uniform_ray(ctx);
         rays[face_ray_offset + j] = { pick_face_point(ctx, face) + relative_dist * 0.0001f, relative_dist };
       }
 
@@ -390,7 +383,7 @@ namespace cuda_malley_emission
       for (int j = threadIdx.y; j < n_rays.y; j += blockDim.y)
       {
         rays_power[face_ray_offset + j] = ray_power;
-        float3 relative_dist = rotation * invert_z(pick_uniform_ray(ctx));
+        float3 relative_dist = rotation * invert_z(malley_cuda::pick_uniform_ray(ctx));
         rays[face_ray_offset + j] = { pick_face_point(ctx, face) + relative_dist * 0.0001f, relative_dist };
       }
     }
@@ -676,7 +669,41 @@ namespace cuda_parallel_rays_emission
     }
   }
 
-  int calculate(system_t* system, emission::task_t* task)
+  __global__ void emit_multiple_parallel_rays(context_t* ctx, const multi_source_params_t* params, int n_sources, ray_t* rays)
+  {
+    float3 origin = ctx->origin;
+    float radius = ctx->radius;
+
+    int source_idx = blockIdx.x;
+    for (; source_idx < n_sources; source_idx += gridDim.x)
+    {
+      const multi_source_params_t param = params[source_idx];
+
+      float offset = 1.3f + radius;
+      const float3 direction = param.direction;
+      const mat33 rotation = rotate_towards(make_float3(0, 0, 1), direction);      
+      int n_rays_offset = param.n_rays_offset;
+      int n_rays = param.n_rays;
+
+      curandStateMtgp32* HSGenR = &ctx->HSGenR[blockIdx.x];
+      curandStateMtgp32* HSGenTheta = &ctx->HSGenTheta[blockIdx.x];
+
+      int ray_idx = threadIdx.x;
+      for (; ray_idx < n_rays; ray_idx += blockDim.x)
+      {
+        float r = radius * sqrtf(curand_uniform(HSGenR));
+        float theta = M_2PI * curand_uniform(HSGenTheta);
+
+        float s, c;
+        sincos(theta, &s, &c);
+
+        float3 ray_origin = rotation * make_float3(r * c, r * s, -offset) + origin;
+        rays[ray_idx + n_rays_offset] = { ray_origin, direction };
+      }
+    }
+  }
+
+  int calculate_flat(system_t* system, emission::task_t* task)
   {
     align_rays_count_to_warp_size(system->params, system->n_warp_size);
     int n_total_rays = calculate_total_rays(system->params);
@@ -723,6 +750,87 @@ namespace cuda_parallel_rays_emission
     cudaMemcpy(&task->rays->ray[n_input_rays], system->host_context.rays, n_total_rays * sizeof(ray_t), cudaMemcpyDeviceToHost);
 
     return EMISSION_OK;
+  }
+
+  int calculate_grid(system_t* system, emission::task_t* task)
+  {
+    align_rays_count_to_warp_size(system->params, system->n_warp_size);
+    int n_total_rays = calculate_total_rays(system->params);
+    context_t& host_context = system->host_context;
+    if (host_context.n_allocated != n_total_rays)
+    {
+      checkCudaErrors(cudaFree(host_context.rays));
+      host_context.n_allocated = n_total_rays;
+      checkCudaErrors(cudaMalloc((void **)&host_context.rays, host_context.n_allocated * sizeof(ray_t)));
+    }
+
+    ray_t* device_rays = system->host_context.rays;
+    const int n_input_rays = task_grow(task, n_total_rays);
+    const int n_sources = system->params.n_sources;
+
+    multi_source_params_t* host_multi_source_params = (multi_source_params_t*)calloc(n_sources, sizeof(multi_source_params_t));
+    int offset = 0;
+    int n_grid_threshold = n_total_rays * 3 / n_sources;
+    int n_grid_count = 0;
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    { 
+      const parallel_rays_emission_cpu::parallel_rays_source_t& f = system->params.sources[source_idx];
+      multi_source_params_t& m = host_multi_source_params[source_idx];
+      memcpy(&m.direction, &f.direction, sizeof(float3));
+      m.n_rays = f.n_rays < n_grid_threshold ? f.n_rays : 0;
+      if (f.n_rays < n_grid_threshold)
+        ++n_grid_count;
+      m.n_rays_offset = offset;
+      offset += f.n_rays;
+    }
+
+    multi_source_params_t* device_multi_source_params = 0;
+    cudaMalloc(&device_multi_source_params, sizeof(multi_source_params_t) * n_sources);
+    cudaMemcpy(device_multi_source_params, host_multi_source_params, sizeof(multi_source_params_t) * n_sources, cudaMemcpyHostToDevice);
+
+    emit_multiple_parallel_rays << <system->n_mtgp_blocks, 128 >> > (system->device_context, device_multi_source_params, n_sources, device_rays);
+
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    {
+      const parallel_rays_emission_cpu::parallel_rays_source_t& f = system->params.sources[source_idx];
+      if (f.n_rays >= n_grid_threshold)
+      {
+        source_params_t params = { make_float3(f.direction.x, f.direction.y, f.direction.z), f.n_rays };
+        int n_rays_offset = host_multi_source_params[source_idx].n_rays_offset;
+        emit_parallel_rays << <system->n_mtgp_blocks, 256 >> > (system->device_context, params, device_rays + n_rays_offset);
+      }
+    }
+
+    // Fill ray powers
+    int n_host_rays_offset = n_input_rays;
+    float radius = system->host_context.radius;
+    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    {
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
+      const float ray_power = source.power * (float(M_PI) * radius * radius) / (float)source.n_rays;
+      for (int r = 0; r != source.n_rays; ++r)
+        task->power[n_host_rays_offset + r] = ray_power;
+      n_host_rays_offset += source.n_rays;
+    }
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    cudaFree(device_multi_source_params);
+
+    // Using raw memory copy because of incompatible data-types.
+    cudaMemcpy(&task->rays->ray[n_input_rays], system->host_context.rays, n_total_rays * sizeof(ray_t), cudaMemcpyDeviceToHost);
+
+    return EMISSION_OK;
+  }
+
+  int calculate(system_t* system, emission::task_t* task)
+  {
+    //return calculate_flat(system, task);
+    if (system->params.n_sources < 5)
+      return calculate_flat(system, task);
+    else
+      return calculate_grid(system, task);
   }
 
   /// @brief Creates virtual methods table from local methods.

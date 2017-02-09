@@ -180,6 +180,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_emission.h" />
+    <ClInclude Include="malley_cuda.cuh" />
     <ClInclude Include="system.cuh" />
   </ItemGroup>
   <ItemGroup>

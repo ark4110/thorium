@@ -4,6 +4,7 @@ project(cuda_emission)
 set(SOURCE_FILES
     cuda_emission.h
     cuda_emission.cpp
+    malley_cuda.cuh
     system.cuh
     system.cu
     )
