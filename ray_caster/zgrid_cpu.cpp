@@ -116,14 +116,14 @@ namespace ray_caster_zgrid_cpu
   {
     for (int t = 0; t != task->n_tasks; ++t)
     {
-      task->hit_face[t] = 0;
+      task->hit_face_idx[t] = -1;
 
       math::ray_t ray = task->ray[t];
       callback_param_t param = { system, ray, std::numeric_limits<math::point_t>::max(), -1 };
       math::grid_traverse(&system->grid, ray, (math::grid_traversal_callback)grid_callback, &param);
       if (param.hit_face != -1)
       {
-        task->hit_face[t] = &system->scene->faces[param.hit_face];
+        task->hit_face_idx[t] = (int)(&system->scene->faces[param.hit_face] - system->scene->faces);
         task->hit_point[t] = param.hit_point;
       }
     }

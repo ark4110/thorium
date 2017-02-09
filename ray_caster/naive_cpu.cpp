@@ -70,7 +70,7 @@ namespace raycaster_naive_cpu
       // for every ray
       math::ray_t ray = task->ray[t];
       math::point_t min_distance = std::numeric_limits<math::point_t>::max();
-      task->hit_face[t] = 0;
+      task->hit_face_idx[t] = -1;
       for (int f = 0; f != system->scene->n_faces; ++f)
       {
         // and any faces from scene
@@ -86,7 +86,7 @@ namespace raycaster_naive_cpu
             // if there is intersection and which distance lesser then previous
             // set face and vector to intersection
             min_distance = new_distance;
-            task->hit_face[t] = &system->scene->faces[f];
+            task->hit_face_idx[t] = (int)(&system->scene->faces[f] - system->scene->faces);
             task->hit_point[t] = point;
           }
         }

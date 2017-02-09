@@ -166,9 +166,9 @@ namespace cpu_form_factors
         for (int j = 0; j != face_rays && n_ray < emission_task->rays->n_tasks; ++j, ++n_ray)
         {
           ++mesh_outgoing_rays;
-          if (ray_caster_task->hit_face[n_ray])
+          if (ray_caster_task->hit_face_idx[n_ray] != -1)
           {
-            int hit_face_idx = ray_caster_task->hit_face[n_ray] - system->scene->faces;
+            int hit_face_idx = ray_caster_task->hit_face_idx[n_ray];
             int hit_mesh_idx = face2mesh(system, hit_face_idx);
             task->form_factors[m * n_meshes + hit_mesh_idx] += 1.f;
           }

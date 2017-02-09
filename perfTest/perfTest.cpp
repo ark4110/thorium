@@ -96,7 +96,7 @@ task_t* task_clone(task_t* task)
   task_t* result = (task_t*)malloc(sizeof(task_t));
   result->n_tasks = task->n_tasks;
   result->ray = task->ray;
-  result->hit_face = (face_t**)malloc(task->n_tasks * sizeof(face_t*));
+  result->hit_face_idx = (int*)malloc(task->n_tasks * sizeof(int));
   result->hit_point = (math::vec3*)malloc(task->n_tasks * sizeof(math::vec3));
   return result;
 }
@@ -124,13 +124,13 @@ ErrorStats CalculateError(task_t* cpu, task_t* gpu)
   ErrorStats result = {};
   for (int i = 0; i != cpu->n_tasks; ++i)
   {
-    if (cpu->hit_face[i] != gpu->hit_face[i])
+    if (cpu->hit_face_idx[i] != gpu->hit_face_idx[i])
     {
       ++result.Mismatch;
       continue;
     }
 
-    if (cpu->hit_face[i] != 0)
+    if (cpu->hit_face_idx[i] != -1)
     {
       math::vec3 diff = cpu->hit_point[i] - gpu->hit_point[i];
       float distance = sqrtf(dot(diff, diff));
@@ -151,7 +151,7 @@ int CalculateMismatch(task_t* cpu, task_t* gpu)
   int result = 0;
   for (int i = 0; i != cpu->n_tasks; ++i)
   {
-    if (cpu->hit_face[i] != gpu->hit_face[i])
+    if (cpu->hit_face_idx[i] != gpu->hit_face_idx[i])
     {
       ++result;
     }
@@ -485,7 +485,7 @@ int main(int argc, char* argv[])
     {
       if (systemsToCheck[s])
       {
-        free(tasks[s]->hit_face);
+        free(tasks[s]->hit_face_idx);
         free(tasks[s]->hit_point);
         free(tasks[s]);
       }

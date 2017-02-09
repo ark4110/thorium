@@ -184,12 +184,12 @@ namespace naive_cuda_ray_caster
       {
         if (h_indices[j] != -1)
         {
-          task->hit_face[t + j] = system->scene->faces + h_indices[j];
+          task->hit_face_idx[t + j] = h_indices[j];
           task->hit_point[t + j] = loc2ext(h_points[j]);
         }
         else
         {
-          task->hit_face[t + j] = 0;
+          task->hit_face_idx[t + j] = -1;
         }
       }
 
@@ -526,12 +526,12 @@ namespace zgrid_cuda_ray_caster
       {
         if (h_indices[j] != -1)
         {
-          task->hit_face[t + j] = system->scene->faces + h_indices[j];
+          task->hit_face_idx[t + j] = h_indices[j];
           task->hit_point[t + j] = loc2ext(h_points[j]);
         }
         else
         {
-          task->hit_face[t + j] = 0;
+          task->hit_face_idx[t + j] = -1;
         }
       }
 

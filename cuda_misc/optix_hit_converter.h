@@ -44,7 +44,7 @@ namespace optix_hit_converter
     optix_hit_t* hits;
 
     void* device_hit_points;
-    void** device_hit_faces;
+    int* device_hit_face_idx;
   };
 
   state_t* state_init(const ray_caster::scene_t* scene);

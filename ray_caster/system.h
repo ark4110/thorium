@@ -39,7 +39,7 @@ namespace ray_caster
     int n_tasks;
     int n_reserved;
     math::ray_t* ray;
-    face_t** hit_face;
+    int* hit_face_idx;
     math::vec3* hit_point;
   };
 
@@ -58,7 +58,7 @@ namespace ray_caster
 
   /// @brief Allocates memory for task with n_rays rays.
   task_t* task_create(int n_rays);
-  task_t task_static(int n_rays, ray_t* ray, face_t** hit_face, math::vec3* hit_point);
+  task_t task_static(int n_rays, ray_t* ray, int* hit_face_idx, math::vec3* hit_point);
 
   /// @brief Grow existing or create new task.
   int task_grow(task_t** task, int n_rays);

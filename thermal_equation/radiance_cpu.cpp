@@ -188,7 +188,7 @@ namespace radiance_equation
     const int n_rays = ray_caster_task->n_tasks;
     for (int r = 0; r != n_rays; ++r)
     {
-      if (!ray_caster_task->hit_face[r])
+      if (ray_caster_task->hit_face_idx[r] == -1)
       {
         if (system->params.stats)
         {
@@ -199,11 +199,11 @@ namespace radiance_equation
       }
       else
       {
-        const int hit_face_idx = ray_caster_task->hit_face[r] - system->scene->faces;
+        const int hit_face_idx = ray_caster_task->hit_face_idx[r];
         const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
 
         const math::ray_t& ray = ray_caster_task->ray[r];
-        const math::triangle_t& face = *ray_caster_task->hit_face[r];
+        const math::triangle_t& face = system->scene->faces[hit_face_idx];
 
         const subject::material_t& material = mesh_material(system->scene, hit_mesh_idx);
         const subject::optical_properties_t& optical = ray_check_hit_front(ray, face) ? material.front : material.rear;

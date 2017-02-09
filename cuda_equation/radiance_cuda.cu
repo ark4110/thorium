@@ -336,16 +336,8 @@ namespace radiance_equation_cuda
 
     subject::scene_t* scene = system->scene;
     int* device_hit_face_idx = 0;
-    int* host_hit_face_idx = (int*)calloc(n_rays, sizeof(int));
-    for (int i = 0; i != n_rays; ++i)
-    {
-      int idx = ray_caster_task->hit_face[i] ? (ray_caster_task->hit_face[i] - scene->faces) : -1;
-      assert(idx < scene->n_faces);
-      host_hit_face_idx[i] = idx;
-    }
     checkCudaErrors(cudaMalloc(&device_hit_face_idx, sizeof(int) * n_rays));
-    checkCudaErrors(cudaMemcpy(device_hit_face_idx, host_hit_face_idx, sizeof(int) * n_rays, cudaMemcpyHostToDevice));
-    free(host_hit_face_idx);
+    checkCudaErrors(cudaMemcpy(device_hit_face_idx, ray_caster_task->hit_face_idx, sizeof(int) * n_rays, cudaMemcpyHostToDevice));
 
     float3* device_hit_point = 0;
     checkCudaErrors(cudaMalloc(&device_hit_point, sizeof(float3) * n_rays));
@@ -378,10 +370,11 @@ namespace radiance_equation_cuda
     cudaFree(device_hit_status);
 
     for (int r = 0; r != n_rays; ++r)
-    { 
+    {
+      const int hit_face_idx = ray_caster_task->hit_face_idx[r];
       float ray_power = emission_task->power[r];
 
-      if (!ray_caster_task->hit_face[r])
+      if (hit_face_idx == -1)
       {
         if (system->params.stats)
         {
@@ -391,7 +384,6 @@ namespace radiance_equation_cuda
         continue;
       }
 
-      const int hit_face_idx = ray_caster_task->hit_face[r] - system->scene->faces;
       const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
 
       assert(host_hit_status[r] <= hit_missed);

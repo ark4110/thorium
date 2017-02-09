@@ -52,14 +52,14 @@ namespace ray_caster
     task->n_tasks = n_rays;
     task->n_reserved = n_rays;
     task->ray = (math::ray_t*)     malloc(n_rays * sizeof(math::ray_t));
-    task->hit_face = (face_t**)    malloc(n_rays * sizeof(ray_caster::face_t*));
+    task->hit_face_idx = (int*)    malloc(n_rays * sizeof(int));
     task->hit_point = (math::vec3*)malloc(n_rays * sizeof(math::vec3));
     return task;
   }
 
-  task_t task_static(int n_rays, ray_t* ray, face_t** hit_face, math::vec3* hit_point)
+  task_t task_static(int n_rays, ray_t* ray, int* hit_face_idx, math::vec3* hit_point)
   {
-    return{ n_rays, -1, ray, hit_face, hit_point };
+    return{ n_rays, -1, ray, hit_face_idx, hit_point };
   }
 
   int task_grow(task_t** task, int n_rays)
@@ -86,7 +86,7 @@ namespace ray_caster
         fprintf(stderr, "Task grow from %d to %d rays\n", n_from, valid_task->n_reserved);
       
       valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
-      valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_reserved * sizeof(ray_caster::face_t*));
+      valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
       valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
     }
 
@@ -113,7 +113,7 @@ namespace ray_caster
 
     valid_task->n_reserved = valid_task->n_tasks + n_rays;
     valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
-    valid_task->hit_face = (face_t**)realloc(valid_task->hit_face, valid_task->n_reserved * sizeof(ray_caster::face_t*));
+    valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
     valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
     return n_rays;
   }
@@ -143,7 +143,7 @@ namespace ray_caster
     if (task && task->n_reserved >= 0)
     {
       free(task->ray);
-      free(task->hit_face);
+      free(task->hit_face_idx);
       free(task->hit_point);
       free(task);
     }
