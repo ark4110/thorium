@@ -87,17 +87,17 @@ namespace emission
     if (cuda_emission::is_supported())
       return type;
 
-    fprintf(stderr, "No CUDA detected. Fallback emission to CPU.\n");
-
     switch (type)
     {
-    case EMISSION_MALLEY_CPU:
     case EMISSION_MALLEY_CUDA:
+      fprintf(stderr, "No CUDA detected. Fallback malley emission to CPU.\n");
+    case EMISSION_MALLEY_CPU:    
       return EMISSION_MALLEY_CPU;
       break;
 
-    case EMISSION_PARALLEL_RAYS_CPU:
     case EMISSION_PARALLEL_RAYS_CUDA:
+      fprintf(stderr, "No CUDA detected. Fallback parallel rays emission to CPU.\n");
+    case EMISSION_PARALLEL_RAYS_CPU:
       return EMISSION_PARALLEL_RAYS_CPU;
       break;
 
