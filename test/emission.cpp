@@ -37,6 +37,13 @@ struct EngineType
   static const int ID = EngineTypeID;
 };
 
+template <int EmissionEngineTypeID, int EquationEngineTypeID>
+struct EnginesConfig
+{
+  static const int Emission = EmissionEngineTypeID;
+  static const int Equation = EquationEngineTypeID;
+};
+
 template <typename EngineType>
 class MalleyEmission : public Test
 {
@@ -129,7 +136,7 @@ TYPED_TEST(MalleyEmission, DISABLED_LargeObject)
 }
 
 
-template <typename EngineType>
+template <typename EnginesConfig>
 class ParallelEmission : public Test
 {
 public:
@@ -154,13 +161,13 @@ public:
     parallel_rays_emission_cpu::params_t emitterParams;
     emitterParams.n_sources = SourcesCount;
     emitterParams.sources = Sources;
-    auto emitter = emission::system_create(EngineType::ID, &emitterParams);
+    auto emitter = emission::system_create(EnginesConfig::Emission, &emitterParams);
 
     radiance_equation::params_t equationParams = {};
     equationParams.emitters = &emitter;
     equationParams.n_emitters = 1;
     equationParams.ray_caster = caster;
-    auto equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
+    auto equation = thermal_equation::system_create(EnginesConfig::Equation, &equationParams);
 
     thermal_solution::params_t solutionParams = { 1, &equation };
     auto solution = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
@@ -193,9 +200,15 @@ public:
   parallel_rays_emission_cpu::parallel_rays_source_t Sources[2];
 };
 
+typedef ::testing::Types<EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CPU>
+  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CPU>
+  , EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CUDA>
+  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA>
+  > ParallelEmissionConfigs;
+
 typedef ::testing::Types<EngineType<EMISSION_PARALLEL_RAYS_CPU>, EngineType<EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
 
-TYPED_TEST_CASE(ParallelEmission, ParallelEmissionTypes);
+TYPED_TEST_CASE(ParallelEmission, ParallelEmissionConfigs);
 
 TYPED_TEST(ParallelEmission, TopSource)
 {

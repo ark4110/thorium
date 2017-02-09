@@ -23,13 +23,37 @@
 #include "form_factors.h"
 #include "radiance_cpu.h"
 #include "heat_source_cpu.h"
+#include "../cuda_equation/cuda_equation.h"
+#include "../cuda_equation/radiance_cuda.h"
+#include <cstdio>
 
 namespace thermal_equation
 {
+  int cpu_fallback(int type)
+  {
+    if (cuda_equation::is_supported())
+      return type;
+
+    switch (type)
+    {
+    case THERMAL_EQUATION_RADIANCE_CUDA:
+      fprintf(stderr, "No CUDA detected. Fallback radiance equation to CPU.\n");
+
+    case THERMAL_EQUATION_RADIANCE_CPU:
+      return THERMAL_EQUATION_RADIANCE_CPU;
+      break;
+
+    default:
+      return -1;
+    }
+  }
 
   system_t* system_create(int type, void* params)
   {
     system_t* system = 0;
+
+    type = cpu_fallback(type);
+
     switch (type)
     {
     case THERMAL_EQUATION_SB_FF_CPU:
@@ -46,6 +70,10 @@ namespace thermal_equation
 
     case THERMAL_EQUATION_HEAT_SOURCE_CPU:
       system = heat_source_equation::system_create();
+      break;
+
+    case THERMAL_EQUATION_RADIANCE_CUDA:
+      system = radiance_equation_cuda::system_create();
       break;
 
     default:

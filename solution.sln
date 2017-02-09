@@ -60,6 +60,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ballistics", "ballistics\ba
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_misc", "cuda_misc\cuda_misc.vcxproj", "{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_equation", "cuda_equation\cuda_equation.vcxproj", "{C5F9E143-544D-420E-AD3B-6C984116AEFA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -212,6 +214,14 @@ Global
 		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|Win32.Build.0 = Release|Win32
 		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|x64.ActiveCfg = Release|x64
 		{49D7C7CB-EB0D-4F9E-927F-9916389ECF95}.Release|x64.Build.0 = Release|x64
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Debug|Win32.Build.0 = Debug|Win32
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Debug|x64.ActiveCfg = Debug|x64
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Debug|x64.Build.0 = Debug|x64
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Release|Win32.ActiveCfg = Release|Win32
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Release|Win32.Build.0 = Release|Win32
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Release|x64.ActiveCfg = Release|x64
+		{C5F9E143-544D-420E-AD3B-6C984116AEFA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

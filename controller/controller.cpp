@@ -157,6 +157,10 @@ int main(int argc, char* argv[])
   parallel_rays_emission_cpu::params_t exterior_emission_params = {};
   planet_emission::params_t planet_emission_params = {};
   planet_emission_params.predictor = predictor;
+
+  planet_emission_params.n_rays = n_distant_rays;
+  planet_emission_params.n_solar_rays = n_distant_rays;
+  planet_emission_params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CUDA;
   
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
   
@@ -179,7 +183,7 @@ int main(int argc, char* argv[])
 
     if (task->current_time == 0)
     {
-      task->current_time = (double)time(0);
+      task->current_time = 1486619909/*(double)time(0)*/;
       fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
     }
     else
@@ -200,13 +204,6 @@ int main(int argc, char* argv[])
   if (!interior_radiance_emitter)
   {
     std::cerr << "Failed to create interior emitter" << std::endl;
-    return 1;
-  }
-  
-  emission::system_t* exterior_radiance_emitter = emission::system_create(EMISSION_PARALLEL_RAYS_CUDA, &exterior_emission_params);
-  if (!exterior_radiance_emitter)
-  {
-    std::cerr << "Failed to create exterior emitter" << std::endl;
     return 1;
   }
 
@@ -234,11 +231,7 @@ int main(int argc, char* argv[])
   radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = emitters;
   radiance_params.n_emitters = 1;
-  if (exterior_emission_params.n_sources > 0)
-  {
-    emitters[radiance_params.n_emitters] = exterior_radiance_emitter;
-    ++radiance_params.n_emitters;
-  }
+
   if (planet_emitter)
   {
     emitters[radiance_params.n_emitters] = planet_emitter;
@@ -247,7 +240,7 @@ int main(int argc, char* argv[])
   radiance_params.ray_caster = caster;
   radiance_equation::stats_t radiance_stats;
   radiance_params.stats = &radiance_stats;
-  equations[0] = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &radiance_params);
+  equations[0] = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CUDA, &radiance_params);
   if (!equations[0])
   {
     std::cerr << "Failed to create radiance equation" << std::endl;
@@ -347,7 +340,6 @@ int main(int argc, char* argv[])
   for (int i = 0; i != sizeof(equations) / sizeof(equations[0]); ++i)
     thermal_equation::system_free(equations[i]);
   emission::system_free(interior_radiance_emitter);
-  emission::system_free(exterior_radiance_emitter);
   ray_caster::system_free(caster);
   
 	return 0;

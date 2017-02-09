@@ -31,6 +31,13 @@ using namespace testing;
 
 const float Accuracy = 0.001f;
 
+template <int EngineTypeID>
+struct EngineType
+{
+  static const int ID = EngineTypeID;
+};
+
+template <typename EngineType>
 class RadianceSolution
   : public Test
 {
@@ -47,7 +54,7 @@ public:
     equationParams.emitters = &Emitter;
     equationParams.n_emitters = 1;
     equationParams.ray_caster = RayCaster;
-    Equation = thermal_equation::system_create(THERMAL_EQUATION_RADIANCE_CPU, &equationParams);
+    Equation = thermal_equation::system_create(EngineType::ID, &equationParams);
 
     thermal_solution::params_t solutionParams = { 1, &Equation };
     System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
@@ -112,7 +119,10 @@ public:
   thermal_solution::task_t* Task;
 };
 
-TEST_F(RadianceSolution, BoxPreserveEnergy)
+typedef ::testing::Types</*EngineType<THERMAL_EQUATION_RADIANCE_CPU>, */EngineType<THERMAL_EQUATION_RADIANCE_CUDA>> RadianceEquationTypes;
+TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
+
+TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
 {
   using namespace thermal_solution;
   Scene.n_faces = 12;
@@ -132,7 +142,7 @@ TEST_F(RadianceSolution, BoxPreserveEnergy)
   ASSERT_NEAR(1.f, Task->temperatures[0] / initialEnergy, Accuracy);
 }
 
-TEST_F(RadianceSolution, NestedBoxesPreserveEnergy)
+TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
 {
   using namespace thermal_solution;
   const float initialEnergy = Temperatures[0] * Scale * Scale + Temperatures[1];

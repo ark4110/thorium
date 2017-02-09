@@ -1,5 +1,5 @@
 // Copyright (c) 2015 Contributors as noted in the AUTHORS file.
-// This file is part of form_factors.
+// This file is part of Thorium.
 //
 // form_factors is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

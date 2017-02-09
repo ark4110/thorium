@@ -161,6 +161,9 @@
     <ProjectReference Include="..\cuda_emission\cuda_emission.vcxproj">
       <Project>{9a8c8cf8-f6e6-4228-a5d9-5fe3428de7db}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\cuda_equation\cuda_equation.vcxproj">
+      <Project>{c5f9e143-544d-420e-ad3b-6c984116aefa}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\cuda_misc\cuda_misc.vcxproj">
       <Project>{49d7c7cb-eb0d-4f9e-927f-9916389ecf95}</Project>
     </ProjectReference>
