@@ -29,6 +29,8 @@ namespace radiance_equation
 {
   struct stats_t
   {
+    int n_steps;
+
     union
     {
       struct
@@ -58,6 +60,17 @@ namespace radiance_equation
       } named;
       float raw[7];
     } powers;
+
+    union
+    {
+      struct
+      {
+        int t_emission;
+        int t_ray_casting;
+        int t_processing;
+      } named;
+      int raw[3];
+    } times;
   };
 
   struct params_t

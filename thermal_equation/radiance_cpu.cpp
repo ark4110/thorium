@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <cstring>
 
+#include <chrono>
+
 namespace radiance_equation
 {
   struct cpu_system_t : thermal_equation::system_t
@@ -156,6 +158,8 @@ namespace radiance_equation
     emission_task->mesh_temperatures = task->temperatures;
     emission_task->mesh_emission = task->emission;
 
+    auto start_ptime = std::chrono::high_resolution_clock().now();
+
     int n_rays_before_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
     int r = 0;
     for (int e = 0; e != system->params.n_emitters; ++e)
@@ -164,6 +168,8 @@ namespace radiance_equation
       if ((r = system_calculate(emitter, system->emission_task)) < 0)
         return r;
     }
+    auto emission_ptime = std::chrono::high_resolution_clock().now();
+    
     int n_rays_after_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
 
     // @todo Is nothing to do ok?
@@ -172,6 +178,8 @@ namespace radiance_equation
 
     if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
       return r;
+    auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
+    
 
     unsigned n_ray_counter[hit_drop + 1] = {};
     float ray_power_counter[hit_drop + 2] = {};
@@ -246,8 +254,22 @@ namespace radiance_equation
       }
     }
 
+    auto processing_ptime = std::chrono::high_resolution_clock().now();
+
     if (system->params.stats)
+    {
       system->params.stats->quants.named.n_postponed = task_get_n_tasks(system->postponed_task->rays);
+
+      auto emission_time = std::chrono::duration_cast<std::chrono::microseconds>(emission_ptime - start_ptime);
+      auto ray_caster_time = std::chrono::duration_cast<std::chrono::microseconds>(ray_caster_ptime - emission_ptime);
+      auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(processing_ptime - ray_caster_ptime);
+
+      system->params.stats->times.named.t_emission += emission_time.count();
+      system->params.stats->times.named.t_ray_casting += ray_caster_time.count();
+      system->params.stats->times.named.t_processing += processing_time.count();
+
+      ++system->params.stats->n_steps;
+    }
 
     return THERMAL_EQUATION_OK;
   }
@@ -289,5 +311,16 @@ namespace radiance_equation
       , stats.powers.named.e_droped
       , stats.powers.named.e_missed
     );
+
+    {
+      int emission = (stats.times.named.t_emission / stats.n_steps) / 1000;
+      int ray_casting = (stats.times.named.t_ray_casting / stats.n_steps) / 1000;
+      int processing = (stats.times.named.t_processing / stats.n_steps) / 1000;
+      fprintf(stderr, "RADIANCE\tTimings: emission %dms ray-tracing %dms processing %dms\n"
+        , emission
+        , ray_casting
+        , processing
+        );
+    }
   }
 }
