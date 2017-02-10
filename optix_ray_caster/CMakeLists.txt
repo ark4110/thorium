@@ -18,3 +18,5 @@ optix_system.cpp
     )
 
 add_library(optix_ray_caster STATIC ${SOURCE_FILES})
+
+target_link_libraries(optix_ray_caster cuda_ray_caster)
