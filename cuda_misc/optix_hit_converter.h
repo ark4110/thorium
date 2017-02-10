@@ -42,15 +42,12 @@ namespace optix_hit_converter
 
     int n_hits;
     optix_hit_t* hits;
-
-    void* device_hit_points;
-    int* device_hit_face_idx;
   };
 
-  state_t* state_init(const ray_caster::scene_t* scene);
+  state_t* state_init(const ray_caster::scene_t* scene, bool force_cpu);
   void state_free(state_t* state);
 
-  void state_prepare(state_t* state, ray_caster::task_t* task);
+  int state_prepare(state_t* state, ray_caster::task_t* task);
 
   int convert(state_t* state, ray_caster::task_t* task);
   

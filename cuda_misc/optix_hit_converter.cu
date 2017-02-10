@@ -36,11 +36,16 @@ namespace optix_hit_converter
     return result;
   }
 
-  state_t* state_init(const ray_caster::scene_t* scene)
+  bool is_supported(const state_t* state)
+  {
+    return state->optix_buffer_type == 0x201;
+  }
+
+  state_t* state_init(const ray_caster::scene_t* scene, bool force_cpu)
   {
     state_t* state = (state_t*)calloc(1, sizeof(state_t));
 
-    bool supported = is_supported();
+    bool supported = is_supported() && !force_cpu;
 
     state->optix_buffer_type = supported ? 0x201 : 0x200; // RTP_BUFFER_TYPE_CUDA_LINEAR : RTP_BUFFER_TYPE_HOST
 
@@ -60,11 +65,9 @@ namespace optix_hit_converter
     {
       cudaFree(state->device_faces);
 
-      if (is_supported())
+      if (is_supported(state))
       {
         cudaFree(state->hits);
-        cudaFree(state->device_hit_face_idx);
-        cudaFree(state->device_hit_points);
       }
       else
         free(state->hits);
@@ -72,31 +75,32 @@ namespace optix_hit_converter
     free(state);
   }
 
-  void state_prepare(state_t* state, ray_caster::task_t* task)
+  int state_prepare(state_t* state, ray_caster::task_t* task)
   {
     if (state->n_hits >= task->n_tasks)
-      return;
+      return RAY_CASTER_OK;
+
+    bool cuda_enabled = is_supported(state);
+    const bool allocation_valid = (cuda_enabled && task->allocation_device >= 0) ||
+      (!cuda_enabled && task->allocation_device < 0);
+
+    if (!allocation_valid)
+      return -RAY_CASTER_INVALID_TASK_ALLOCATION;
 
     state->n_hits = task->n_tasks;
 
-    if (optix_hit_converter::is_supported())
+    if (cuda_enabled)
     {
       if (state->hits)
         cudaFree(state->hits);
       checkCudaErrors(cudaMalloc((void**)&state->hits, sizeof(optix_hit_t) * task->n_tasks));
-
-      if (state->device_hit_points)
-        cudaFree(state->device_hit_points);      
-      checkCudaErrors(cudaMalloc(&state->device_hit_points, sizeof(float3) * task->n_tasks));
-
-      if (state->device_hit_face_idx)
-        cudaFree(state->device_hit_face_idx);
-      checkCudaErrors(cudaMalloc(&state->device_hit_face_idx, sizeof(int) * task->n_tasks));
     }
     else
     {
       state->hits = (optix_hit_t*)realloc(state->hits, task->n_tasks * sizeof(optix_hit_t));
     }
+
+    return RAY_CASTER_OK;
   }
 
   __device__ float3 triangle_uv_to_point(face_t face, float u, float v)
@@ -122,17 +126,16 @@ namespace optix_hit_converter
 
   int convert_cuda(state_t* state, ray_caster::task_t* task)
   {
-    const int n_rays = task->n_tasks;
-
     cudaThreadSetCacheConfig(cudaFuncCachePreferL1);
-    convert_hits << <128, 128 >> > (state->hits, (const face_t*)state->device_faces, task->n_tasks, (float3*)state->device_hit_points, state->device_hit_face_idx);
+    convert_hits << <128, 128 >> > (state->hits
+      , (const face_t*)state->device_faces
+      , task->n_tasks
+      , (float3*)task->hit_point
+      , task->hit_face_idx);
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cudaThreadSetCacheConfig(cudaFuncCachePreferNone);
-
-    cudaMemcpy(task->hit_point, state->device_hit_points, sizeof(float3) * n_rays, cudaMemcpyDeviceToHost);
-    cudaMemcpy(task->hit_face_idx, state->device_hit_face_idx, sizeof(int) * n_rays, cudaMemcpyDeviceToHost);
 
     return RAY_CASTER_OK;
   }
@@ -156,6 +159,6 @@ namespace optix_hit_converter
 
   int convert(state_t* state, ray_caster::task_t* task)
   {
-    return is_supported() ? convert_cuda(state, task) : convert_cpu(state, task);
+    return is_supported(state) ? convert_cuda(state, task) : convert_cpu(state, task);
   }
 }

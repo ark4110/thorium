@@ -35,8 +35,6 @@ namespace {
 #include <curand_mtgp32dc_p_11213.h>
 }
 
-#include <iostream>
-
 #define CURAND_CALL(x) do { if((x) != CURAND_STATUS_SUCCESS) { \
   printf("Error at %s:%d\n",__FILE__,__LINE__); \
   return EXIT_FAILURE;}} while(0)
@@ -66,22 +64,64 @@ namespace radiance_equation_cuda
 
   void sync_context_to_device(system_t* system)
   {
+    system->host_context.n_meshes = system->scene->n_meshes;
+
     if (system->device_context == 0)
       checkCudaErrors(cudaMalloc((void**)&system->device_context, sizeof(context_t)));
     checkCudaErrors(cudaMemcpy(system->device_context, &system->host_context, sizeof(context_t), cudaMemcpyHostToDevice));
   }
 
+  int align_rays_count(int n_rays)
+  {
+    const int alignment = 1024;
+    return n_rays + (alignment - n_rays % alignment) % alignment;
+  }
+
+  void prepare_context(system_t* system, int n_rays)
+  {
+    context_t& host_context = system->host_context;
+
+    if (host_context.n_rays_alloc < n_rays)
+    {
+      host_context.n_rays_alloc = align_rays_count(n_rays);
+      if (host_context.hit_descision)
+        cudaFree(host_context.hit_descision);
+      checkCudaErrors(cudaMalloc(&host_context.hit_descision, sizeof(char) * host_context.n_rays_alloc));
+
+      if (host_context.ray_power)
+        cudaFree(host_context.ray_power);
+      checkCudaErrors(cudaMalloc(&host_context.ray_power, sizeof(float) * host_context.n_rays_alloc));
+
+      if (host_context.postponed_ray_power)
+        cudaFree(host_context.postponed_ray_power);
+      checkCudaErrors(cudaMalloc(&host_context.postponed_ray_power, sizeof(float) * host_context.n_rays_alloc));
+
+      sync_context_to_device(system);
+    }
+  }
+
+  int get_postponed_rays_count(system_t* system)
+  {
+    context_t from_device;
+    checkCudaErrors(cudaMemcpy(&from_device, system->device_context, sizeof(context_t), cudaMemcpyDeviceToHost));
+    return from_device.n_postponed;
+  }
+
   /// @brief Initializes system with given ray caster after creation.
   int init(system_t* system, params_t* params)
   {
+    assert(sizeof(float3) == sizeof(math::vec3));
+    assert(sizeof(ray_t) == sizeof(math::ray_t));
+
     system->params = *params;
 
     system->host_context = {};
     system->device_context = 0;
     system->kernel_params = 0;
 
-    system->emission_task = 0;
-    system->postponed_task = 0;
+    system->emission_task = emission::task_create();
+    system->postponed_task = emission::task_create();
+
     system->face_to_mesh_index = 0;
 
     const char* argv[] = { "" };
@@ -125,6 +165,18 @@ namespace radiance_equation_cuda
     if (ctx->mesh_materials)
       cudaFree(ctx->mesh_materials);
     ctx->mesh_materials = 0;
+
+    if (ctx->mesh_powers)
+      cudaFree(ctx->mesh_powers);
+    ctx->mesh_powers = 0;
+
+    if (ctx->ray_power)
+      cudaFree(ctx->ray_power);
+    ctx->ray_power = 0;
+
+    if (ctx->postponed_ray_power)
+      cudaFree(ctx->postponed_ray_power);
+    ctx->postponed_ray_power = 0;
   }
 
   int shutdown(system_t* system)
@@ -208,6 +260,8 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaMemcpy(host_context.mesh_materials, mesh_materials, sizeof(int) * scene->n_meshes, cudaMemcpyHostToDevice));
     free(mesh_materials);
 
+    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_powers, sizeof(float) * scene->n_meshes)); 
+
     sync_context_to_device(system);
 
     return THERMAL_EQUATION_OK;
@@ -241,15 +295,16 @@ namespace radiance_equation_cuda
       return hit_drop;
   }
 
-  __global__ void process_rays(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_point, ray_t* rays, char* hit_status)
+  __global__ void make_ray_descisions(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_point, ray_t* rays)
   {
+    char* hit_descisions = ctx->hit_descision;
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
       const int face_idx = hit_face_idx[ray_idx];
       if (face_idx < 0)
       {
-        hit_status[ray_idx] = hit_missed;
+        hit_descisions[ray_idx] = hit_missed;
         continue;
       }
 
@@ -264,7 +319,7 @@ namespace radiance_equation_cuda
       hit_decision decision = make_hit_descision(ctx, optical);
       const float3 point = hit_point[ray_idx];
 
-      hit_status[ray_idx] = decision;
+      hit_descisions[ray_idx] = decision;
       switch (decision)
       {
       case hit_absorb:
@@ -291,20 +346,124 @@ namespace radiance_equation_cuda
     }
   }
 
-  void postpone(system_t* system, math::ray_t ray, float power)
+  inline __device__ bool is_postpone_descision(char descision)
   {
-    task_add(system->postponed_task, ray, power);
+    return descision == hit_reflect || descision == hit_diffuse || descision == hit_transmit;
   }
 
   /**
-  *  @brief Calculates thermal flow for a given scene.
+    Single block of n_tpb threads.
+    Shared n_thread_postponed size is n_tpb * sizeof(int).
   */
+  __global__ void postpone_rays(context_t* ctx, int n_rays, const ray_t* rays, ray_t* postponed_ray)
+  {
+    extern __shared__ int s_thread_postponed[];
+
+    // Init shared memory.
+    s_thread_postponed[threadIdx.x] = 0;
+
+    const char* hit_descision = ctx->hit_descision;
+    
+
+    // Calculate postponed rays count for each thread.
+    int r = threadIdx.x;
+    for (; r < n_rays; r += blockDim.x)
+    {
+      char descision = hit_descision[r];
+      if (is_postpone_descision(descision))
+        s_thread_postponed[threadIdx.x] += 1;
+    }
+    __syncthreads();
+    
+     //Gather step for leading thread: calculate each thread offset
+     //and report total postponed count.
+     //@todo Parallelize?
+    if (threadIdx.x == 0)
+    { 
+      int acc = s_thread_postponed[0];
+      for (int i = 1; i < blockDim.x; ++i)
+      {
+        // @todo Check s_thread_postponed[i] = s_thread_postponed[i] + s_thread_postponed[i - 1]
+        int new_acc = acc + s_thread_postponed[i];
+        s_thread_postponed[i] = acc;
+        acc = new_acc;
+      }
+      ctx->n_postponed = acc;
+    }
+    __syncthreads();
+
+    const float* raw_powers = ctx->ray_power;
+    float* postponed_raw_powers = ctx->postponed_ray_power;
+
+    r = threadIdx.x;
+    int postponed_index = s_thread_postponed[threadIdx.x];
+    for (; r < n_rays; r += blockDim.x)
+    {      
+      char descision = hit_descision[r];
+      if (is_postpone_descision(descision))
+      {
+        if (postponed_index >= ctx->n_rays_alloc)
+          printf("postponed %d\n", postponed_index);
+        postponed_ray[postponed_index] = rays[r];
+        postponed_raw_powers[postponed_index] = raw_powers[r];
+        ++postponed_index;
+      }
+    }
+  }
+
+  /**
+    Each block process mesh_power_shared_size meshes.
+    Each thread process all rays.
+    I.e. suboptional implementation for mesh count > 12k
+  */
+  __global__ void calculate_mesh_absorption(const context_t* ctx, int n_rays, const int* hit_face_idx)
+  {
+    extern __shared__ float s_mesh_power[];
+
+    const int mesh_power_shared_size = 48 * 1024 / sizeof(float);
+
+    // Init shared memory.
+    const int n_meshes = ctx->n_meshes;
+    for (int tid = threadIdx.x; tid < n_meshes; tid += blockDim.x)
+      s_mesh_power[tid] = 0;
+    __syncthreads();
+
+    const int* face_to_mesh_idx = ctx->face_to_mesh_index;
+    const char* hit_descision = ctx->hit_descision;
+    const float* raw_powers = ctx->ray_power;
+    int ray_idx = threadIdx.x;
+    for (; ray_idx < n_rays; ray_idx += blockDim.x)
+    {
+      const char descision = hit_descision[ray_idx];
+      if (descision == hit_absorb)
+      {
+        const int mesh_idx = face_to_mesh_idx[hit_face_idx[ray_idx]];
+        if (mesh_idx / mesh_power_shared_size == blockIdx.x)
+        {
+          atomicAdd(s_mesh_power + (mesh_idx % mesh_power_shared_size), raw_powers[ray_idx]);
+        }
+      }
+    }
+    __syncthreads();
+
+    // Assign accumulated mesh powers.
+    float* mesh_power = ctx->mesh_powers;
+    const int block_mesh_offset = mesh_power_shared_size * blockIdx.x;
+    for (int tid = threadIdx.x; tid < mesh_power_shared_size && block_mesh_offset + tid < n_meshes; tid += blockDim.x)
+    {
+      mesh_power[block_mesh_offset + tid] = s_mesh_power[tid];
+    }
+  }
+
   int calculate(system_t* system, thermal_equation::task_t* task)
   {
-    // Prepare emission task
+    int r = 0;
+
+    // Prepare emission tasks
     std::swap(system->emission_task, system->postponed_task);
-    task_reset(system->postponed_task);
     emission::task_t* emission_task = system->emission_task;
+    emission::task_t* postponed_task = system->postponed_task;
+    task_reset(postponed_task);
 
     if (system->params.stats)
       *system->params.stats = stats_t();
@@ -313,8 +472,9 @@ namespace radiance_equation_cuda
     emission_task->mesh_emission = task->emission;
 
     auto start_ptime = std::chrono::high_resolution_clock().now();
-
-    int r = 0;
+    // Right now emission expect host task
+    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, -1)) < 0)
+      return r;
     for (int e = 0; e != system->params.n_emitters; ++e)
     {
       emission::system_t* emitter = system->params.emitters[e];
@@ -327,7 +487,13 @@ namespace radiance_equation_cuda
     if (system->emission_task->rays == 0)
       return THERMAL_EQUATION_OK;
 
-    if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
+    // Put task to ray caster native device.
+    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, 0)) < 0)
+      return r;
+    if ((r = system_cast(system->params.ray_caster, emission_task->rays)) < 0)
+      return r;
+    // Put ray caster result to current CUDA device.
+    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, 1 /* @todo use current device*/)) < 0)
       return r;
     auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
 
@@ -335,44 +501,62 @@ namespace radiance_equation_cuda
     const int n_rays = ray_caster_task->n_tasks;
 
     subject::scene_t* scene = system->scene;
-    int* device_hit_face_idx = 0;
-    checkCudaErrors(cudaMalloc(&device_hit_face_idx, sizeof(int) * n_rays));
-    checkCudaErrors(cudaMemcpy(device_hit_face_idx, ray_caster_task->hit_face_idx, sizeof(int) * n_rays, cudaMemcpyHostToDevice));
 
-    float3* device_hit_point = 0;
-    checkCudaErrors(cudaMalloc(&device_hit_point, sizeof(float3) * n_rays));
-    checkCudaErrors(cudaMemcpy(device_hit_point, ray_caster_task->hit_point, sizeof(float3) * n_rays, cudaMemcpyHostToDevice));
-
-    ray_t* device_rays = 0;
-    checkCudaErrors(cudaMalloc(&device_rays, sizeof(ray_t) * n_rays));
-    checkCudaErrors(cudaMemcpy(device_rays, ray_caster_task->ray, sizeof(ray_t) * n_rays, cudaMemcpyHostToDevice));
-
-    char* device_hit_status = 0;
-    char* host_hit_status = (char*)malloc(n_rays);
-    checkCudaErrors(cudaMalloc(&device_hit_status, sizeof(char) * n_rays));
-
-    process_rays << <system->n_mtgp_blocks, 256 >> > (system->device_context
+    prepare_context(system, n_rays);
+    
+    make_ray_descisions << <system->n_mtgp_blocks, 256 >> > (system->device_context
       , n_rays
-      , device_hit_face_idx
-      , device_hit_point
-      , device_rays
-      , device_hit_status);
+      , ray_caster_task->hit_face_idx
+      , (float3*)ray_caster_task->hit_point
+      , (ray_t*)ray_caster_task->ray);
 
-    checkCudaErrors(cudaMemcpy(host_hit_status, device_hit_status, n_rays, cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(ray_caster_task->ray, device_rays, sizeof(ray_t) * n_rays, cudaMemcpyDeviceToHost));
+    ////// Postpone step    
+    // Emission powers are on host device.
+    checkCudaErrors(cudaMemcpy(system->host_context.ray_power, emission_task->power, sizeof(float) * n_rays, cudaMemcpyHostToDevice));
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    cudaFree(device_hit_face_idx);
-    cudaFree(device_hit_point);
-    cudaFree(device_rays);
-    cudaFree(device_hit_status);
+    task_grow(system->postponed_task, n_rays);
+    if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
+      return r;
 
-    for (int r = 0; r != n_rays; ++r)
+    int shared_size = system->n_tpb * sizeof(int);
+    postpone_rays << <1, system->n_tpb, shared_size >> > (
+      system->device_context
+      , n_rays
+      , (ray_t*)ray_caster_task->ray // mutated rays
+      , (ray_t*)postponed_task->rays->ray);
+    
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    const int n_postponed = get_postponed_rays_count(system);
+    checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
+    postponed_task->rays->n_tasks = n_postponed;
+
+    ////// Gather step
+    const int mesh_power_shared_size = 48 * 1024;
+    const int n_mesh_power_shared_size = mesh_power_shared_size / sizeof(float);
+    const int n_mesh_blocks = (system->scene->n_meshes + n_mesh_power_shared_size - 1) / n_mesh_power_shared_size;
+    calculate_mesh_absorption<<<n_mesh_blocks, system->n_tpb, mesh_power_shared_size>>> (system->device_context
+      , n_rays
+      , ray_caster_task->hit_face_idx);
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    const int n_meshes = system->scene->n_meshes;
+    float* mesh_powers = (float*)malloc(n_meshes * sizeof(float));
+    checkCudaErrors(cudaMemcpy(mesh_powers, system->host_context.mesh_powers, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i != n_meshes; ++i)
+      task->absorption[i] += mesh_powers[i];
+    free(mesh_powers);
+
+    /*for (int r = 0; r != n_rays; ++r)
     {
       const int hit_face_idx = ray_caster_task->hit_face_idx[r];
-      float ray_power = emission_task->power[r];
+      float ray_power = system->postponed_task->power[r];
 
       if (hit_face_idx == -1)
       {
@@ -389,13 +573,6 @@ namespace radiance_equation_cuda
       assert(host_hit_status[r] <= hit_missed);
 
       hit_decision decision = (hit_decision)host_hit_status[r];
-      if (system->params.stats)
-      {
-        ++system->params.stats->quants.raw[decision];
-        system->params.stats->powers.raw[decision] += ray_power;
-        if (decision != hit_absorb && decision != hit_drop)
-          system->params.stats->powers.named.e_postponed += ray_power;
-      }
 
       switch (decision)
       {
@@ -406,7 +583,6 @@ namespace radiance_equation_cuda
       case hit_reflect:
       case hit_diffuse:
       case hit_transmit:
-        postpone(system, ray_caster_task->ray[r], ray_power);
       break;
 
       case hit_drop:
@@ -414,10 +590,8 @@ namespace radiance_equation_cuda
       default:
         break;
       }
-    }
+    }*/
     
-    free(host_hit_status);
-
     auto processing_ptime = std::chrono::high_resolution_clock().now();
 
     if (system->params.stats)

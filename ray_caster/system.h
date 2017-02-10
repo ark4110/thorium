@@ -35,7 +35,12 @@ namespace ray_caster
    * If ray has no intersection with scene face it index will be -1.
    */
   struct task_t
-  {
+  { 
+    int allocation_device;
+    void(*free_data)(task_t*);
+    int(*grow)(task_t*, int addition);
+    int(*relocate)(task_t*, int device);
+
     int n_tasks;
     int n_reserved;
     math::ray_t* ray;
@@ -58,8 +63,7 @@ namespace ray_caster
 
   /// @brief Allocates memory for task with n_rays rays.
   task_t* task_create(int n_rays);
-  task_t task_static(int n_rays, ray_t* ray, int* hit_face_idx, math::vec3* hit_point);
-
+  
   /// @brief Grow existing or create new task.
   int task_grow(task_t** task, int n_rays);
 
@@ -70,6 +74,8 @@ namespace ray_caster
 
   /// @brief Reset task rays to zero.
   int task_reset(task_t* task);
+
+  void task_free_data(task_t* task);
 
   /// @brief Frees memory for task.
   void task_free(task_t* task);
@@ -88,6 +94,7 @@ namespace ray_caster
   #define RAY_CASTER_OK    0
   #define RAY_CASTER_ERROR 1
   #define RAY_CASTER_NOT_SUPPORTED 2
+  #define RAY_CASTER_INVALID_TASK_ALLOCATION 3
 
   /**
    *   @brief Virtual methods table for ray caster functionality.
@@ -114,6 +121,10 @@ namespace ray_caster
     /// @brief Casts rays of given task task for prepared scene.
     /// @note Task's rays, rays hit faces indices and points are prepared by callee.
     int(*cast)(system_t* system, task_t* task);
+
+    /// @brief Relocate task to device.
+    /// @detail device -1 reserved for host, 0 for ray caster native device.
+    int (*relocate_task)(system_t* system, task_t* task, int device);
   };
 
   const char* system_get_name(int system_id);
@@ -147,4 +158,5 @@ namespace ray_caster
   int system_set_scene(system_t* system, scene_t* scene);
   int system_prepare(system_t* system);
   int system_cast(system_t* system, task_t* task);
+  int system_relocate_task(system_t* system, task_t* task, int device);
 }

@@ -31,20 +31,21 @@ using namespace testing;
 
 const float Accuracy = 0.001f;
 
-template <int EngineTypeID>
-struct EngineType
+template <int EquationEngineID, int RayCasterEngineID>
+struct EnginesConfig
 {
-  static const int ID = EngineTypeID;
+  static const int EquationEngine = EquationEngineID;
+  static const int RayCasterEngine = RayCasterEngineID;
 };
 
-template <typename EngineType>
+template <typename EnginesConfig>
 class RadianceSolution
   : public Test
 {
 public:
   RadianceSolution()
   {
-    RayCaster = ray_caster::system_create(RAY_CASTER_NAIVE_CUDA);
+    RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
     
     malley_cpu::params_t emitterParams;
     emitterParams.n_rays = 1000;
@@ -54,7 +55,7 @@ public:
     equationParams.emitters = &Emitter;
     equationParams.n_emitters = 1;
     equationParams.ray_caster = RayCaster;
-    Equation = thermal_equation::system_create(EngineType::ID, &equationParams);
+    Equation = thermal_equation::system_create(EnginesConfig::EquationEngine, &equationParams);
 
     thermal_solution::params_t solutionParams = { 1, &Equation };
     System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
@@ -119,7 +120,8 @@ public:
   thermal_solution::task_t* Task;
 };
 
-typedef ::testing::Types</*EngineType<THERMAL_EQUATION_RADIANCE_CPU>, */EngineType<THERMAL_EQUATION_RADIANCE_CUDA>> RadianceEquationTypes;
+typedef ::testing::Types<EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>> RadianceEquationTypes;
 TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
 
 TYPED_TEST(RadianceSolution, BoxPreserveEnergy)

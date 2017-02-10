@@ -176,7 +176,11 @@ namespace radiance_equation
     if (system->emission_task->rays == 0)
       return THERMAL_EQUATION_OK;
 
-    if ((r = system_cast(system->params.ray_caster, system->emission_task->rays)) < 0)
+    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, 0)) < 0)
+      return r;
+    if ((r = system_cast(system->params.ray_caster, emission_task->rays)) < 0)
+      return r;
+    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, -1)) < 0)
       return r;
     auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
     

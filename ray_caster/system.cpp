@@ -46,20 +46,28 @@ namespace ray_caster
     free(scene);
   }
 
-  task_t* task_create(int n_rays)
+  void host_task_free_data(task_t* task)
   {
-    task_t* task = (task_t*) malloc(sizeof(task_t));
-    task->n_tasks = n_rays;
-    task->n_reserved = n_rays;
-    task->ray = (math::ray_t*)     malloc(n_rays * sizeof(math::ray_t));
-    task->hit_face_idx = (int*)    malloc(n_rays * sizeof(int));
-    task->hit_point = (math::vec3*)malloc(n_rays * sizeof(math::vec3));
-    return task;
+    free(task->ray);
+    free(task->hit_face_idx);
+    free(task->hit_point);
   }
 
-  task_t task_static(int n_rays, ray_t* ray, int* hit_face_idx, math::vec3* hit_point)
+  task_t* task_create(int n_rays)
   {
-    return{ n_rays, -1, ray, hit_face_idx, hit_point };
+    task_t* task = (task_t*) calloc(1, sizeof(task_t));
+    *task = { -1 // allocation_device
+      , &host_task_free_data // void(*free_data)(task_t*);
+      , 0 // int(*grow)(task_t*, int addition);
+      , 0 // int(*relocate)(task_t*, int device);
+      , n_rays // n_tasks
+      , n_rays // n_reserved
+      , (math::ray_t*) calloc(n_rays, sizeof(math::ray_t))
+      , (int*) calloc(n_rays, sizeof(int))
+      , (math::vec3*)calloc(n_rays, sizeof(math::vec3))
+    };
+    
+    return task;
   }
 
   int task_grow(task_t** task, int n_rays)
@@ -74,6 +82,12 @@ namespace ray_caster
 
     if (valid_task->n_reserved < 0)
       throw std::invalid_argument("Can't grow static task.");
+
+    if (valid_task->grow)
+      return valid_task->grow(valid_task, n_rays);
+
+    if (valid_task->allocation_device != -1)
+      throw std::invalid_argument("Can't grow invalid task: external grow method not defined for device task.");
 
     int n_prev = valid_task->n_tasks;
     valid_task->n_tasks += n_rays;
@@ -138,15 +152,23 @@ namespace ray_caster
     return prev;
   }
 
+  void task_free_data(task_t* task)
+  {
+    if (task && task->free_data)
+      task->free_data(task);
+  }
+
   void task_free(task_t* task)
   {
-    if (task && task->n_reserved >= 0)
-    {
-      free(task->ray);
-      free(task->hit_face_idx);
-      free(task->hit_point);
-      free(task);
-    }
+    if (!task)
+      return;
+
+    if (task->n_reserved < 0) // check for static task
+      return;
+
+    if (task->free_data)
+      task->free_data(task);
+    free(task);
   }
 
   int cpu_fallback(int type)
@@ -154,17 +176,18 @@ namespace ray_caster
     if (cuda_ray_caster::is_supported())
       return type;
 
-    fprintf(stderr, "No CUDA detected. Fallback ray caster to CPU.\n");
-
     switch (type)
     {
-    case RAY_CASTER_NAIVE_CPU:
     case RAY_CASTER_NAIVE_CUDA:
+      fprintf(stderr, "No CUDA detected. Fallback ray caster to CPU.\n");
+    case RAY_CASTER_NAIVE_CPU:
+    
       return RAY_CASTER_NAIVE_CPU;      
       break;
 
-    case RAY_CASTER_ZGRID_CPU:
     case RAY_CASTER_ZGRID_CUDA:
+      fprintf(stderr, "No CUDA detected. Fallback ray caster to CPU.\n");
+    case RAY_CASTER_ZGRID_CPU:    
       return RAY_CASTER_ZGRID_CPU;
       break;
 
@@ -173,7 +196,7 @@ namespace ray_caster
       return RAY_CASTER_OPTIX;
 #else
     {
-      fprintf(stderr, "No Optix engine in 32-bit. Fallback NAIVE CUDA.\n");
+      fprintf(stderr, "No Optix engine in 32-bit. Fallback to NAIVE CUDA.\n");
       return cpu_fallback(RAY_CASTER_NAIVE_CUDA);
     }
     break;
@@ -290,5 +313,14 @@ namespace ray_caster
   int system_cast(system_t* system, task_t* task)
   {
     return system->methods->cast(system, task);
+  }
+
+  int system_relocate_task(system_t* system, task_t* task, int device)
+  {
+    // @todo Add dummy relocation for depricated systems?
+    if (system->methods->relocate_task)
+      return system->methods->relocate_task(system, task, device);
+    else
+      return RAY_CASTER_OK;
   }
 }

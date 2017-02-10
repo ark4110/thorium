@@ -37,11 +37,12 @@ struct EngineType
   static const int ID = EngineTypeID;
 };
 
-template <int EmissionEngineTypeID, int EquationEngineTypeID>
+template <int EmissionEngineTypeID, int EquationEngineTypeID, int RayCasterEngineTypeID>
 struct EnginesConfig
 {
   static const int Emission = EmissionEngineTypeID;
   static const int Equation = EquationEngineTypeID;
+  static const int RayCaster = RayCasterEngineTypeID;
 };
 
 template <typename EngineType>
@@ -152,7 +153,7 @@ public:
 
   float GetTemperatureDiff()
   {
-    auto caster = ray_caster::system_create(RAY_CASTER_NAIVE_CPU);
+    auto caster = ray_caster::system_create(EnginesConfig::RayCaster);
 
     auto scene = ToSubjectScene(MakeFloorScene());
     AddMaterial(scene, subject::material_absolute_absorbance());
@@ -200,11 +201,15 @@ public:
   parallel_rays_emission_cpu::parallel_rays_source_t Sources[2];
 };
 
-typedef ::testing::Types<EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CPU>
-  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CPU>
-  , EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CUDA>
-  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA>
-  > ParallelEmissionConfigs;
+//typedef ::testing::Types<EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_NAIVE_CPU>
+//  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_NAIVE_CPU>
+//  , EnginesConfig<EMISSION_PARALLEL_RAYS_CPU, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_NAIVE_CPU>
+//  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_NAIVE_CPU>
+//  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>
+//  > ParallelEmissionConfigs;
+
+typedef ::testing::Types<EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>
+> ParallelEmissionConfigs;
 
 typedef ::testing::Types<EngineType<EMISSION_PARALLEL_RAYS_CPU>, EngineType<EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
 

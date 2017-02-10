@@ -20,12 +20,15 @@
 #include <memory>
 #include <optix_prime/optix_prime.h>
 #include "../cuda_misc/optix_hit_converter.h"
+#include "../cuda_ray_caster/task_relocation.h"
 
 namespace optix_ray_caster
 {
   struct system_t : ray_caster::system_t
   {
     ray_caster::scene_t* scene;
+
+    RTPcontexttype context_type;
     
     RTPcontext context;
     RTPbufferdesc vertices;
@@ -37,10 +40,17 @@ namespace optix_ray_caster
   int init(system_t* system)
   {
     system->scene = 0;
-
     system->context = {};
-    if (rtpContextCreate(RTP_CONTEXT_TYPE_CUDA, &system->context) == RTP_SUCCESS)
+
+    if (false /* force CPU for benchmarking */)
     {
+      system->context_type = RTP_CONTEXT_TYPE_CPU;
+      if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
+        return -RAY_CASTER_ERROR;
+    }
+    else if (rtpContextCreate(system->context_type, &system->context) == RTP_SUCCESS)
+    {
+      system->context_type = RTP_CONTEXT_TYPE_CUDA;
       unsigned devices[] = { 0 };
       if (rtpContextSetCudaDeviceNumbers(system->context, 1, devices) != RTP_SUCCESS)
       {
@@ -50,6 +60,7 @@ namespace optix_ray_caster
     }
     else
     {
+      system->context_type = RTP_CONTEXT_TYPE_CPU;
       fprintf(stderr, "Optix ray caster fallback to CPU!\n");
       if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
         return -RAY_CASTER_ERROR;
@@ -114,7 +125,8 @@ namespace optix_ray_caster
     if (rtpModelFinish(system->model) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
     
-    system->converter_state = optix_hit_converter::state_init(scene);
+    bool force_cpu = system->context_type == RTP_CONTEXT_TYPE_CPU;
+    system->converter_state = optix_hit_converter::state_init(scene, force_cpu);
 
     return RAY_CASTER_OK;
   }
@@ -135,13 +147,17 @@ namespace optix_ray_caster
     RTPbufferdesc rays;
     if (rtpBufferDescCreate(system->context,
       RTP_BUFFER_FORMAT_RAY_ORIGIN_DIRECTION,
-      RTP_BUFFER_TYPE_HOST, task->ray, &rays) != RTP_SUCCESS)
+      (task->allocation_device == -1 ? RTP_BUFFER_TYPE_HOST : RTP_BUFFER_TYPE_CUDA_LINEAR), task->ray, &rays) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
     if (rtpBufferDescSetRange(rays, 0, task->n_tasks) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
 
     optix_hit_converter::state_t* converter = system->converter_state;
-    state_prepare(converter, task);
+    if ((c = state_prepare(converter, task)) < 0)
+    {
+      rtpBufferDescDestroy(rays);
+      return c;
+    }
 
     RTPbufferdesc hits;
     if (rtpBufferDescCreate(system->context,
@@ -167,6 +183,13 @@ namespace optix_ray_caster
     return r;
   }
 
+  int relocate(system_t* system, ray_caster::task_t* task, int device)
+  {
+    if (device == 0)
+      device = system->context_type == RTP_CONTEXT_TYPE_CUDA ? 1 : -1;
+    return cuda_task_relocation::relocate_task(task, device);
+  }
+
   const ray_caster::system_methods_t methods =
   {
     (int(*)(ray_caster::system_t* system))&init,
@@ -174,6 +197,7 @@ namespace optix_ray_caster
     (int(*)(ray_caster::system_t* system, ray_caster::scene_t* scene))&set_scene,
     (int(*)(ray_caster::system_t* system))&prepare,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task))&cast,
+    (int(*)(ray_caster::system_t* system, ray_caster::task_t* task, int device))&relocate,
   };
 
   ray_caster::system_t* system_create()
