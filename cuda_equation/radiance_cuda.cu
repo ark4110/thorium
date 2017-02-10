@@ -511,42 +511,47 @@ namespace radiance_equation_cuda
       , ray_caster_task->hit_face_idx
       , (float3*)ray_caster_task->hit_point
       , (ray_t*)ray_caster_task->ray);
-
-    ////// Postpone step    
+    
     // Emission powers are on host device.
     checkCudaErrors(cudaMemcpy(system->host_context.ray_power, emission_task->power, sizeof(float) * n_rays, cudaMemcpyHostToDevice));
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
+    ////// Postpone step
     task_grow(system->postponed_task, n_rays);
     if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
       return r;
 
+    cudaStream_t postpone_stream;
+    cudaStream_t mesh_absorption_stream;
+    cudaStreamCreate(&postpone_stream);
+    cudaStreamCreate(&mesh_absorption_stream);
+
     int shared_size = system->n_tpb * sizeof(int);
-    postpone_rays << <1, system->n_tpb, shared_size >> > (
+    postpone_rays << <1, system->n_tpb, shared_size, postpone_stream >> > (
       system->device_context
       , n_rays
       , (ray_t*)ray_caster_task->ray // mutated rays
       , (ray_t*)postponed_task->rays->ray);
     
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    const int n_postponed = get_postponed_rays_count(system);
-    checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
-    postponed_task->rays->n_tasks = n_postponed;
-
     ////// Gather step
     const int mesh_power_shared_size = 48 * 1024;
     const int n_mesh_power_shared_size = mesh_power_shared_size / sizeof(float);
     const int n_mesh_blocks = (system->scene->n_meshes + n_mesh_power_shared_size - 1) / n_mesh_power_shared_size;
-    calculate_mesh_absorption<<<n_mesh_blocks, system->n_tpb, mesh_power_shared_size>>> (system->device_context
+    calculate_mesh_absorption<<<n_mesh_blocks, system->n_tpb, mesh_power_shared_size, mesh_absorption_stream >>> (system->device_context
       , n_rays
       , ray_caster_task->hit_face_idx);
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
+
+    cudaStreamDestroy(postpone_stream);
+    cudaStreamDestroy(mesh_absorption_stream);
+
+    const int n_postponed = get_postponed_rays_count(system);
+    checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
+    postponed_task->rays->n_tasks = n_postponed;
 
     const int n_meshes = system->scene->n_meshes;
     float* mesh_powers = (float*)malloc(n_meshes * sizeof(float));
