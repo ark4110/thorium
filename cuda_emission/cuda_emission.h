@@ -23,6 +23,7 @@
 namespace cuda_emission
 {
   bool is_supported();
+  int cuda_task_relocation(emission::system_t*, emission::task_t* task, int device);
 }
 
 namespace cuda_malley_emission

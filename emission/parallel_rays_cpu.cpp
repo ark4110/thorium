@@ -132,6 +132,7 @@ namespace parallel_rays_emission_cpu
     (int(*)(emission::system_t* system))&shutdown,
     (int(*)(emission::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(emission::system_t* system, emission::task_t* task))&calculate,
+    &emission::native_host_task_relocation
   };
 
   emission::system_t* system_create()

@@ -32,6 +32,7 @@ namespace emission
   task_t* task_create()
   {
     task_t* task = (task_t*)calloc(1, sizeof(task_t));
+    task->rays = ray_caster::task_create(0);
     return task;
   }
 
@@ -170,5 +171,35 @@ namespace emission
   int system_calculate(system_t* system, task_t* task)
   {
     return system->methods->calculate(system, task);
+  }
+
+  int apply_ray_caster_task_relocation(task_t* task, int device)
+  {
+    if (task && task->rays && task->rays->relocate)
+      return task->rays->relocate(task->rays, device);
+    else
+      return EMISSION_OK;
+  }
+
+  int system_relocate_task(system_t* system, task_t* task, int device)
+  {
+    if (system->methods->relocate_task)
+      return system->methods->relocate_task(system, task, device);
+    else
+      return apply_ray_caster_task_relocation(task, device);
+  }  
+  
+  int native_host_task_relocation(emission::system_t*, emission::task_t* task, int device)
+  {
+    if (device == 0)
+      device = -1;
+
+    if (!task || !task->rays)
+      return EMISSION_OK;
+
+    if (task->rays->relocate)
+      return task->rays->relocate(task->rays, device);
+
+    return EMISSION_OK;
   }
 }

@@ -37,8 +37,12 @@ namespace ray_caster
   struct task_t
   { 
     int allocation_device;
+
+    // @todo Move methods to separate table
     void(*free_data)(task_t*);
     int(*grow)(task_t*, int addition);
+    
+    /// @detail  Looks useless but it is not. It allows to preserve knowledge about specific allocation.
     int(*relocate)(task_t*, int device);
 
     int n_tasks;

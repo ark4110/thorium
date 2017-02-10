@@ -5,8 +5,9 @@ set(SOURCE_FILES
     cuda_emission.h
     cuda_emission.cpp
     malley_cuda.cuh
-    system.cuh
-    system.cu
+    malley_cuda.cu
+    parallel_cuda.cuh
+    parallel_cuda.cu
     )
 
 cuda_add_library(cuda_emission STATIC ${SOURCE_FILES})

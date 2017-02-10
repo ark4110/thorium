@@ -92,6 +92,7 @@ namespace emission
 
   #define EMISSION_OK    0
   #define EMISSION_ERROR 200
+  #define EMISSION_INVALID_TASK_ALLOCATION 201
 
   /**
    *   @brief Virtual methods table for calculator functionality.
@@ -113,6 +114,13 @@ namespace emission
 
     /// @brief Calculates weights, generate emission rays and casts rays for given system.
     int(*calculate)(system_t* system, task_t* task);
+
+    /**
+      @detail -1 for host device, 0 for system native device.
+      @detail Right now rays power are always on host. I.e. task relocation is equal to ray_caster task relocation.
+      @todo Relocate rays power. Consider moving powers to ray caster task as additional meta.
+    */
+    int(*relocate_task)(system_t* system, task_t* task, int device);
   };
 
   #define EMISSION_MALLEY_CPU 1
@@ -138,4 +146,8 @@ namespace emission
   int system_shutdown(system_t* system);
   int system_set_scene(system_t* system, subject::scene_t* scene);
   int system_calculate(system_t* system, task_t* task);
+  int system_relocate_task(system_t* system, task_t* task, int device);
+
+  // Relocation for CPU based systems.
+  int native_host_task_relocation(emission::system_t*, emission::task_t* task, int device);
 }

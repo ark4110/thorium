@@ -48,6 +48,9 @@ namespace cuda_task_relocation
     cudaFree(task->hit_point);
     cudaFree(task->hit_face_idx);
 
+    if (rtask.n_reserved > 100000)
+      fprintf(stderr, "Task grow from %d to %d rays\n", n_prev, rtask.n_reserved);
+
     *task = rtask;
 
     return n_prev;
@@ -67,6 +70,9 @@ namespace cuda_task_relocation
     if (device == -1)
     {
       ray_caster::task_t* rtask = ray_caster::task_create(task->n_tasks);
+
+      // Preserve knowledge about CUDA.
+      rtask->relocate = &relocate_task;
 
       checkCudaErrors(cudaMemcpy(rtask->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
       checkCudaErrors(cudaMemcpy(rtask->hit_point, task->hit_point, task->n_tasks * sizeof(math::vec3), cudaMemcpyDeviceToHost));

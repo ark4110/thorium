@@ -176,12 +176,13 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="system.cu" />
+    <CudaCompile Include="malley_cuda.cu" />
+    <CudaCompile Include="parallel_cuda.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_emission.h" />
     <ClInclude Include="malley_cuda.cuh" />
-    <ClInclude Include="system.cuh" />
+    <ClInclude Include="parallel_cuda.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cuda_emission.cpp" />

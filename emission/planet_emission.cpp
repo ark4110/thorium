@@ -198,7 +198,9 @@ namespace planet_emission
         }
       }
     }
-    
+
+    if ((r = system_relocate_task(system->element_emitter, task, 0)) < 0)
+      return r;
     if ((r = system_calculate(system->element_emitter, task)) < 0)
       return r;
 

@@ -17,6 +17,7 @@
 #include "cuda_emission.h"
 
 #include <cuda_runtime_api.h>
+#include "../cuda_ray_caster/task_relocation.h"
 
 namespace cuda_emission
 {
@@ -24,5 +25,20 @@ namespace cuda_emission
   {
     int count = 0;
     return cudaSuccess == cudaGetDeviceCount(&count) && count > 0;
+  }
+
+  int cuda_task_relocation(emission::system_t*, emission::task_t* task, int device)
+  {
+    if (device == 0)
+      device = 1; // @todo Use device id
+
+    if (!task || !task->rays)
+      return EMISSION_OK;
+
+    if (task->rays->relocate)
+      return task->rays->relocate(task->rays, device);
+
+    // @todo How to avoid dependency with cuda_ray_caster?
+    return cuda_task_relocation::relocate_task(task->rays, device);
   }
 }

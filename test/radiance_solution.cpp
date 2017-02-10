@@ -31,10 +31,11 @@ using namespace testing;
 
 const float Accuracy = 0.001f;
 
-template <int EquationEngineID, int RayCasterEngineID>
+template <int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
 {
   static const int EquationEngine = EquationEngineID;
+  static const int EmissionEngine = EmissionEngineID;
   static const int RayCasterEngine = RayCasterEngineID;
 };
 
@@ -49,7 +50,7 @@ public:
     
     malley_cpu::params_t emitterParams;
     emitterParams.n_rays = 1000;
-    Emitter = emission::system_create(EMISSION_MALLEY_CPU, &emitterParams);
+    Emitter = emission::system_create(EnginesConfig::EmissionEngine, &emitterParams);
 
     radiance_equation::params_t equationParams = {};
     equationParams.emitters = &Emitter;
@@ -120,8 +121,12 @@ public:
   thermal_solution::task_t* Task;
 };
 
-typedef ::testing::Types<EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_OPTIX>,
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>> RadianceEquationTypes;
+typedef ::testing::Types<
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CUDA, RAY_CASTER_OPTIX>
+> RadianceEquationTypes;
+
 TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
 
 TYPED_TEST(RadianceSolution, BoxPreserveEnergy)

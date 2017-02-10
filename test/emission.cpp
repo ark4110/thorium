@@ -37,11 +37,11 @@ struct EngineType
   static const int ID = EngineTypeID;
 };
 
-template <int EmissionEngineTypeID, int EquationEngineTypeID, int RayCasterEngineTypeID>
+template <int EquationEngineTypeID, int EmissionEngineTypeID, int RayCasterEngineTypeID>
 struct EnginesConfig
 {
-  static const int Emission = EmissionEngineTypeID;
   static const int Equation = EquationEngineTypeID;
+  static const int Emission = EmissionEngineTypeID;
   static const int RayCaster = RayCasterEngineTypeID;
 };
 
@@ -82,6 +82,7 @@ TYPED_TEST(MalleyEmission, AllocateRaycasterTask)
   float b[2] = { 1000.f, 1000.f };
   task->mesh_emission = b;
   task->mesh_temperatures = b;
+  system_relocate_task(this->Emitter, task, 0);
   system_calculate(this->Emitter, task);
   ASSERT_TRUE(task->rays != 0);
   ASSERT_EQ(4, task->rays->n_tasks);
@@ -94,6 +95,7 @@ TYPED_TEST(MalleyEmission, ReallocateRaycasterTask)
   task->mesh_emission = b;
   task->mesh_temperatures = b;
 
+  system_relocate_task(this->Emitter, task, 0);
   system_calculate(this->Emitter, task);
   system_calculate(this->Emitter, task);
   ASSERT_TRUE(task->rays != 0);
@@ -208,7 +210,10 @@ public:
 //  , EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>
 //  > ParallelEmissionConfigs;
 
-typedef ::testing::Types<EnginesConfig<EMISSION_PARALLEL_RAYS_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>
+typedef ::testing::Types<
+  //EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_PARALLEL_RAYS_CUDA, RAY_CASTER_OPTIX>,
+  //EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_OPTIX>
 > ParallelEmissionConfigs;
 
 typedef ::testing::Types<EngineType<EMISSION_PARALLEL_RAYS_CPU>, EngineType<EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;

@@ -119,8 +119,17 @@ namespace radiance_equation_cuda
     system->device_context = 0;
     system->kernel_params = 0;
 
-    system->emission_task = emission::task_create();
+    system->emission_task = emission::task_create();    
     system->postponed_task = emission::task_create();
+
+    // Level-up emission tasks
+    system_relocate_task(system->params.ray_caster, system->emission_task->rays, 0);
+    system_relocate_task(system->params.ray_caster, system->postponed_task->rays, 0);
+    for (int i = 0; i != params->n_emitters; ++i)
+    {
+      system_relocate_task(params->emitters[i], system->emission_task, 0);
+      system_relocate_task(params->emitters[i], system->postponed_task, 0);
+    }
 
     system->face_to_mesh_index = 0;
 
@@ -224,12 +233,6 @@ namespace radiance_equation_cuda
     for (int e = 0; e != system->params.n_emitters; ++e)
       if ((r = system_set_scene(system->params.emitters[e], scene)) < 0)
         return r;
-
-    emission::task_free(system->emission_task);
-    system->emission_task = emission::task_create();
-
-    emission::task_free(system->postponed_task);
-    system->postponed_task = emission::task_create();
 
     context_t& host_context = system->host_context;
 
@@ -472,12 +475,13 @@ namespace radiance_equation_cuda
     emission_task->mesh_emission = task->emission;
 
     auto start_ptime = std::chrono::high_resolution_clock().now();
-    // Right now emission expect host task
-    if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, -1)) < 0)
-      return r;
+
     for (int e = 0; e != system->params.n_emitters; ++e)
-    {
+    { 
       emission::system_t* emitter = system->params.emitters[e];
+      // Right now emission expect host task
+      if ((r = system_relocate_task(emitter, emission_task, 0)) < 0)
+        return r;
       if ((r = system_calculate(emitter, system->emission_task)) < 0)
         return r;
     }
@@ -499,8 +503,6 @@ namespace radiance_equation_cuda
 
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
-
-    subject::scene_t* scene = system->scene;
 
     prepare_context(system, n_rays);
     
