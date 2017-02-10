@@ -30,23 +30,34 @@ namespace cuda_task_relocation
   int grow_task(ray_caster::task_t* task, int n_rays)
   {
     int n_prev = task->n_tasks;
+    if (task->n_tasks + n_rays < task->n_reserved)
+    {
+      task->n_tasks += n_rays;
+      return n_prev;
+    }
+
+    // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.
+
+    ray_caster::task_t* buffer_task = ray_caster::task_create(task->n_tasks);
+    checkCudaErrors(cudaMemcpy(buffer_task->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
+
+    cudaFree(task->ray);
+    cudaFree(task->hit_point);
+    cudaFree(task->hit_face_idx);
+
     ray_caster::task_t rtask = { task->allocation_device, &cuda_task_free_data, &grow_task, &relocate_task };
     
     rtask.n_tasks = task->n_tasks + n_rays;
-    int n_alloc = rtask.n_tasks + (1024 - rtask.n_tasks % 1024) % 1024;
+    const int align_factor = 1024 * 128;
+    int n_alloc = rtask.n_tasks + (align_factor - rtask.n_tasks % align_factor) % align_factor;
     rtask.n_reserved = n_alloc;
 
     checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
     checkCudaErrors(cudaMalloc((void**)&rtask.hit_point, sizeof(math::vec3) * n_alloc));
     checkCudaErrors(cudaMalloc((void**)&rtask.hit_face_idx, sizeof(int) * n_alloc));
 
-    checkCudaErrors(cudaMemcpy(rtask.ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToDevice));
-    checkCudaErrors(cudaMemcpy(rtask.hit_point, task->hit_point, task->n_tasks * sizeof(math::vec3), cudaMemcpyDeviceToDevice));
-    checkCudaErrors(cudaMemcpy(rtask.hit_face_idx, task->hit_face_idx, task->n_tasks * sizeof(int), cudaMemcpyDeviceToDevice));
-
-    cudaFree(task->ray);
-    cudaFree(task->hit_point);
-    cudaFree(task->hit_face_idx);
+    checkCudaErrors(cudaMemcpy(rtask.ray, buffer_task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
+    task_free(buffer_task);
 
     if (rtask.n_reserved > 100000)
       fprintf(stderr, "Task grow from %d to %d rays\n", n_prev, rtask.n_reserved);
