@@ -63,10 +63,9 @@ namespace optix_hit_converter
   {
     if (state)
     {
-      cudaFree(state->device_faces);
-
       if (is_supported(state))
       {
+        cudaFree(state->device_faces);
         cudaFree(state->hits);
       }
       else
