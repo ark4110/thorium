@@ -42,6 +42,7 @@ namespace optix_ray_caster
     system->scene = 0;
     system->context = {};
 
+    system->context_type = RTP_CONTEXT_TYPE_CUDA;
     if (false /* force CPU for benchmarking */)
     {
       system->context_type = RTP_CONTEXT_TYPE_CPU;
@@ -50,7 +51,6 @@ namespace optix_ray_caster
     }
     else if (rtpContextCreate(system->context_type, &system->context) == RTP_SUCCESS)
     {
-      system->context_type = RTP_CONTEXT_TYPE_CUDA;
       unsigned devices[] = { 0 };
       if (rtpContextSetCudaDeviceNumbers(system->context, 1, devices) != RTP_SUCCESS)
       {
