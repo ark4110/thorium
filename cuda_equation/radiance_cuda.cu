@@ -39,10 +39,6 @@ namespace {
 #include <thrust/scan.h>
 #include <thrust/reduce.h>
 #include <thrust/execution_policy.h>
-#include <thrust/system/cuda/vector.h>
-#include <thrust/system/cuda/execution_policy.h>
-
-#include <map>
 
 #define CURAND_CALL(x) do { if((x) != CURAND_STATUS_SUCCESS) { \
   printf("Error at %s:%d\n",__FILE__,__LINE__); \
@@ -50,125 +46,6 @@ namespace {
 
 namespace radiance_equation_cuda
 {
-  class cached_allocator
-  {
-  public:
-    // just allocate bytes
-    typedef char value_type;
-
-    cached_allocator() { }
-
-    ~cached_allocator()
-    {
-      // free all allocations when cached_allocator goes out of scope
-      free_all();
-    }
-
-    char* allocate(std::ptrdiff_t num_bytes)
-    {
-      num_bytes = roundup(num_bytes);
-
-      char* result = 0;
-
-      // search the cache for a free block
-      free_blocks_type::iterator free_block = free_blocks.find(num_bytes);
-
-      if (free_block != free_blocks.end())
-      {
-        // get the pointer
-        result = free_block->second;
-
-        // erase from the free_blocks map
-        free_blocks.erase(free_block);
-      }
-      else
-      {
-        // no allocation of the right size exists
-        // create a new one with cuda::malloc
-        // throw if cuda::malloc can't satisfy the request
-        try
-        {
-          fprintf(stderr, "cached_allocator::allocate(): no free block found; calling cuda::malloc for %d\n", num_bytes);
-          free_all();
-
-          // allocate memory and convert cuda::pointer to raw pointer
-          result = thrust::cuda::malloc<char>(num_bytes).get();
-        }
-        catch (std::runtime_error &e)
-        {
-          throw;
-        }
-      }
-
-      // insert the allocated pointer into the allocated_blocks map
-      allocated_blocks.insert(std::make_pair(result, num_bytes));
-
-      return result;
-    }
-
-    void deallocate(char* ptr, size_t n)
-    {
-      // erase the allocated block from the allocated blocks map
-      allocated_blocks_type::iterator iter = allocated_blocks.find(ptr);
-      std::ptrdiff_t num_bytes = iter->second;
-      allocated_blocks.erase(iter);
-
-      // insert the block into the free blocks map
-      free_blocks.insert(std::make_pair(num_bytes, ptr));
-    }
-
-  private:
-    std::ptrdiff_t next_power_of_2(std::ptrdiff_t v)
-    {
-      v--;
-      v |= v >> 1;
-      v |= v >> 2;
-      v |= v >> 4;
-      v |= v >> 8;
-      v |= v >> 16;
-      return v + 1;
-    }
-
-    std::ptrdiff_t prev_power_of_2(std::ptrdiff_t v)
-    {
-      return next_power_of_2(v) >> 1;
-    }
-
-    std::ptrdiff_t roundup(std::ptrdiff_t num_bytes)
-    {
-      const std::ptrdiff_t align = prev_power_of_2(num_bytes);
-      return num_bytes + (align - num_bytes % align) % align;
-    }
-    typedef std::multimap<std::ptrdiff_t, char*> free_blocks_type;
-    typedef std::map<char*, std::ptrdiff_t> allocated_blocks_type;
-
-    free_blocks_type free_blocks;
-    allocated_blocks_type allocated_blocks;
-
-    void free_all()
-    {
-      fprintf(stderr, "cached_allocator::free_all(): cleaning up...\n");
-
-      // deallocate all outstanding blocks in both lists
-      for (free_blocks_type::iterator i = free_blocks.begin();
-        i != free_blocks.end(); i++)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->second));
-      }
-
-      for (allocated_blocks_type::iterator i = allocated_blocks.begin();
-        i != allocated_blocks.end(); i++)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->first));
-      }
-
-      free_blocks.clear();
-      allocated_blocks.clear();
-    }
-  };
-
   struct system_t : thermal_equation::system_t
   {
     params_t params;
@@ -189,8 +66,6 @@ namespace radiance_equation_cuda
     emission::task_t* postponed_task;
 
     int* face_to_mesh_index;
-
-    cached_allocator* thrust_cache;
   };
 
   void sync_context_to_device(system_t* system)
@@ -281,8 +156,6 @@ namespace radiance_equation_cuda
     system->n_postpone_blocks = 1024;
     checkCudaErrors(cudaMalloc((void **)&host_context.postponed_offsets, sizeof(int) * system->n_postpone_blocks * system->n_tpb));
 
-    system->thrust_cache = new cached_allocator();
-
     return THERMAL_EQUATION_OK;
   }
 
@@ -324,8 +197,6 @@ namespace radiance_equation_cuda
   int shutdown(system_t* system)
   {
     system->scene = 0;
-
-    delete system->thrust_cache;
 
     contex_free_scene(&system->host_context);
 
@@ -526,8 +397,23 @@ namespace radiance_equation_cuda
     }
   }
 
+  __global__ void mesh_absorption(const context_t* ctx, int n_rays, const int* hit_mesh_idx)
+  { 
+    int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
+    {
+      const int mesh_idx = hit_mesh_idx[ray_idx];
+      if (mesh_idx >= 0 && ctx->hit_descision[ray_idx] == hit_absorb)
+      {
+        atomicAdd(&ctx->mesh_power[mesh_idx], ctx->ray_power[ray_idx]);
+      }
+    }
+  }
+
   int calculate(system_t* system, thermal_equation::task_t* task)
   {
+    const int n_meshes = system->scene->n_meshes;
+
     int r = 0;
 
     // Prepare emission tasks
@@ -574,6 +460,7 @@ namespace radiance_equation_cuda
     const int n_rays = ray_caster_task->n_tasks;
 
     prepare_context(system, n_rays);
+    cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
     
     make_ray_descisions << <system->n_mtgp_blocks, 256 >> > (system->device_context
       , n_rays
@@ -592,13 +479,16 @@ namespace radiance_equation_cuda
     if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
       return r;
     
-    thrust::device_ptr<int> postponed_offsets(system->host_context.postponed_offsets);
-    thrust::device_ptr<float> ray_power(system->host_context.ray_power);
-    thrust::device_ptr<float> mesh_power(system->host_context.mesh_power);
-    thrust::device_ptr<int> mesh_power_idx(system->host_context.mesh_power_idx);
-    thrust::device_ptr<int> hit_mesh_idx(ray_caster_task->hit_face_idx);
+    // Absorption step
+    int n_abosrption_blocks = (n_rays + system->n_tpb - 1) / system->n_tpb;
+    mesh_absorption << <32, system->n_tpb>> > (system->device_context
+      , n_rays
+      , ray_caster_task->hit_face_idx);
 
-    precalc_postpone_offsets << <system->n_postpone_blocks, system->n_tpb >> > (system->device_context, n_rays);
+    precalc_postpone_offsets << <system->n_postpone_blocks, system->n_tpb>> > (system->device_context, n_rays);
+
+    // Postpone step    
+    thrust::device_ptr<int> postponed_offsets(system->host_context.postponed_offsets);
     const int n_postponed = thrust::reduce(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb);
     thrust::exclusive_scan(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb, postponed_offsets);
     postpone_rays << <system->n_postpone_blocks, system->n_tpb>> > (
@@ -607,31 +497,29 @@ namespace radiance_equation_cuda
         , (ray_t*)ray_caster_task->ray // mutated rays
         , (ray_t*)postponed_task->rays->ray);
 
-    thrust::sort_by_key(thrust::cuda::par(*system->thrust_cache), hit_mesh_idx, hit_mesh_idx + n_rays, ray_power);
-    thrust::reduce_by_key(hit_mesh_idx, hit_mesh_idx + n_rays, ray_power, mesh_power_idx, mesh_power);
-
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
     postponed_task->rays->n_tasks = n_postponed;
 
-    const int n_meshes = system->scene->n_meshes;
-
     const int n_meshes_1 = n_meshes + 1;
     float* h_mesh_power = (float*)malloc(n_meshes_1 * sizeof(float));
-    int* h_mesh_power_idx = (int*)malloc(n_meshes_1 * sizeof(int));
+    //int* h_mesh_power_idx = (int*)malloc(n_meshes_1 * sizeof(int));
 
     checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes_1 * sizeof(float), cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(h_mesh_power_idx, system->host_context.mesh_power_idx, n_meshes_1 * sizeof(int), cudaMemcpyDeviceToHost));
+    for (int i = 0; i != n_meshes; ++i)
+      task->absorption[i] += h_mesh_power[i];
+    /*checkCudaErrors(cudaMemcpy(h_mesh_power_idx, system->host_context.mesh_power_idx, n_meshes_1 * sizeof(int), cudaMemcpyDeviceToHost));
     for (int i = h_mesh_power_idx[0] == -1 ? 1 : 0; i != n_meshes_1 - (h_mesh_power_idx[0] == -1 ? 0 : 1); ++i)
     { 
       const int mesh_idx = h_mesh_power_idx[i];
       assert(mesh_idx >= 0 && mesh_idx < n_meshes);
       task->absorption[mesh_idx] += h_mesh_power[i];
     }
+    free(h_mesh_power_idx);*/
     free(h_mesh_power);
-    free(h_mesh_power_idx);
+    
 
     /*for (int r = 0; r != n_rays; ++r)
     {
