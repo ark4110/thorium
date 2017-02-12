@@ -36,7 +36,8 @@ namespace radiance_equation_cuda
 
     int n_meshes;
     int* mesh_materials;
-    float* mesh_powers;
+    float* mesh_power;
+    int* mesh_power_idx;
 
     curandStateMtgp32* HSGenDescision;
 
@@ -45,7 +46,7 @@ namespace radiance_equation_cuda
     char* hit_descision;
     float* ray_power;
     float* postponed_ray_power;
-    int n_postponed;
+    int* postponed_offsets;
   };
   
   __global__ void process_rays(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_point, ray_t* rays, char* hit_status);
