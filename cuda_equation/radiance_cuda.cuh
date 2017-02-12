@@ -37,7 +37,6 @@ namespace radiance_equation_cuda
     int n_meshes;
     int* mesh_materials;
     float* mesh_power;
-    int* mesh_power_idx;
 
     curandStateMtgp32* HSGenDescision;
 

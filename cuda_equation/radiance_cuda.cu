@@ -181,10 +181,6 @@ namespace radiance_equation_cuda
       cudaFree(ctx->mesh_power);
     ctx->mesh_power = 0;
 
-    if (ctx->mesh_power_idx)
-      cudaFree(ctx->mesh_power_idx);
-    ctx->mesh_power_idx = 0;
-
     if (ctx->ray_power)
       cudaFree(ctx->ray_power);
     ctx->ray_power = 0;
@@ -269,8 +265,7 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaMemcpy(host_context.mesh_materials, mesh_materials, sizeof(int) * scene->n_meshes, cudaMemcpyHostToDevice));
     free(mesh_materials);
 
-    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * (1 + scene->n_meshes))); 
-    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power_idx, sizeof(int) * (1 + scene->n_meshes)));
+    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * scene->n_meshes)); 
 
     sync_context_to_device(system);
 
@@ -503,63 +498,12 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
     postponed_task->rays->n_tasks = n_postponed;
 
-    const int n_meshes_1 = n_meshes + 1;
-    float* h_mesh_power = (float*)malloc(n_meshes_1 * sizeof(float));
-    //int* h_mesh_power_idx = (int*)malloc(n_meshes_1 * sizeof(int));
-
-    checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes_1 * sizeof(float), cudaMemcpyDeviceToHost));
+    float* h_mesh_power = (float*)malloc(n_meshes * sizeof(float));
+        checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i != n_meshes; ++i)
-      task->absorption[i] += h_mesh_power[i];
-    /*checkCudaErrors(cudaMemcpy(h_mesh_power_idx, system->host_context.mesh_power_idx, n_meshes_1 * sizeof(int), cudaMemcpyDeviceToHost));
-    for (int i = h_mesh_power_idx[0] == -1 ? 1 : 0; i != n_meshes_1 - (h_mesh_power_idx[0] == -1 ? 0 : 1); ++i)
-    { 
-      const int mesh_idx = h_mesh_power_idx[i];
-      assert(mesh_idx >= 0 && mesh_idx < n_meshes);
-      task->absorption[mesh_idx] += h_mesh_power[i];
-    }
-    free(h_mesh_power_idx);*/
+      task->absorption[i] += h_mesh_power[i];    
     free(h_mesh_power);
-    
 
-    /*for (int r = 0; r != n_rays; ++r)
-    {
-      const int hit_face_idx = ray_caster_task->hit_face_idx[r];
-      float ray_power = system->postponed_task->power[r];
-
-      if (hit_face_idx == -1)
-      {
-        if (system->params.stats)
-        {
-          ++system->params.stats->quants.named.n_missed;
-          system->params.stats->powers.named.e_missed += ray_power;
-        }
-        continue;
-      }
-
-      const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
-
-      assert(host_hit_status[r] <= hit_missed);
-
-      hit_decision decision = (hit_decision)host_hit_status[r];
-
-      switch (decision)
-      {
-      case hit_absorb:
-        task->absorption[hit_mesh_idx] += ray_power;
-        break;
-
-      case hit_reflect:
-      case hit_diffuse:
-      case hit_transmit:
-      break;
-
-      case hit_drop:
-      case hit_missed:
-      default:
-        break;
-      }
-    }*/
-    
     auto processing_ptime = std::chrono::high_resolution_clock().now();
 
     if (system->params.stats)
