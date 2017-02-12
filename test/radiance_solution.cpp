@@ -29,7 +29,7 @@
 
 using namespace testing;
 
-const float Accuracy = 0.001f;
+const float Accuracy = 0.0025f;
 
 template <int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
@@ -167,4 +167,48 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
 
   float resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
   ASSERT_NEAR(1.f, resultEnergy / initialEnergy, Accuracy);
+}
+
+TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
+{
+  using namespace thermal_solution;
+  this->Scene.n_faces = 12;
+  this->Scene.n_meshes = 1;
+  this->Materials[0].rear.absorbance = 0.5;
+  this->Materials[0].rear.specular_reflectance = 0.5;
+
+  const float initialEnergy = this->Temperatures[0];
+  int r = 0;
+  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  for (int step = 1; step < 50; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  r = system_calculate(this->System, this->Task);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
+}
+
+TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
+{
+  using namespace thermal_solution;
+  this->Scene.n_faces = 12;
+  this->Scene.n_meshes = 1;
+  this->Materials[0].rear.absorbance = 0.5;
+  this->Materials[0].rear.diffuse_reflectance = 0.5;
+
+  const float initialEnergy = this->Temperatures[0];
+  int r = 0;
+  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  for (int step = 1; step < 50; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  r = system_calculate(this->System, this->Task);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
 }
