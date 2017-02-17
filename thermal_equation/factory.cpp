@@ -44,7 +44,7 @@ namespace thermal_equation
       break;
 
     default:
-      return -1;
+      return type;
     }
   }
 
