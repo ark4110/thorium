@@ -37,19 +37,38 @@ namespace optix_ray_caster
     optix_hit_converter::state_t* converter_state;
   };
 
+  const char* error_to_text(int r)
+  {
+    switch (r)
+    {
+    case RTP_ERROR_OBJECT_CREATION_FAILED:
+      return "RTP_ERROR_OBJECT_CREATION_FAILED";
+
+    case RTP_ERROR_INVALID_VALUE:
+      return "RTP_ERROR_INVALID_VALUE";
+
+    case RTP_ERROR_MEMORY_ALLOCATION_FAILED:
+      return "RTP_ERROR_MEMORY_ALLOCATION_FAILED";
+
+    default:
+      return "unknown error";
+    }
+  }
+
   int init(system_t* system)
   {
     system->scene = 0;
     system->context = {};
 
     system->context_type = RTP_CONTEXT_TYPE_CUDA;
+    int r = 0;
     if (false /* force CPU for benchmarking */)
     {
       system->context_type = RTP_CONTEXT_TYPE_CPU;
       if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
         return -RAY_CASTER_ERROR;
     }
-    else if (rtpContextCreate(system->context_type, &system->context) == RTP_SUCCESS)
+    else if ((r = rtpContextCreate(system->context_type, &system->context)) == RTP_SUCCESS)
     {
       unsigned devices[] = { 0 };
       if (rtpContextSetCudaDeviceNumbers(system->context, 1, devices) != RTP_SUCCESS)
@@ -61,7 +80,7 @@ namespace optix_ray_caster
     else
     {
       system->context_type = RTP_CONTEXT_TYPE_CPU;
-      fprintf(stderr, "Optix ray caster fallback to CPU!\n");
+      fprintf(stderr, "Optix ray caster fallback to CPU! Reason %s \n", error_to_text(r));
       if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
         return -RAY_CASTER_ERROR;
     }
