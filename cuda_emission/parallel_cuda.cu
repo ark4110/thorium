@@ -309,21 +309,22 @@ namespace cuda_parallel_rays_emission
     }
 
     // Fill ray powers
-    int n_host_rays_offset = n_input_rays;
     float radius = system->host_context.radius;
-    for (int source_idx = 0; source_idx != n_sources; ++source_idx)
+    for (int source_idx = 0; source_idx < n_sources; ++source_idx)
     {
+      const int n_host_rays_offset = n_input_rays + host_multi_source_params[source_idx].n_rays_offset;
       parallel_rays_emission_cpu::parallel_rays_source_t& source = system->params.sources[source_idx];
       const float ray_power = source.power * (float(M_PI) * radius * radius) / (float)source.n_rays;
       for (int r = 0; r != source.n_rays; ++r)
         task->power[n_host_rays_offset + r] = ray_power;
-      n_host_rays_offset += source.n_rays;
     }
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     cudaFree(device_multi_source_params);
+
+    free(host_multi_source_params);
 
     return EMISSION_OK;
   }
