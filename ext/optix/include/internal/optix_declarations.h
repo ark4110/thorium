@@ -66,7 +66,7 @@ typedef enum
   RT_FORMAT_FLOAT,                        /*!< Float                */
   RT_FORMAT_FLOAT2,                       /*!< sizeof(float)*2      */
   RT_FORMAT_FLOAT3,                       /*!< sizeof(float)*3      */
-  RT_FORMAT_FLOAT4,                       /*!< sizeof(float)*2      */
+  RT_FORMAT_FLOAT4,                       /*!< sizeof(float)*4      */
   RT_FORMAT_BYTE,                         /*!< BYTE                 */
   RT_FORMAT_BYTE2,                        /*!< sizeof(CHAR)*2       */
   RT_FORMAT_BYTE3,                        /*!< sizeof(CHAR)*3       */
