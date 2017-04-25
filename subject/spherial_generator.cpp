@@ -114,7 +114,7 @@ namespace subject
 
   void generator_free(generator_t* g)
   {
-    g->methods->shutdown;
+    g->methods->shutdown(g);
     free(g);
   }
 

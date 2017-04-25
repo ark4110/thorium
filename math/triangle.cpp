@@ -322,29 +322,6 @@ namespace math
     }
   }
 
-  // @todo Not tested.
-  int decode_vertex_mapping_cyclic(int vertex_mapping, char*lp, char* rp)
-  {
-    int mask = 1;
-    int count = 0;
-    for (int l = 0; l != 3; ++l)
-    {
-      for (int r = 0; r != 3 && count != 3; ++r, mask << 1)
-      {
-        if ((vertex_mapping & mask) == 0)
-          continue;
-
-        *lp++ = l;
-        *rp++ = r;
-        ++count;
-        mask = mask << (3 - r);
-        break;
-      }
-    }
-
-    return count;
-  }
-
   bool triangle_has_adjacent_edge(const triangle_t& l, const triangle_t& r)
   {
     int m = triangle_find_adjacent_vertices(l, r);
