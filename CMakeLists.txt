@@ -14,7 +14,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 
 find_package(CUDA REQUIRED)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_20 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_50,code=sm_50)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35 -gencode arch=compute_50,code=sm_50 -Wno-deprecated-gpu-targets)
 find_package(OptiX REQUIRED)
 include_directories("/usr/local/cuda/samples/common/inc")
 

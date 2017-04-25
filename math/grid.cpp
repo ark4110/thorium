@@ -368,7 +368,7 @@ namespace math
 
     printf(" hits \t| cells\n");
     for (size_t j = 0; j != size; ++j)
-      printf("%d \t| %d\n", j > 3 ? (int)pow(2, j - 2) : j, counts[j]);
+      printf("%zu \t| %zu\n", j > 3 ? (size_t)pow(2, j - 2) : j, counts[j]);
     free(counts);
   }
 
