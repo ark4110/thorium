@@ -22,12 +22,12 @@ using namespace math;
 
 namespace math
 {
-  bool operator==(const vec3& l, const vec3& r)
+  static bool operator==(const vec3& l, const vec3& r)
   {
     return near_enough(l, r);
   }
 
-  bool operator==(const mat33& l, const mat33& r)
+  static bool operator==(const mat33& l, const mat33& r)
   {
     float diff = 0;
     for (int i = 0; i != 9; ++i)
