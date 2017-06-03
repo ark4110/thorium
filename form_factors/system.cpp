@@ -49,10 +49,9 @@ namespace form_factors
     free(system);
   }
 
-  task_t* task_create(subject::scene_t* scene, int n_rays)
+  task_t* task_create(subject::scene_t* scene)
   {
     task_t* task = (task_t*)malloc(sizeof(task_t));
-    task->n_rays = n_rays;
     task->form_factors = (float*)malloc(scene->n_meshes * scene->n_meshes * sizeof(float));
     return task;
   }

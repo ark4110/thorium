@@ -18,6 +18,8 @@
 #include "test_scene.h"
 #include <ray_caster/system.h>
 #include <form_factors/system.h>
+#include <emission/system.h>
+#include <emission/malley_cpu.h>
 #include <math/operations.h>
 #include <math/triangle.h>
 #include <math/mat.h>
@@ -29,11 +31,23 @@ using namespace form_factors;
 using subject::scene_t;
 using subject::mesh_t;
 
-template <int EngineTypeID>
+template <int EmitterTypeID, int RayCasterTypeID>
 struct EngineType
 {
-  static const int ID = EngineTypeID;
+  static const int EmitterID = EmitterTypeID;
+  static const int RayCasterID = RayCasterTypeID;
 };
+
+#ifdef _WIN64
+#define RAY_CASTER_SELECTOR RAY_CASTER_OPTIX
+#else
+#define RAY_CASTER_SELECTOR RAY_CASTER_NAIVE_CUDA
+#endif
+
+typedef ::testing::Types<
+  //EngineType<EMISSION_MALLEY_CPU, RAY_CASTER_SELECTOR>
+  EngineType<EMISSION_MALLEY_CUDA, RAY_CASTER_SELECTOR>
+> FormFactorsTypes;
 
 template <typename EngineType>
 class FormFactors : public Test
@@ -42,16 +56,19 @@ public:
   FormFactors()
   {
     Scene = 0;
-    RayCaster = ray_caster::system_create(RAY_CASTER_NAIVE_CUDA);
-    form_factors::params_t params;
-    params.caster = RayCaster;
-    Calculator = system_create(EngineType::ID, &params);
+    malley_cpu::params_t emitter_params;
+    emitter_params.n_rays = 2000;
+    Emitter = emission::system_create(EngineType::EmitterID, &emitter_params);
+    RayCaster = ray_caster::system_create(EngineType::RayCasterID);
+    form_factors::params_t params{ Emitter, RayCaster };
+    Calculator = system_create(FORM_FACTORS_CPU, &params);
   }
 
   ~FormFactors()
   {
     system_free(Calculator);
-    ray_caster::system_free(RayCaster);
+    system_free(RayCaster);
+    system_free(Emitter);
     scene_free(Scene);
   }
 
@@ -176,10 +193,10 @@ public:
 
   scene_t* Scene;
   ray_caster::system_t* RayCaster;
+  emission::system_t* Emitter;
   system_t* Calculator;
 };
 
-typedef ::testing::Types<EngineType<FORM_FACTORS_CPU> > FormFactorsTypes;
 TYPED_TEST_CASE(FormFactors, FormFactorsTypes);
 
 math::point_t theor_parallel_planes(math::point_t a, math::point_t b, math::point_t c) {
@@ -208,7 +225,7 @@ TYPED_TEST(FormFactors, ParallelPlanesCorrect)
     system_set_scene(this->Calculator, stackScene);
 
     float factors[2 * 2];
-    task_t task = { 40000, factors };
+    task_t task = { factors };
 
     float theoretical = theor_parallel_planes(1, 1, distances[i]);
 
@@ -229,7 +246,7 @@ TYPED_TEST(FormFactors, RotatedParallelPlanesCorrect)
     system_set_scene(this->Calculator, stackScene);
 
     float factors[2 * 2];
-    task_t task = { 40000, factors };
+    task_t task = { factors };
 
     float theoretical = theor_parallel_planes(1, 1, distances[i]);
 
@@ -246,7 +263,7 @@ TYPED_TEST(FormFactors, PerpendicularPlanesCorrect)
   system_set_scene(this->Calculator, stackScene);
 
   float factors[2 * 2];
-  task_t task = { 40000, factors };
+  task_t task = { factors };
 
   float theoretical = theor_perpendicular_planes(1, 1, 1);
 
@@ -262,7 +279,7 @@ TYPED_TEST(FormFactors, RotatedPerpendicularPlanesCorrect)
   system_set_scene(this->Calculator, stackScene);
   
   float factors[2 * 2];
-  task_t task = { 40000, factors };
+  task_t task = { factors };
 
   float theoretical = theor_perpendicular_planes(1, 1, 1);
 
@@ -277,7 +294,7 @@ TYPED_TEST(FormFactors, BoxCorrect)
   system_set_scene(this->Calculator, scene);
 
   float factors[1 * 1];
-  task_t task = { 40000, factors };
+  task_t task = { factors };
 
   float theoretical = 0.5f;
 

@@ -25,6 +25,7 @@
 #include "../math/operations.h"
 #include "../math/triangle.h"
 #include "../math/mat.h"
+#include "../math/ray.h"
 #include <float.h>
 #include <cmath>
 #include <stdlib.h>
@@ -43,6 +44,7 @@ namespace cpu_form_factors
     /// @brief Inverted index to find mesh from face idx.
     int* face_to_mesh;
 
+    emission::system_t* emitter;
     ray_caster::system_t* caster;
   };
 
@@ -55,6 +57,7 @@ namespace cpu_form_factors
     system->mesh_emission = 0;
     
     system->face_to_mesh = 0;
+    system->emitter = params->emitter;
     system->caster = params->caster;
     
     return FORM_FACTORS_OK;
@@ -74,6 +77,9 @@ namespace cpu_form_factors
     free(system->face_to_mesh);
     system->face_to_mesh = 0;
 
+    system->emitter = 0;
+    system->caster = 0;
+
     return FORM_FACTORS_OK;
   }
 
@@ -90,6 +96,8 @@ namespace cpu_form_factors
     if ((r = system_set_scene(system->caster, ray_caster_scene)) < 0)
       return r;
     if ((r = system_prepare(system->caster)) < 0)
+      return r;
+    if ((r = emission::system_set_scene(system->emitter, system->scene)) < 0)
       return r;
 
     // @todo Move face->mesh index to scene?
@@ -116,31 +124,30 @@ namespace cpu_form_factors
    */
   int calculate(cpu_system_t* system, form_factors::task_t* task)
   {
-    malley_cpu::params_t params;
-    params.n_rays = task->n_rays;
-    emission::system_t* emitter = emission::system_create(EMISSION_MALLEY_CPU, &params);
+    emission::system_t* emitter = system->emitter;
 
-    int r = 0;
-    if ((r = emission::system_set_scene(emitter, system->scene)) < 0)
-      return r;
+    int r = 0;    
 
     emission::task_t* emission_task = emission::task_create();
     emission_task->mesh_emission = system->mesh_emission;
     emission_task->mesh_temperatures = system->mesh_temperatures;
     
+    system_relocate_task(system->emitter, emission_task, 0);
     if ((r = emission::system_calculate(emitter, emission_task)) < 0)
     {
       task_free(emission_task);
-      system_free(emitter);
       return r;
     }
 
+    if ((r = system_relocate_task(system->caster, emission_task->rays, 0)) < 0)
+      return r;
     if ((r = ray_caster::system_cast(system->caster, emission_task->rays)) < 0)
     {
       task_free(emission_task);
-      system_free(emitter);
       return r;
     }
+    if ((r = system_relocate_task(system->caster, emission_task->rays, -1)) < 0)
+      return r;
 
     // now we have nearest intersection face for every ray in task (if intersection was occurred)
     // calculate form factors between meshes
@@ -149,39 +156,47 @@ namespace cpu_form_factors
 
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     
-    int n_ray = 0;
-    for (int m = 0; m != n_meshes; ++m)
-    { 
-      int mesh_outgoing_rays = 0;
+    int n_rays = emission_task->rays->n_tasks;
+    int mesh_idx = 0;
+    int face_idx = 0;
+    int mesh_outgoing_rays = 0;
 
-      const subject::mesh_t& mesh = system->scene->meshes[m];
-      const int mesh_n_faces = mesh.n_faces;
-      for (int f = 0; f != mesh_n_faces; ++f)
+    for (int ray_idx = 0; ray_idx != n_rays && mesh_idx != n_meshes;)
+    {      
+      const subject::mesh_t& mesh = system->scene->meshes[mesh_idx];
+      const ray_caster::face_t& face = system->scene->faces[mesh.first_idx + face_idx];
+      const math::ray_t ray = ray_caster_task->ray[ray_idx];
+
+      bool current_face = ray_origin_on_plane(ray, face);
+      if (!current_face)
       {
-        const int face_idx = mesh.first_idx + f;
-        const ray_caster::face_t& face = system->scene->faces[face_idx];
-        const int face_rays_front = malley_cpu::emitted_front(emitter, face_idx);
-        const int face_rays_rear = malley_cpu::emitted_rear(emitter, face_idx);
-        const int face_rays = face_rays_front + face_rays_rear;
-        for (int j = 0; j != face_rays && n_ray < emission_task->rays->n_tasks; ++j, ++n_ray)
+        if (++face_idx == mesh.n_faces)
         {
-          ++mesh_outgoing_rays;
-          if (ray_caster_task->hit_face_idx[n_ray] != -1)
-          {
-            int hit_face_idx = ray_caster_task->hit_face_idx[n_ray];
-            int hit_mesh_idx = face2mesh(system, hit_face_idx);
-            task->form_factors[m * n_meshes + hit_mesh_idx] += 1.f;
-          }
-        }
-      }
+          float mesh_ratio = 1.f / (float)mesh_outgoing_rays;
+          for (int j = 0; j != n_meshes; ++j)
+            task->form_factors[mesh_idx * n_meshes + j] *= mesh_ratio;
 
-      float mesh_ratio = 1.f / (float)mesh_outgoing_rays;
-      for (int j = 0; j != n_meshes; ++j)
-        task->form_factors[m * n_meshes + j] *= mesh_ratio;
+          ++mesh_idx;
+          face_idx = 0;
+          mesh_outgoing_rays = 0;
+        }
+        continue;
+      }
+      ++mesh_outgoing_rays;
+
+      if (ray_caster_task->hit_face_idx[ray_idx] != -1)
+      {
+        int hit_face_idx = ray_caster_task->hit_face_idx[ray_idx];
+        int hit_mesh_idx = face2mesh(system, hit_face_idx);
+        task->form_factors[mesh_idx * n_meshes + hit_mesh_idx] += 1.f;
+      }
+      ++ray_idx;
     }
+    float mesh_ratio = 1.f / (float)mesh_outgoing_rays;
+    for (int j = 0; j != n_meshes; ++j)
+      task->form_factors[mesh_idx * n_meshes + j] *= mesh_ratio;
 
     task_free(emission_task);
-    system_free(emitter);
     
     return FORM_FACTORS_OK;
   }

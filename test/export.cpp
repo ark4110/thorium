@@ -36,7 +36,7 @@ public:
 TEST_F(CsvExport, ParallelPlanesModel)
 {
   float factors[4] = { 0, 1, 0, 1 };
-  form_factors::task_t task = { 1, factors };
+  form_factors::task_t task = { factors };
   subject::scene_t scene = { 1, 0, 2, 0 };
   ASSERT_EQ(CSV_EXPORT_OK, csv_export::export_csv("test.csv", &scene, &task));
   FILE* f = fopen("test.csv", "r");
