@@ -113,4 +113,23 @@ namespace math
 
     return { origin + relative_dist * 0.0001f, relative_dist };
   }
+
+  bool ray_origin_on_plane(ray_t ray, const triangle_t& triangle)
+  {
+    ray.origin -= 0.0001f * ray.direction;
+    vec3 r0 = ray.origin - triangle.points[0];
+    vec3 r1 = ray.origin - triangle.points[1];
+    vec3 r2 = ray.origin - triangle.points[2];
+    vec3 r = r0;
+    if (norm(r1) > norm(r))
+      r = r1;
+    if (norm(r2) > norm(r))
+      r = r2;
+    return dot(triangle_normal(triangle), r) < 0.00001f;
+  }
+
+  bool ray_emitted_front(const ray_t& ray, const triangle_t& triangle)
+  {
+    return dot(triangle_normal(triangle), ray.direction) >= 0.f;
+  }
 }
