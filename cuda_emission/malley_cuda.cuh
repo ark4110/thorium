@@ -103,5 +103,6 @@ namespace cuda_malley_emission
   __global__ void prepare_context(context_t* ctx, const subject::mesh_t* meshes, int n_meshes);
   __global__ void calculate_weights(context_t* ctx, const float* temperatures);
   __global__ void calculate_n_rays(context_t* ctx, int n_target_rays);
+  __global__ void generate_random(context_t* ctx, ray_t* rays);
   __global__ void emit_malley_rays(context_t* ctx, ray_t* rays, float* mesh_emissions, float* rays_power);
 }
