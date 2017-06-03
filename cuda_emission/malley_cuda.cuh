@@ -88,7 +88,6 @@ namespace cuda_malley_emission
     // Buffers for task
     int n_ray_buffer;
     float* mesh_emission;
-    float* ray_power;
 
     float weight_factor;
     int n_total_rays;

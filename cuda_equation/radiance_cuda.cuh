@@ -43,8 +43,8 @@ namespace radiance_equation_cuda
     // Per step vars
     int n_rays_alloc;
     char* hit_descision;
-    float* ray_power;
-    float* postponed_ray_power;
+    float* ray_power; // owned by task
+    float* postponed_ray_power;  // owned by task
     int* postponed_offsets;
   };
   

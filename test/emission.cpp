@@ -326,8 +326,9 @@ public:
     task->mesh_emission = b;
     task->mesh_temperatures = b;
     system_calculate(this->Emitter, task);
+    system_relocate_task(this->Emitter, task, -1);
 
-    float total_flux = kahan_summation(task->power, task->power + task->rays->n_tasks);
+    float total_flux = kahan_summation(task->rays->power, task->rays->power + task->rays->n_tasks);
 
     math::sphere_t sphere = math::triangles_bsphere(Scene->faces, Scene->n_faces);
     float bsphere_scale = parallel_rays_emission_cpu::scene_bsphere_emission_scale;

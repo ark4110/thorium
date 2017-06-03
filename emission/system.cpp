@@ -41,7 +41,6 @@ namespace emission
     if (task)
     {
       task_free(task->rays);
-      free(task->power);
     }
 
     free(task);
@@ -52,8 +51,6 @@ namespace emission
     int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_input_rays = ray_caster::task_grow(&task->rays, n_rays);
     int n_total = task->rays->n_tasks;
-    if (n_prev_reserved != task->rays->n_reserved)
-      task->power = (float*)realloc(task->power, task->rays->n_reserved * sizeof(float));
     return n_input_rays;
   }
 
@@ -62,8 +59,6 @@ namespace emission
     int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_current_reserve = ray_caster::task_reserve(&task->rays, n_rays);
     int n_target_reserve = task->rays->n_tasks + n_rays;
-    if (n_prev_reserved < n_target_reserve)
-      task->power = (float*)realloc(task->power, n_target_reserve * sizeof(float));
     return n_current_reserve;
   }
 
@@ -79,7 +74,7 @@ namespace emission
 
     int& n_rays = task->rays->n_tasks;
     task->rays->ray[n_rays] = ray;
-    task->power[n_rays] = power;
+    task->rays->power[n_rays] = power;
     ++n_rays;
   }
 

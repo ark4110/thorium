@@ -96,6 +96,8 @@ namespace parallel_rays_emission_cpu
   {
     int n_total_rays = get_total_rays(system);
     task_reserve(task, n_total_rays);
+
+    ray_caster::task_t* ray_caster_task = task->rays;
     
     for (int source_idx = 0; source_idx != system->params.n_sources; ++source_idx)
     {
@@ -118,8 +120,8 @@ namespace parallel_rays_emission_cpu
         math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
         math::vec3 direction = source.direction;
 
-        task->rays->ray[n_input_rays + r] = { origin, direction };
-        task->power[n_input_rays + r] = ray_power;
+        ray_caster_task->ray[n_input_rays + r] = { origin, direction };
+        ray_caster_task->power[n_input_rays + r] = ray_power;
       }
     }
 

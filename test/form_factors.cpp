@@ -45,7 +45,7 @@ struct EngineType
 #endif
 
 typedef ::testing::Types<
-  //EngineType<EMISSION_MALLEY_CPU, RAY_CASTER_SELECTOR>
+  EngineType<EMISSION_MALLEY_CPU, RAY_CASTER_SELECTOR>,
   EngineType<EMISSION_MALLEY_CUDA, RAY_CASTER_SELECTOR>
 > FormFactorsTypes;
 
@@ -57,7 +57,7 @@ public:
   {
     Scene = 0;
     malley_cpu::params_t emitter_params;
-    emitter_params.n_rays = 2000;
+    emitter_params.n_rays = 40000;
     Emitter = emission::system_create(EngineType::EmitterID, &emitter_params);
     RayCaster = ray_caster::system_create(EngineType::RayCasterID);
     form_factors::params_t params{ Emitter, RayCaster };

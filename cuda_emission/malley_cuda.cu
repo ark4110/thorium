@@ -136,10 +136,6 @@ namespace cuda_malley_emission
     if (ctx->mesh_emission)
       cudaFree(ctx->mesh_emission);
     ctx->mesh_emission = 0;
-
-    if (ctx->ray_power)
-      cudaFree(ctx->ray_power);
-    ctx->ray_power = 0;
   }
 
   /// @brief Shutdowns calculator system prior to free memory.
@@ -492,12 +488,8 @@ namespace cuda_malley_emission
 
     if (host_context.n_ray_buffer < n_rays)
     {
-      if (host_context.ray_power)
-        cudaFree(host_context.ray_power);
-
       int n_new_rays = n_rays + 1024 - n_rays % 1024;
       host_context.n_ray_buffer = n_new_rays;
-      cudaMalloc(&host_context.ray_power, n_new_rays * sizeof(float));
 
       sync_context_to_device(system);
     }
@@ -538,14 +530,13 @@ namespace cuda_malley_emission
     emit_malley_rays << <system->n_mtgp_blocks, threads >> > (system->device_context
       , (ray_t*)task->rays->ray + n_input_rays
       , host_context.mesh_emission
-      , host_context.ray_power
+      , task->rays->power
       );
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     // Using raw memory copy because of incompatible data-types.
-    cudaMemcpy(&task->power[n_input_rays], host_context.ray_power, n_real_rays * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(task->mesh_emission, host_context.mesh_emission, scene->n_meshes * sizeof(float), cudaMemcpyDeviceToHost);
 
     return EMISSION_OK;

@@ -55,6 +55,7 @@ namespace cuda_task_relocation
     checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
     checkCudaErrors(cudaMalloc((void**)&rtask.hit_point, sizeof(math::vec3) * n_alloc));
     checkCudaErrors(cudaMalloc((void**)&rtask.hit_face_idx, sizeof(int) * n_alloc));
+    checkCudaErrors(cudaMalloc((void**)&rtask.power, sizeof(float) * n_alloc));
 
     checkCudaErrors(cudaMemcpy(rtask.ray, buffer_task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
     task_free(buffer_task);
@@ -88,6 +89,7 @@ namespace cuda_task_relocation
       checkCudaErrors(cudaMemcpy(rtask->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
       checkCudaErrors(cudaMemcpy(rtask->hit_point, task->hit_point, task->n_tasks * sizeof(math::vec3), cudaMemcpyDeviceToHost));
       checkCudaErrors(cudaMemcpy(rtask->hit_face_idx, task->hit_face_idx, task->n_tasks * sizeof(int), cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(rtask->power, task->power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
       task_free_data(task);
 
       *task = *rtask;
@@ -105,10 +107,12 @@ namespace cuda_task_relocation
       checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
       checkCudaErrors(cudaMalloc((void**)&rtask.hit_point, sizeof(math::vec3) * n_alloc));
       checkCudaErrors(cudaMalloc((void**)&rtask.hit_face_idx, sizeof(int) * n_alloc));
+      checkCudaErrors(cudaMalloc((void**)&rtask.power, sizeof(float) * n_alloc));
 
       checkCudaErrors(cudaMemcpy(rtask.ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
       checkCudaErrors(cudaMemcpy(rtask.hit_point, task->hit_point, task->n_tasks * sizeof(math::vec3), cudaMemcpyHostToDevice));
       checkCudaErrors(cudaMemcpy(rtask.hit_face_idx, task->hit_face_idx, task->n_tasks * sizeof(int), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(rtask.power, task->power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
 
       task_free_data(task);
       *task = rtask;

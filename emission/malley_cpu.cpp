@@ -242,7 +242,7 @@ namespace malley_cpu
         for (int j = 0; j != n_face_rays_front && n_ray < n_real_rays; ++j, ++n_ray)
         {
           const float ray_power = front_emission / n_face_rays_front;
-          task->power[n_input_rays + n_ray] = ray_power;
+          task->rays->power[n_input_rays + n_ray] = ray_power;
 
           // Randomly generated ray's origin on the face
           math::vec3 origin = pick_face_point(system, face);
@@ -260,7 +260,7 @@ namespace malley_cpu
         for (int j = 0; j != n_face_rays_rear && n_ray < n_real_rays; ++j, ++n_ray)
         {
           const float ray_power = rear_emission / n_face_rays_rear;
-          task->power[n_input_rays + n_ray] = ray_power;
+          task->rays->power[n_input_rays + n_ray] = ray_power;
           
           math::vec3 origin = pick_face_point(system, face);
           math::vec3 malley = ray_malley_emmit(system->malley_emission);
