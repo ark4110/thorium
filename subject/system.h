@@ -39,22 +39,34 @@ namespace subject
 
   shell_properties_t default_shell_properties();
 
+  /// @brief Optical material properties - i.e. what happens with incoming light
   struct optical_properties_t
   {
     float specular_reflectance;
     float diffuse_reflectance;
     float absorbance; ///< Коэффициент поглощения (rus.)
     float transmittance; ///< The ratio of the light energy falling on a body to that transmitted through it. Коэффициент пропускания (rus.)
-    float emissivity; ///< Effectiveness in emitting energy as thermal radiation. Степень черноты (rus.)
   };
 
-  optical_properties_t black_material();
+  /// @brief Properties of material that influence outgoing radiation
+  struct emission_properties_t
+  {
+    float emissivity; ///< emissivity coefficient - effectiveness in emiitting eneryy as thermal radiation
+  };
+
+  struct radiance_properties_t
+  {
+    optical_properties_t optical;
+    emission_properties_t emission;
+  };
+
+  radiance_properties_t black_material();
 
   struct material_t
   {
     shell_properties_t shell;
-    optical_properties_t front;
-    optical_properties_t rear;
+    radiance_properties_t front;
+    radiance_properties_t rear;
     char name[128];
   };
 

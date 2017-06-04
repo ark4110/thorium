@@ -308,7 +308,7 @@ namespace radiance_equation_cuda
 
       const int mesh_idx = ctx->face_to_mesh_index[face_idx];
       const subject::material_t& material = ctx->materials[ctx->mesh_materials[mesh_idx]];
-      const subject::optical_properties_t& optical = hit_front ? material.front : material.rear;
+      const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
       hit_decision decision = make_hit_descision(ctx, optical);
       const float3 point = hit_point[ray_idx];

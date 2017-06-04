@@ -211,7 +211,7 @@ namespace radiance_equation
 
         const subject::material_t& material = mesh_material(system->scene, hit_mesh_idx);
         bool hit_front = ray_check_hit_front(ray, face);
-        const subject::optical_properties_t& optical = hit_front ? material.front : material.rear;
+        const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
         const float ray_power = emission_task->rays->power[r];
 

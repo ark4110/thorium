@@ -62,7 +62,7 @@ public:
     System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
 
     Materials[0] = subject::black_body();
-    Materials[0].front.emissivity = 0;
+    Materials[0].front.emission.emissivity = 0;
 
     memcpy(Faces, subject::box(), sizeof(subject::face_t) * 12);
     memcpy(Faces + 12, subject::box(), sizeof(subject::face_t) * 12);
@@ -180,8 +180,8 @@ TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
   using namespace thermal_solution;
   this->Scene.n_faces = 12;
   this->Scene.n_meshes = 1;
-  this->Materials[0].rear.absorbance = 0.5;
-  this->Materials[0].rear.specular_reflectance = 0.5;
+  this->Materials[0].rear.optical.absorbance = 0.5;
+  this->Materials[0].rear.optical.specular_reflectance = 0.5;
 
   const float initialEnergy = this->Temperatures[0];
   int r = 0;
@@ -202,8 +202,8 @@ TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
   using namespace thermal_solution;
   this->Scene.n_faces = 12;
   this->Scene.n_meshes = 1;
-  this->Materials[0].rear.absorbance = 0.5;
-  this->Materials[0].rear.diffuse_reflectance = 0.5;
+  this->Materials[0].rear.optical.absorbance = 0.5;
+  this->Materials[0].rear.optical.diffuse_reflectance = 0.5;
 
   const float initialEnergy = this->Temperatures[0];
   int r = 0;

@@ -89,16 +89,16 @@ namespace obj_import
         materialProperties["shell.heat_capacity"] = &m.shell.heat_capacity;
         materialProperties["shell.thermal_conductivity"] = &m.shell.thermal_conductivity;
         materialProperties["shell.thickness"] = &m.shell.thickness;
-        materialProperties["front.specular_reflectance"] = &m.front.specular_reflectance;
-        materialProperties["front.diffuse_reflectance"] = &m.front.diffuse_reflectance;
-        materialProperties["front.absorbance"] = &m.front.absorbance;
-        materialProperties["front.transmittance"] = &m.front.transmittance;
-        materialProperties["front.emissivity"] = &m.front.emissivity;
-        materialProperties["rear.specular_reflectance"] = &m.rear.specular_reflectance;
-        materialProperties["rear.diffuse_reflectance"] = &m.rear.diffuse_reflectance;
-        materialProperties["rear.absorbance"] = &m.rear.absorbance;
-        materialProperties["rear.transmittance"] = &m.rear.transmittance;
-        materialProperties["rear.emissivity"] = &m.rear.emissivity;
+        materialProperties["front.specular_reflectance"] = &m.front.optical.specular_reflectance;
+        materialProperties["front.diffuse_reflectance"] = &m.front.optical.diffuse_reflectance;
+        materialProperties["front.absorbance"] = &m.front.optical.absorbance;
+        materialProperties["front.transmittance"] = &m.front.optical.transmittance;
+        materialProperties["front.emissivity"] = &m.front.emission.emissivity;
+        materialProperties["rear.specular_reflectance"] = &m.rear.optical.specular_reflectance;
+        materialProperties["rear.diffuse_reflectance"] = &m.rear.optical.diffuse_reflectance;
+        materialProperties["rear.absorbance"] = &m.rear.optical.absorbance;
+        materialProperties["rear.transmittance"] = &m.rear.optical.transmittance;
+        materialProperties["rear.emissivity"] = &m.rear.emission.emissivity;
 
         typedef std::set<std::string> StringSet;
         StringSet parsedParameters;

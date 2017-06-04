@@ -47,16 +47,16 @@ namespace obj_export
       fprintf(out, "shell.heat_capacity %f\n", m->shell.heat_capacity);
       fprintf(out, "shell.thermal_conductivity %f\n", m->shell.thermal_conductivity);
       fprintf(out, "shell.thickness %f\n", m->shell.thickness);
-      fprintf(out, "front.specular_reflectance %f\n", m->front.specular_reflectance);
-      fprintf(out, "front.diffuse_reflectance %f\n", m->front.diffuse_reflectance);
-      fprintf(out, "front.absorbance %f\n", m->front.absorbance);
-      fprintf(out, "front.transmittance %f\n", m->front.transmittance);
-      fprintf(out, "front.emissivity %f\n", m->front.emissivity);
-      fprintf(out, "rear.specular_reflectance %f\n", m->rear.specular_reflectance);
-      fprintf(out, "rear.diffuse_reflectance %f\n", m->rear.diffuse_reflectance);
-      fprintf(out, "rear.absorbance %f\n", m->rear.absorbance);
-      fprintf(out, "rear.transmittance %f\n", m->rear.transmittance);
-      fprintf(out, "rear.emissivity %f\n", m->rear.emissivity);
+      fprintf(out, "front.specular_reflectance %f\n", m->front.optical.specular_reflectance);
+      fprintf(out, "front.diffuse_reflectance %f\n", m->front.optical.diffuse_reflectance);
+      fprintf(out, "front.absorbance %f\n", m->front.optical.absorbance);
+      fprintf(out, "front.transmittance %f\n", m->front.optical.transmittance);
+      fprintf(out, "front.emissivity %f\n", m->front.emission.emissivity);
+      fprintf(out, "rear.specular_reflectance %f\n", m->rear.optical.specular_reflectance);
+      fprintf(out, "rear.diffuse_reflectance %f\n", m->rear.optical.diffuse_reflectance);
+      fprintf(out, "rear.absorbance %f\n", m->rear.optical.absorbance);
+      fprintf(out, "rear.transmittance %f\n", m->rear.optical.transmittance);
+      fprintf(out, "rear.emissivity %f\n", m->rear.emission.emissivity);
       fprintf(out, "\n");
     }
   }
