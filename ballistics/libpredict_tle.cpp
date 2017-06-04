@@ -18,6 +18,7 @@
 #include "../math/mat.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <predict/predict.h>
 
 namespace libpredict_tle
@@ -35,7 +36,13 @@ namespace libpredict_tle
   {
     system->params = *params;
 
-    char *tle[2] = { const_cast<char*>(params->orbit.tle.line_1), const_cast<char*>(params->orbit.tle.line_2) };
+    char line1[1024];
+    char line2[1024];
+
+    strncpy(line1, params->orbit.tle.line_1, sizeof(line1));
+    strncpy(line2, params->orbit.tle.line_2, sizeof(line2));
+
+    char *tle[2] = { line1, line2 };
     system->elements = predict_parse_tle(tle);
 
     return BALLISTICS_OK;

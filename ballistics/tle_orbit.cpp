@@ -24,9 +24,9 @@ namespace ballistics
   {
     if (!o)
       return;
-    free(o->tle.header);
-    free(o->tle.line_1);
-    free(o->tle.line_2);
+    free((void*)o->tle.header);
+    free((void*)o->tle.line_1);
+    free((void*)o->tle.line_2);
     free(o);
   }
 }

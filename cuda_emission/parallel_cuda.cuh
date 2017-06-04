@@ -30,12 +30,14 @@ namespace cuda_parallel_rays_emission
   struct source_params_t
   {
     float3 direction;
+    float power;
     int n_rays;
   };
 
   struct multi_source_params_t
   {
     float3 direction;
+    float power;
     int n_rays_offset;
     int n_rays;
   };

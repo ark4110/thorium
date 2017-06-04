@@ -46,6 +46,16 @@ namespace math
   ray_t ray_transmit(const ray_t& ray, const vec3& point);
 
   /**
+    @brief Check that ray origin is on (almost) plane.
+  */
+  bool ray_origin_on_plane(ray_t ray, const triangle_t& triangle);
+
+  /**
+    @brief Check that ray emitted from front side.
+  */
+  bool ray_emitted_front(const ray_t& ray, const triangle_t& triangle);
+
+  /**
     @brief Malley ray emission algorithm.
     @detail Malley emission algorithm is an nice and efficient hack to emit ray from black-body.
     @detail It consider normal distribution of rays AND cosine-weighted distribution.

@@ -39,7 +39,4 @@ namespace malley_cpu
  *  Emit rays from both sides of face.
  *  */
   emission::system_t* system_create();
-
-  int emitted_front(emission::system_t* system, int face_idx);
-  int emitted_rear(emission::system_t* system, int face_idx);
 }

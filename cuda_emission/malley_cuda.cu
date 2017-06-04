@@ -89,7 +89,7 @@ namespace cuda_malley_emission
     system->n_warp_size = deviceProp.warpSize;
     //system->n_tpb = 128;
 
-    int n_mtgp_blocks = 64;
+    int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
     context_t& host_context = system->host_context;
@@ -110,6 +110,9 @@ namespace cuda_malley_emission
 
   void contex_free_scene(context_t* ctx)
   {
+    ctx->n_ray_buffer = 0;
+    ctx->n_total_rays = 0;
+
     if (ctx->faces)
       cudaFree(ctx->faces);
     ctx->faces = 0;
@@ -117,6 +120,10 @@ namespace cuda_malley_emission
     if (ctx->faces_data)
       cudaFree(ctx->faces_data);
     ctx->faces_data = 0;
+
+    if (ctx->face_ray_offsets)
+      cudaFree(ctx->face_ray_offsets);
+    ctx->face_ray_offsets = 0;
 
     if (ctx->materials)
       cudaFree(ctx->materials);
@@ -129,10 +136,6 @@ namespace cuda_malley_emission
     if (ctx->mesh_emission)
       cudaFree(ctx->mesh_emission);
     ctx->mesh_emission = 0;
-
-    if (ctx->ray_power)
-      cudaFree(ctx->ray_power);
-    ctx->ray_power = 0;
   }
 
   /// @brief Shutdowns calculator system prior to free memory.
@@ -347,39 +350,87 @@ namespace cuda_malley_emission
     return face.points[0] + a * face.points[1] + b * face.points[2];
   }
 
+  /// We prepared random origin in ray itself.
+  inline __device__ float3 pick_face_point(const ray_t& ray, const face_t& face)
+  {
+    float a = ray.origin.x;
+    float b = ray.origin.y;
+    if (a + b > 1)
+    {
+      a = 1.f - a;
+      b = 1.f - b;
+    }
+
+    return face.points[0] + a * face.points[1] + b * face.points[2];
+  }
+
+  /// We prepared random uniform direction in ray itself.
+  inline __device__ float3 pick_uniform_ray(const ray_t& holder)
+  {
+    return holder.direction;
+  }
+
+  __global__ void generate_random(context_t* ctx, ray_t* rays)
+  {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    const int n_total_rays = ctx->n_total_rays;
+    curandStateMtgp32* HSGenR     = &ctx->HSGenR[blockIdx.x];
+    curandStateMtgp32* HSGenTheta = &ctx->HSGenTheta[blockIdx.x];
+    curandStateMtgp32* TPGenA     = &ctx->TPGenA[blockIdx.x];
+    curandStateMtgp32* TPGenB     = &ctx->TPGenB[blockIdx.x];
+
+    for (; idx < n_total_rays; idx += gridDim.x * blockDim.x)
+    {
+      rays[idx].origin.x = curand_uniform(TPGenA);
+      rays[idx].origin.y = curand_uniform(TPGenB);
+
+      float r = curand_uniform(HSGenR);
+      float theta = M_2PI * curand_uniform(HSGenTheta);
+
+      float rad = sqrtf(r);
+      float s, c;
+      sincosf(theta, &s, &c);
+      rays[idx].direction = make_float3(rad * c, rad * s, sqrtf(1 - r));
+    }
+  }
+
   __global__ void emit_malley_rays(context_t* ctx, ray_t* rays, float* mesh_emissions, float* rays_power)
   {
-    int face_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    int face_idx = threadIdx.y + blockIdx.x * blockDim.y;
     int n_faces = ctx->n_faces;
 
-    for (; face_idx < n_faces; face_idx += blockDim.x * gridDim.x)
+    for (; face_idx < n_faces; face_idx += blockDim.y * gridDim.x)
     {
       face_t face = ctx->faces[face_idx];
       const face_data_t& face_data = ctx->faces_data[face_idx];
       int2 n_rays = face_data.n_rays;
 
       float2 emission = face_data.emission;
-      if (threadIdx.y == 0)
+      if (threadIdx.x == 0)
         atomicAdd(&mesh_emissions[face_data.mesh_idx], emission.x + emission.y);
 
       mat33 rotation = pick_face_rotation(face);
 
       float ray_power = emission.x / (float)n_rays.x;
       int face_ray_offset = ctx->face_ray_offsets[face_idx];
-      for (int j = threadIdx.y; j < n_rays.x; j += blockDim.y)
+      for (int j = threadIdx.x; j < n_rays.x; j += blockDim.x)
       {
         rays_power[face_ray_offset + j] = ray_power;
-        float3 relative_dist = rotation * malley_cuda::pick_uniform_ray(ctx);
-        rays[face_ray_offset + j] = { pick_face_point(ctx, face) + relative_dist * 0.0001f, relative_dist };
+        ray_t& ray = rays[face_ray_offset + j];
+        float3 relative_dist = rotation * pick_uniform_ray(ray);
+        float3 origin = pick_face_point(ray, face);
+        ray = { origin + relative_dist * 0.0001f, relative_dist };
       }
 
       ray_power = emission.y / (float)n_rays.y;
       face_ray_offset += face_data.n_rays.x;
-      for (int j = threadIdx.y; j < n_rays.y; j += blockDim.y)
+      for (int j = threadIdx.x; j < n_rays.y; j += blockDim.x)
       {
         rays_power[face_ray_offset + j] = ray_power;
-        float3 relative_dist = rotation * invert_z(malley_cuda::pick_uniform_ray(ctx));
-        rays[face_ray_offset + j] = { pick_face_point(ctx, face) + relative_dist * 0.0001f, relative_dist };
+        ray_t& ray = rays[face_ray_offset + j];
+        float3 relative_dist = rotation * invert_z(pick_uniform_ray(ray));
+        float3 origin = pick_face_point(ray, face);
+        rays[face_ray_offset + j] = { origin + relative_dist * 0.0001f, relative_dist };
       }
     }
   }
@@ -437,12 +488,8 @@ namespace cuda_malley_emission
 
     if (host_context.n_ray_buffer < n_rays)
     {
-      if (host_context.ray_power)
-        cudaFree(host_context.ray_power);
-
       int n_new_rays = n_rays + 1024 - n_rays % 1024;
       host_context.n_ray_buffer = n_new_rays;
-      cudaMalloc(&host_context.ray_power, n_new_rays * sizeof(float));
 
       sync_context_to_device(system);
     }
@@ -472,22 +519,24 @@ namespace cuda_malley_emission
     int n_avg_rays_per_face = prev_power_of_2(system->params.n_rays / scene->n_faces);
     if (n_avg_rays_per_face < 2)
       n_avg_rays_per_face = 2;
+
+    generate_random << <system->n_mtgp_blocks, 256 >> > (system->device_context
+      , (ray_t*)task->rays->ray + n_input_rays);
+    
     // Run multiple threads for faces with large amount of rays.
-    //int n_threads_per_face = 1;
     int n_threads_per_face = std::min<int>(32, n_avg_rays_per_face);
 
-    dim3 threads(256 / n_threads_per_face, n_threads_per_face);
+    dim3 threads(n_threads_per_face, 256 / n_threads_per_face);
     emit_malley_rays << <system->n_mtgp_blocks, threads >> > (system->device_context
       , (ray_t*)task->rays->ray + n_input_rays
       , host_context.mesh_emission
-      , host_context.ray_power
+      , task->rays->power
       );
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
     // Using raw memory copy because of incompatible data-types.
-    cudaMemcpy(&task->power[n_input_rays], host_context.ray_power, n_real_rays * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(task->mesh_emission, host_context.mesh_emission, scene->n_meshes * sizeof(float), cudaMemcpyDeviceToHost);
 
     return EMISSION_OK;

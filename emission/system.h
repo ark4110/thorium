@@ -60,11 +60,7 @@ namespace emission
     */
     float* mesh_emission;
 
-    /**
-      @brief Power of emitted rays, W.
-      @detail Owned by emission system.
-    */
-    float* power;
+    
   };
 
   task_t* task_create();

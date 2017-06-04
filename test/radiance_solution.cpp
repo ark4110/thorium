@@ -121,11 +121,17 @@ public:
   thermal_solution::task_t* Task;
 };
 
+#ifdef _WIN64
 typedef ::testing::Types<
   EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
   EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
   EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CUDA, RAY_CASTER_OPTIX>
 > RadianceEquationTypes;
+#else
+typedef ::testing::Types<
+  EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_NAIVE_CPU>
+> RadianceEquationTypes;
+#endif
 
 TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
 

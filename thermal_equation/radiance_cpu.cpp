@@ -196,7 +196,7 @@ namespace radiance_equation
       {
         if (system->params.stats)
         {
-          const float ray_power = emission_task->power[r];
+          const float ray_power = emission_task->rays->power[r];
           ++system->params.stats->quants.named.n_missed;
           system->params.stats->powers.named.e_missed += ray_power;
         }
@@ -212,7 +212,7 @@ namespace radiance_equation
         const subject::material_t& material = mesh_material(system->scene, hit_mesh_idx);
         const subject::optical_properties_t& optical = ray_check_hit_front(ray, face) ? material.front : material.rear;
 
-        const float ray_power = emission_task->power[r];
+        const float ray_power = emission_task->rays->power[r];
 
         hit_decision decision = make_hit_descision(system, optical);
         if (system->params.stats)
@@ -268,9 +268,9 @@ namespace radiance_equation
       auto ray_caster_time = std::chrono::duration_cast<std::chrono::microseconds>(ray_caster_ptime - emission_ptime);
       auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(processing_ptime - ray_caster_ptime);
 
-      system->params.stats->times.named.t_emission += emission_time.count();
-      system->params.stats->times.named.t_ray_casting += ray_caster_time.count();
-      system->params.stats->times.named.t_processing += processing_time.count();
+      system->params.stats->times.named.t_emission += (int)emission_time.count();
+      system->params.stats->times.named.t_ray_casting += (int)ray_caster_time.count();
+      system->params.stats->times.named.t_processing += (int)processing_time.count();
 
       ++system->params.stats->n_steps;
     }

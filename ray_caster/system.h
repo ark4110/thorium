@@ -50,6 +50,7 @@ namespace ray_caster
     math::ray_t* ray;
     int* hit_face_idx;
     math::vec3* hit_point;
+    float* power;
   };
 
   /// @brief Scene representation.

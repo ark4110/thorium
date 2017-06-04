@@ -87,23 +87,26 @@ namespace radiance_equation_cuda
   {
     context_t& host_context = system->host_context;
 
+    bool sync = false;
     if (host_context.n_rays_alloc < n_rays)
     {
       host_context.n_rays_alloc = align_rays_count(n_rays);
       if (host_context.hit_descision)
         cudaFree(host_context.hit_descision);
       checkCudaErrors(cudaMalloc(&host_context.hit_descision, sizeof(char) * host_context.n_rays_alloc));
-
-      if (host_context.ray_power)
-        cudaFree(host_context.ray_power);
-      checkCudaErrors(cudaMalloc(&host_context.ray_power, sizeof(float) * host_context.n_rays_alloc));
-
-      if (host_context.postponed_ray_power)
-        cudaFree(host_context.postponed_ray_power);
-      checkCudaErrors(cudaMalloc(&host_context.postponed_ray_power, sizeof(float) * host_context.n_rays_alloc));
-
-      sync_context_to_device(system);
+      sync = true;
     }
+
+    if (host_context.ray_power != system->emission_task->rays->power ||
+      host_context.postponed_ray_power != system->postponed_task->rays->power)
+    {
+      host_context.ray_power = system->emission_task->rays->power;
+      host_context.postponed_ray_power = system->postponed_task->rays->power;
+      sync = true;
+    }
+
+    if (sync)
+      sync_context_to_device(system);
   }
 
   /// @brief Initializes system with given ray caster after creation.
@@ -180,14 +183,6 @@ namespace radiance_equation_cuda
     if (ctx->mesh_power)
       cudaFree(ctx->mesh_power);
     ctx->mesh_power = 0;
-
-    if (ctx->ray_power)
-      cudaFree(ctx->ray_power);
-    ctx->ray_power = 0;
-
-    if (ctx->postponed_ray_power)
-      cudaFree(ctx->postponed_ray_power);
-    ctx->postponed_ray_power = 0;
   }
 
   int shutdown(system_t* system)
@@ -454,6 +449,10 @@ namespace radiance_equation_cuda
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
 
+    task_grow(system->postponed_task, n_rays);
+    if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
+      return r;
+
     prepare_context(system, n_rays);
     cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
     
@@ -463,16 +462,10 @@ namespace radiance_equation_cuda
       , (float3*)ray_caster_task->hit_point
       , (ray_t*)ray_caster_task->ray);
     
-    // Emission powers are on host device.
-    checkCudaErrors(cudaMemcpy(system->host_context.ray_power, emission_task->power, sizeof(float) * n_rays, cudaMemcpyHostToDevice));
-
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    ////// Postpone step
-    task_grow(system->postponed_task, n_rays);
-    if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
-      return r;
+    ////// Postpone step    
     
     // Absorption step
     int n_abosrption_blocks = (n_rays + system->n_tpb - 1) / system->n_tpb;
@@ -495,11 +488,10 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
 
-    checkCudaErrors(cudaMemcpy(system->postponed_task->power, system->host_context.postponed_ray_power, sizeof(float) * n_postponed, cudaMemcpyDeviceToHost));
     postponed_task->rays->n_tasks = n_postponed;
 
     float* h_mesh_power = (float*)malloc(n_meshes * sizeof(float));
-        checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i != n_meshes; ++i)
       task->absorption[i] += h_mesh_power[i];    
     free(h_mesh_power);
@@ -514,9 +506,9 @@ namespace radiance_equation_cuda
       auto ray_caster_time = std::chrono::duration_cast<std::chrono::microseconds>(ray_caster_ptime - emission_ptime);
       auto processing_time = std::chrono::duration_cast<std::chrono::microseconds>(processing_ptime - ray_caster_ptime);
 
-      system->params.stats->times.named.t_emission += emission_time.count();
-      system->params.stats->times.named.t_ray_casting += ray_caster_time.count();
-      system->params.stats->times.named.t_processing += processing_time.count();
+      system->params.stats->times.named.t_emission += (int)emission_time.count();
+      system->params.stats->times.named.t_ray_casting += (int)ray_caster_time.count();
+      system->params.stats->times.named.t_processing += (int)processing_time.count();
 
       ++system->params.stats->n_steps;
     }

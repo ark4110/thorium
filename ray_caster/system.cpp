@@ -51,6 +51,7 @@ namespace ray_caster
     free(task->ray);
     free(task->hit_face_idx);
     free(task->hit_point);
+    free(task->power);
   }
 
   task_t* task_create(int n_rays)
@@ -65,6 +66,7 @@ namespace ray_caster
       , (math::ray_t*) calloc(n_rays, sizeof(math::ray_t))
       , (int*) calloc(n_rays, sizeof(int))
       , (math::vec3*)calloc(n_rays, sizeof(math::vec3))
+      , (float*)calloc(n_rays, sizeof(float))
     };
     
     return task;
@@ -102,6 +104,7 @@ namespace ray_caster
       valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
       valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
       valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
+      valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
     }
 
     return n_prev;
@@ -129,6 +132,7 @@ namespace ray_caster
     valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
     valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
     valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
+    valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
     return n_rays;
   }
 

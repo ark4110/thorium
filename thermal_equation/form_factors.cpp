@@ -83,7 +83,7 @@ namespace form_factors_equation
     if ((r = form_factors::system_set_scene(system->ff_calculator, scene)) < 0)
       return r;
     
-    system->ff_task = form_factors::task_create(scene, system->params.n_rays);
+    system->ff_task = form_factors::task_create(scene);
 
     if ((r = form_factors::system_calculate(system->ff_calculator, system->ff_task)) < 0)
       return r;

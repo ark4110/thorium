@@ -37,18 +37,18 @@ namespace form_factors
    */
   struct task_t
   {
-    int n_rays;
     float* form_factors;
   };
 
   /// @brief create task for given scene with n_rays rays.
-  task_t* task_create(subject::scene_t* scene, int n_rays);
+  task_t* task_create(subject::scene_t* scene);
 
   /// @brief Free memory for given task
   void task_free(task_t* task);
 
   struct params_t
   {
+    emission::system_t* emitter;
     ray_caster::system_t* caster;
   };
 

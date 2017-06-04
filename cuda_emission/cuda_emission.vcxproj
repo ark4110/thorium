@@ -173,10 +173,13 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <MaxRegCount>
       </MaxRegCount>
       <FastMath>true</FastMath>
+      <GenerateLineInfo>true</GenerateLineInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="malley_cuda.cu" />
+    <CudaCompile Include="malley_cuda.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">32</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="parallel_cuda.cu" />
   </ItemGroup>
   <ItemGroup>

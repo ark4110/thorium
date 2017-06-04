@@ -455,15 +455,15 @@ int main(int argc, char* argv[])
       form_factors::system_set_scene(calculator, &te_scene);
 
       float* factors = (float*)calloc(n_faces * n_faces, sizeof(float));
-      form_factors::task_t fftask = { 1000000, factors };
+      form_factors::task_t fftask = { factors };
       form_factors::system_calculate(calculator, &fftask);
       csv_export::export_csv("perf_test_form_factors_1e6_rays.csv", &te_scene, &fftask);
 
-      fftask = { 10000000, factors };
+      fftask = { factors };
       form_factors::system_calculate(calculator, &fftask);
       csv_export::export_csv("perf_test_form_factors_1e7_rays.csv", &te_scene, &fftask);
 
-      fftask = { 50000000, factors };
+      fftask = { factors };
       form_factors::system_calculate(calculator, &fftask);
       csv_export::export_csv("perf_test_form_factors_5e7_rays.csv", &te_scene, &fftask);
 

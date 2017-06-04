@@ -22,9 +22,9 @@ namespace ballistics
 {
   struct tle_t
   {
-    char* header;
-    char* line_1;
-    char* line_2;
+    const char* header;
+    const char* line_1;
+    const char* line_2;
   };
 
   struct tle_orbit_t
