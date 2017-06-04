@@ -40,10 +40,12 @@ namespace cuda_task_relocation
 
     ray_caster::task_t* buffer_task = ray_caster::task_create(task->n_tasks);
     checkCudaErrors(cudaMemcpy(buffer_task->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(buffer_task->power, task->power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
 
     cudaFree(task->ray);
     cudaFree(task->hit_point);
     cudaFree(task->hit_face_idx);
+    cudaFree(task->power);
 
     ray_caster::task_t rtask = { task->allocation_device, &cuda_task_free_data, &grow_task, &relocate_task };
     
