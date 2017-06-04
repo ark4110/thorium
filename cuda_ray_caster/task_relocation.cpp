@@ -60,6 +60,7 @@ namespace cuda_task_relocation
     checkCudaErrors(cudaMalloc((void**)&rtask.power, sizeof(float) * n_alloc));
 
     checkCudaErrors(cudaMemcpy(rtask.ray, buffer_task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(rtask.power, buffer_task->power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
     task_free(buffer_task);
 
     if (rtask.n_reserved > 100000)
