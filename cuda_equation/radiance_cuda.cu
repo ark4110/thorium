@@ -97,14 +97,6 @@ namespace radiance_equation_cuda
       sync = true;
     }
 
-    if (host_context.ray_power != system->emission_task->rays->power ||
-      host_context.postponed_ray_power != system->postponed_task->rays->power)
-    {
-      host_context.ray_power = system->emission_task->rays->power;
-      host_context.postponed_ray_power = system->postponed_task->rays->power;
-      sync = true;
-    }
-
     if (sync)
       sync_context_to_device(system);
   }
@@ -367,12 +359,10 @@ namespace radiance_equation_cuda
     ctx->postponed_offsets[threadIdx.x + blockIdx.x * blockDim.x] = n_thread_postponed;
   }
   
-  __global__ void postpone_rays(context_t* ctx, int n_rays, const ray_t* rays, ray_t* postponed_ray)
+  __global__ void postpone_rays(context_t* ctx, int n_rays, const ray_t* rays, ray_t* postponed_ray, const float* powers, float* postponed_powers)
   {
     int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
     int n_postponed_offset = ctx->postponed_offsets[ray_idx];
-    const float* raw_powers = ctx->ray_power;
-    float* postponed_raw_powers = ctx->postponed_ray_power;
     const char* hit_descisions = ctx->hit_descision;
 
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
@@ -381,13 +371,13 @@ namespace radiance_equation_cuda
       if (is_postpone_descision(descision))
       {
         postponed_ray[n_postponed_offset] = rays[ray_idx];
-        postponed_raw_powers[n_postponed_offset] = raw_powers[ray_idx];
+        postponed_powers[n_postponed_offset] = powers[ray_idx];
         ++n_postponed_offset;
       }
     }
   }
 
-  __global__ void mesh_absorption(const context_t* ctx, int n_rays, const int* hit_mesh_idx)
+  __global__ void mesh_absorption(const context_t* ctx, int n_rays, const int* hit_mesh_idx, const float* power)
   { 
     int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
@@ -395,7 +385,7 @@ namespace radiance_equation_cuda
       const int mesh_idx = hit_mesh_idx[ray_idx];
       if (mesh_idx >= 0 && ctx->hit_descision[ray_idx] == hit_absorb)
       {
-        atomicAdd(&ctx->mesh_power[mesh_idx], ctx->ray_power[ray_idx]);
+        atomicAdd(&ctx->mesh_power[mesh_idx], power[ray_idx]);
       }
     }
   }
@@ -471,7 +461,8 @@ namespace radiance_equation_cuda
     int n_abosrption_blocks = (n_rays + system->n_tpb - 1) / system->n_tpb;
     mesh_absorption << <32, system->n_tpb>> > (system->device_context
       , n_rays
-      , ray_caster_task->hit_face_idx);
+      , ray_caster_task->hit_face_idx
+      , ray_caster_task->power);
 
     precalc_postpone_offsets << <system->n_postpone_blocks, system->n_tpb>> > (system->device_context, n_rays);
 
@@ -483,7 +474,9 @@ namespace radiance_equation_cuda
         system->device_context
         , n_rays
         , (ray_t*)ray_caster_task->ray // mutated rays
-        , (ray_t*)postponed_task->rays->ray);
+        , (ray_t*)postponed_task->rays->ray
+        , ray_caster_task->power
+        , postponed_task->rays->power);
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
