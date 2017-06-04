@@ -210,7 +210,8 @@ namespace radiance_equation
         const math::triangle_t& face = system->scene->faces[hit_face_idx];
 
         const subject::material_t& material = mesh_material(system->scene, hit_mesh_idx);
-        const subject::optical_properties_t& optical = ray_check_hit_front(ray, face) ? material.front : material.rear;
+        bool hit_front = ray_check_hit_front(ray, face);
+        const subject::optical_properties_t& optical = hit_front ? material.front : material.rear;
 
         const float ray_power = emission_task->rays->power[r];
 
@@ -240,7 +241,7 @@ namespace radiance_equation
 
         case hit_diffuse:
         {
-          math::ray_t reflected = ray_malley_emmit(system->malley_emission, face, ray_caster_task->hit_point[r]);
+          math::ray_t reflected = ray_malley_emmit(system->malley_emission, face, ray_caster_task->hit_point[r], hit_front);
           postpone(system, reflected, ray_power);
         }
         break;

@@ -71,5 +71,5 @@ namespace math
 
   /// @brief Emmit ray from triangle point.
   /// @note Don't use for massive rays emission because face normal rotation matrix must be cached!
-  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin);
+  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin, bool front_side);
 }

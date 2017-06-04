@@ -326,6 +326,8 @@ namespace radiance_equation_cuda
       case hit_diffuse:
       {
         float3 malley_ray = malley_cuda::pick_uniform_ray(ctx);
+        if (!hit_front)
+          malley_ray = cuda_math::invert_z(malley_ray);
         rays[ray_idx] = malley_cuda::ray_malley_emmit(malley_ray, face, hit_point[ray_idx]);
       }
       break;
@@ -469,6 +471,7 @@ namespace radiance_equation_cuda
     // Postpone step    
     thrust::device_ptr<int> postponed_offsets(system->host_context.postponed_offsets);
     const int n_postponed = thrust::reduce(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb);
+    //printf("Postponed %d\n", n_postponed);
     thrust::exclusive_scan(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb, postponed_offsets);
     postpone_rays << <system->n_postpone_blocks, system->n_tpb>> > (
         system->device_context

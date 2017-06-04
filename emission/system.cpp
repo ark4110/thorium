@@ -50,7 +50,6 @@ namespace emission
   {
     int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_input_rays = ray_caster::task_grow(&task->rays, n_rays);
-    int n_total = task->rays->n_tasks;
     return n_input_rays;
   }
 

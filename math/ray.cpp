@@ -100,10 +100,12 @@ namespace math
     return static_cast<ray_malley_emission_impl*>(system)->emmit();
   }
 
-  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin)
+  ray_t ray_malley_emmit(ray_malley_emission* system, const triangle_t& face, const vec3& origin, bool front_side)
   {
     // Pick direction from cosine-weighted distribution
     vec3 malley = ray_malley_emmit(system);
+    if (!front_side)
+      malley.z = -malley.z;
 
     // Store rotation for a given face (from Z axis towards face's normal).
     math::mat33 rotation = pick_face_rotation(face, math::make_vec3(0, 0, 1));
