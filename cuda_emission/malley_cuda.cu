@@ -530,7 +530,7 @@ namespace cuda_malley_emission
     emit_malley_rays << <system->n_mtgp_blocks, threads >> > (system->device_context
       , (ray_t*)task->rays->ray + n_input_rays
       , host_context.mesh_emission
-      , task->rays->power
+      , task->rays->power + n_input_rays
       );
 
     checkCudaErrors(cudaPeekAtLastError());
