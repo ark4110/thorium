@@ -121,7 +121,7 @@ public:
   thermal_solution::task_t* Task;
 };
 
-#ifdef _WIN64
+#if defined _WIN64 || !defined  _WIN32
 typedef ::testing::Types<
   EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
   EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,

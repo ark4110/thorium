@@ -38,7 +38,7 @@ struct EngineType
   static const int RayCasterID = RayCasterTypeID;
 };
 
-#ifdef _WIN64
+#if defined _WIN64 || !defined  _WIN32
 #define RAY_CASTER_SELECTOR RAY_CASTER_OPTIX
 #else
 #define RAY_CASTER_SELECTOR RAY_CASTER_NAIVE_CUDA
