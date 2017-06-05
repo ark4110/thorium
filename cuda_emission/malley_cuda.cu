@@ -259,7 +259,7 @@ namespace cuda_malley_emission
       {
         float area = data.area;
         const subject::material_t& material = materials[mesh_materials[mesh_idx]];
-        float2 potential = area * make_float2(material.front.emissivity, material.rear.emissivity);
+        float2 potential = area * make_float2(material.front.emission.emissivity, material.rear.emission.emissivity);
 
         float T = temperatures[mesh_idx];
         float weight_density = T; // some empirical distribution function of temperature

@@ -106,7 +106,7 @@ namespace form_factors_equation
       const subject::material_t& material = mesh_material(system->scene, m);
       const float T = task->temperatures[m];
       float power = sigma * (T * T * T * T) * system->areas[m];
-      float emission = material.front.emissivity * power + material.rear.emissivity * power;
+      float emission = material.front.emission.emissivity * power + material.rear.emission.emissivity * power;
       task->emission[m] += emission;
       for (int n = 0; n != n_meshes; ++n)
       {

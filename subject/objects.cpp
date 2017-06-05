@@ -159,9 +159,9 @@ namespace subject
     return{ 1.f, 1.f, 1.f, 1.f };
   }
 
-  optical_properties_t black_material()
+  radiance_properties_t black_material()
   {
-    return{ 0.f, 0.f, 1.f, 0.f, 1.f };
+    return{ {0.f, 0.f, 1.f, 0.f}, {1.f} };
   }
 
   shell_properties_t shell_Al()
@@ -173,10 +173,10 @@ namespace subject
     return result;
   }
 
-  optical_properties_t optical_Al()
+  radiance_properties_t optical_Al()
   {
-    optical_properties_t result = black_material();
-    result.emissivity = 0.09f;
+    radiance_properties_t result = black_material();
+    result.emission.emissivity = 0.09f;
     
     return result;
   }
@@ -189,10 +189,10 @@ namespace subject
 
   material_t material_absolute_absorbance()
   {
-    optical_properties_t optical = black_material();
-    optical.absorbance = 1.f;
-    optical.emissivity = 0.f;
-    material_t material = { default_shell_properties(), optical, optical, "absolute_absorbance" };
+    radiance_properties_t radiance = black_material();
+    radiance.optical.absorbance = 1.f;
+    radiance.emission.emissivity = 0.f;
+    material_t material = { default_shell_properties(), radiance, radiance, "absolute_absorbance" };
     return material;
   }
 

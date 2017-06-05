@@ -126,8 +126,8 @@ namespace malley_cpu
       const subject::material_t& material = mesh_material(scene, m);
       const float T = temperatures[m];
       const float density = T; // some empirical distribution function of temperature
-      const float front_density = density * material.front.emissivity;
-      const float rear_density = density * material.rear.emissivity;
+      const float front_density = density * material.front.emission.emissivity;
+      const float rear_density = density * material.rear.emission.emissivity;
 
       const subject::mesh_t& mesh = scene->meshes[m];
       for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
@@ -220,8 +220,8 @@ namespace malley_cpu
       // Mesh radiance properties.
       const float T = task->mesh_temperatures[m];
       const float power_density = sigma * (T * T * T * T);
-      const float front_density = power_density * material.front.emissivity;
-      const float rear_density = power_density * material.rear.emissivity;
+      const float front_density = power_density * material.front.emission.emissivity;
+      const float rear_density = power_density * material.rear.emission.emissivity;
 
       // Emmit rays from each mesh face
       for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)

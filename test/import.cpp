@@ -50,16 +50,16 @@ TEST(ObjImport, ParseMaterials)
   ASSERT_NEAR(2, m.shell.heat_capacity, 0.01);
   ASSERT_NEAR(3, m.shell.thermal_conductivity, 0.01);
   ASSERT_NEAR(4, m.shell.thickness, 0.01);
-  ASSERT_NEAR(1.1, m.front.specular_reflectance, 0.01);
-  ASSERT_NEAR(1.2, m.front.diffuse_reflectance, 0.01);
-  ASSERT_NEAR(1.3, m.front.absorbance, 0.01);
-  ASSERT_NEAR(1.4, m.front.transmittance, 0.01);
-  ASSERT_NEAR(1.5, m.front.emissivity, 0.01);
-  ASSERT_NEAR(2.1, m.rear.specular_reflectance, 0.01);
-  ASSERT_NEAR(2.2, m.rear.diffuse_reflectance, 0.01);
-  ASSERT_NEAR(2.3, m.rear.absorbance, 0.01);
-  ASSERT_NEAR(2.4, m.rear.transmittance, 0.01);
-  ASSERT_NEAR(2.5, m.rear.emissivity, 0.01);
+  ASSERT_NEAR(1.1, m.front.optical.specular_reflectance, 0.01);
+  ASSERT_NEAR(1.2, m.front.optical.diffuse_reflectance, 0.01);
+  ASSERT_NEAR(1.3, m.front.optical.absorbance, 0.01);
+  ASSERT_NEAR(1.4, m.front.optical.transmittance, 0.01);
+  ASSERT_NEAR(1.5, m.front.emission.emissivity, 0.01);
+  ASSERT_NEAR(2.1, m.rear.optical.specular_reflectance, 0.01);
+  ASSERT_NEAR(2.2, m.rear.optical.diffuse_reflectance, 0.01);
+  ASSERT_NEAR(2.3, m.rear.optical.absorbance, 0.01);
+  ASSERT_NEAR(2.4, m.rear.optical.transmittance, 0.01);
+  ASSERT_NEAR(2.5, m.rear.emission.emissivity, 0.01);
 }
 
 TEST(ObjImport, Orbit)
