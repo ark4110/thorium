@@ -68,8 +68,21 @@ namespace subject
   class indexed_walker_t : face_graph_index_t
   {
   public:
+    static int walk_method(const face_graph_index_t* system, face_graph_walker walker, void* param)
+    {
+      return static_cast<const indexed_walker_t*>(system)->walk(walker, param);
+    }
+
+    static void free_data_method(face_graph_index_t* system)
+    {
+      static_cast<indexed_walker_t*>(system)->~indexed_walker_t();
+      free(system);
+    }
+
     indexed_walker_t(const face_t* faces, int n_faces)
     {
+      this->walk_func = &walk_method;
+      this->free_data = &free_data_method;
       build_index(faces, n_faces);
     }
 
@@ -305,13 +318,12 @@ namespace subject
 
   void face_graph_index_free(face_graph_index_t* index)
   {
-    ((indexed_walker_t*)index)->~indexed_walker_t();
-    free(index);
+    index->free_data(index);
   }
 
   int face_graph_walk_index(const face_graph_index_t* index, face_graph_walker walker, void* param)
   {
-    return ((const indexed_walker_t*)index)->walk(walker, param);
+    return index->walk_func(index, walker, param);
   }
 
   int face_walk_graph_indexed(const face_t* faces, int n_faces, face_graph_walker walker, void* param)

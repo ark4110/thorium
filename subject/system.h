@@ -144,6 +144,8 @@ namespace subject
 
   struct face_graph_index_t
   {
+    int(*walk_func)(const face_graph_index_t* system, face_graph_walker walker, void* param);
+    void(*free_data)(face_graph_index_t* system);
   };
 
   face_graph_index_t* face_graph_index_create(const face_t* faces, int n_faces);

@@ -19,9 +19,80 @@
 #include "../math/triangle.h"
 #include "../math/operations.h"
 #include <cstdlib>
+#include <vector>
 
 namespace conductive_equation
 {
+  class edges_cache_t : subject::face_graph_index_t
+  {
+  public:
+    static int walk_method(const face_graph_index_t* system, subject::face_graph_walker walker, void* param)
+    {
+      return static_cast<const edges_cache_t*>(system)->walk(walker, param);
+    }
+
+    static void free_data_method(face_graph_index_t* system)
+    {
+      static_cast<edges_cache_t*>(system)->~edges_cache_t();
+      free(system);
+    }
+
+    edges_cache_t(const int* face2mesh_index, face_graph_index_t* raw_index)
+    {
+      face2mesh = face2mesh_index;
+      this->walk_func = &walk_method;
+      this->free_data = &free_data_method;
+
+      face_graph_walk_index(raw_index, &builder_func, this);
+    }
+
+    static int builder_func(int current_idx, int leaf_idx, int vertex_mapping, bool have_more, void* param)
+    {
+      return static_cast<edges_cache_t*>(param)->build(current_idx, leaf_idx, vertex_mapping);
+    }
+
+    int build(int l, int r, int vertex_mapping)
+    {
+      if (r == -1)
+        return 0;
+
+      if (face2mesh[l] == face2mesh[r])
+        return 0;
+
+      char lp[3];
+      char rp[3];
+      if (math::decode_vertex_mapping(vertex_mapping, lp, rp) < 2)
+        return 0;
+      records.push_back({ l, r, vertex_mapping });
+      return 0;
+    }
+
+    int walk(subject::face_graph_walker walker, void* param) const
+    {
+      int r = 0;
+      for (const auto& record : records)
+        if ((r = walker(record.l, record.r, record.vertex_mapping, true, param)))
+          return r;
+      return 0;
+    }
+
+    const int* face2mesh;
+    struct record_t
+    {
+      int l;
+      int r;
+      int vertex_mapping;
+    };
+    std::vector<record_t> records;
+  };
+
+  subject::face_graph_index_t* face_graph_mesh_edges_cache(const int* face2mesh, subject::face_graph_index_t* raw_index)
+  {
+    subject::face_graph_index_t* index = (subject::face_graph_index_t*)malloc(sizeof(edges_cache_t));
+    new(index)edges_cache_t(face2mesh, raw_index);
+    return index;
+  }
+
   struct cpu_system_t : thermal_equation::system_t
   {
     params_t params;
@@ -72,9 +143,12 @@ namespace conductive_equation
   int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;
-    system->graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
 
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index); 
+    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
+
+    subject::face_graph_index_t* raw_graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
+    system->graph = face_graph_mesh_edges_cache(system->face_to_mesh_index, raw_graph);
+    face_graph_index_free(raw_graph);
 
     system->mesh_centers = (math::vec3*) calloc(scene->n_meshes, sizeof(math::vec3));
     for (int m = 0; m != scene->n_meshes; ++m)
@@ -87,7 +161,7 @@ namespace conductive_equation
   {
     cpu_system_t* system;
     thermal_equation::task_t* task;
-  };  
+  };
 
   int graph_walker(int l, int r, int vertex_mapping, bool have_more, graph_walker_param_t* param)
   {
