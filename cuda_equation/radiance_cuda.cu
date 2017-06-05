@@ -454,13 +454,7 @@ namespace radiance_equation_cuda
       , (float3*)ray_caster_task->hit_point
       , (ray_t*)ray_caster_task->ray);
     
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    ////// Postpone step    
-    
     // Absorption step
-    int n_abosrption_blocks = (n_rays + system->n_tpb - 1) / system->n_tpb;
     mesh_absorption << <32, system->n_tpb>> > (system->device_context
       , n_rays
       , ray_caster_task->hit_face_idx
