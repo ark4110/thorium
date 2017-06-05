@@ -29,7 +29,8 @@
 
 using namespace testing;
 
-const float Accuracy = 0.0025f;
+const float InitialAccuracy = 0.0025f;
+const float CurrentAccuracy = 0.0001f;
 
 template <int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
@@ -145,14 +146,22 @@ TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
   int r = 0;
   r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  for (int step = 1; step < 50; ++step)
+  for (int step = 1; step < 8; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
   r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, InitialAccuracy);
+
+  const float currentEnergy = this->Temperatures[0];
+  for (int step = 1; step < 42; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
 }
 
 TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
@@ -163,7 +172,7 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
   int r = 0;
   r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  for (int step = 1; step < 100; ++step)
+  for (int step = 1; step < 8; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
@@ -172,7 +181,15 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 
   float resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
-  ASSERT_NEAR(1.f, resultEnergy / initialEnergy, Accuracy);
+  ASSERT_NEAR(1.f, resultEnergy / initialEnergy, InitialAccuracy);
+
+  const float currentEnergy = this->Temperatures[0] * this->Scale * this->Scale + this->Temperatures[1];
+  for (int step = 1; step < 42; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+  }
+  resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
+  ASSERT_NEAR(1.f, resultEnergy / currentEnergy, CurrentAccuracy);
 }
 
 TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
@@ -187,14 +204,22 @@ TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
   int r = 0;
   r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  for (int step = 1; step < 50; ++step)
+  for (int step = 1; step < 8; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
   r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, InitialAccuracy);
+
+  const float currentEnergy = this->Temperatures[0];
+  for (int step = 1; step < 42; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
 }
 
 TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
@@ -209,12 +234,20 @@ TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
   int r = 0;
   r = system_set_scene(this->System, &this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  for (int step = 1; step < 50; ++step)
+  for (int step = 1; step < 8; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
   r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, Accuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, InitialAccuracy);
+
+  const float currentEnergy = this->Temperatures[0];
+  for (int step = 1; step < 42; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
 }
