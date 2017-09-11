@@ -22,8 +22,10 @@
 #ifndef __optixu_optixu_vector_types_h__
 #define __optixu_optixu_vector_types_h__
 
+#if !defined(__CUDACC_RTC__)
 #include <limits.h>
 #include <stddef.h>
+#endif
 
 #if defined(__cplusplus)
 

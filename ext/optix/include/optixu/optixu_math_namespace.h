@@ -58,7 +58,7 @@
 #include "optixu_vector_functions.h"
 #include "../optix_sizet.h"
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__CUDACC_RTC__)
 // On posix systems uint and ushort are defined when including this file, so we need to
 // guarantee this file gets included in order to get these typedefs.
 #  include <sys/types.h>
@@ -119,7 +119,7 @@
 
 /******************************************************************************/
 namespace optix {
-#if defined(_WIN32) && !defined(RT_UINT_USHORT_DEFINED)
+#if (defined(_WIN32) && !defined(RT_UINT_USHORT_DEFINED)) || defined(__CUDACC_RTC__)
   // uint and ushort are not already defined on Windows systems or they could have been
   // defined in optixu_math.h.
   typedef unsigned int uint;
@@ -2270,12 +2270,12 @@ using optix::operator==;
 
 /* Some types didn't exist until CUDA 3.0.  CUDA_VERSION isn't defined while
  * building CUDA code, so we also need to check the CUDART_VERSION value. */
-#if (CUDA_VERSION >= 3000) || (CUDART_VERSION >= 3000)
+#if (CUDA_VERSION >= 3000) || (CUDART_VERSION >= 3000) || defined(__CUDACC_RTC__)
 #define RT_DEFINE_HELPER2(type) RT_DEFINE_HELPER(type)
 #else
 #define RT_DEFINE_HELPER2(type) \
-  using ::make_##type##1; \
-  using ::make_##type##2;
+  using optix::make_##type##1; \
+  using optix::make_##type##2;
 #endif
 
 

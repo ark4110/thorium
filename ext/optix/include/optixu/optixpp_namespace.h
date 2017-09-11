@@ -2309,7 +2309,7 @@ namespace optix {
 
   inline void ContextObj::setRayGenerationProgram(unsigned int entry_point_index, Program  program)
   {
-    checkError( rtContextSetRayGenerationProgram( m_context, entry_point_index, program->get() ) );
+    checkError( rtContextSetRayGenerationProgram( m_context, entry_point_index, program ? program->get() : 0 ) );
   }
 
   inline Program ContextObj::getRayGenerationProgram(unsigned int entry_point_index) const
@@ -2322,7 +2322,7 @@ namespace optix {
 
   inline void ContextObj::setExceptionProgram(unsigned int entry_point_index, Program  program)
   {
-    checkError( rtContextSetExceptionProgram( m_context, entry_point_index, program->get() ) );
+    checkError( rtContextSetExceptionProgram( m_context, entry_point_index, program ? program->get() : 0 ) );
   }
 
   inline Program ContextObj::getExceptionProgram(unsigned int entry_point_index) const
@@ -2360,7 +2360,7 @@ namespace optix {
 
   inline void ContextObj::setMissProgram(unsigned int ray_type_index, Program  program)
   {
-    checkError( rtContextSetMissProgram( m_context, ray_type_index, program->get() ) );
+    checkError( rtContextSetMissProgram( m_context, ray_type_index, program ? program->get() : 0 ) );
   }
 
   inline Program ContextObj::getMissProgram(unsigned int ray_type_index) const
@@ -2593,7 +2593,7 @@ namespace optix {
 
   inline void SelectorObj::setVisitProgram(Program program)
   {
-    checkError( rtSelectorSetVisitProgram( m_selector, program->get() ) );
+    checkError( rtSelectorSetVisitProgram( m_selector, program ? program->get() : 0 ) );
   }
 
   inline Program SelectorObj::getVisitProgram() const
@@ -3233,7 +3233,7 @@ namespace optix {
 
   inline void GeometryObj::setBoundingBoxProgram(Program  program)
   {
-    checkError( rtGeometrySetBoundingBoxProgram( m_geometry, program->get() ) );
+    checkError( rtGeometrySetBoundingBoxProgram( m_geometry, program ? program->get() : 0 ) );
   }
 
   inline Program GeometryObj::getBoundingBoxProgram() const
@@ -3245,7 +3245,7 @@ namespace optix {
 
   inline void GeometryObj::setIntersectionProgram(Program  program)
   {
-    checkError( rtGeometrySetIntersectionProgram( m_geometry, program->get() ) );
+    checkError( rtGeometrySetIntersectionProgram( m_geometry, program ? program->get() : 0 ) );
   }
 
   inline Program GeometryObj::getIntersectionProgram() const
@@ -3326,7 +3326,7 @@ namespace optix {
 
   inline void MaterialObj::setClosestHitProgram(unsigned int ray_type_index, Program  program)
   {
-    checkError( rtMaterialSetClosestHitProgram( m_material, ray_type_index, (program.get() != 0 ? program->get() : 0) ) );
+    checkError( rtMaterialSetClosestHitProgram( m_material, ray_type_index, program ? program->get() : 0 ) );
   }
 
   inline Program MaterialObj::getClosestHitProgram(unsigned int ray_type_index) const
@@ -3338,7 +3338,7 @@ namespace optix {
 
   inline void MaterialObj::setAnyHitProgram(unsigned int ray_type_index, Program  program)
   {
-    checkError( rtMaterialSetAnyHitProgram( m_material, ray_type_index, program->get() ) );
+    checkError( rtMaterialSetAnyHitProgram( m_material, ray_type_index, program ? program->get() : 0 ) );
   }
 
   inline Program MaterialObj::getAnyHitProgram(unsigned int ray_type_index) const

@@ -22,7 +22,7 @@
 #ifndef __optix_sizet_h__
 #define __optix_sizet_h__
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__CUDACC_RTC__)
   #include <sys/types.h>
 #endif
 

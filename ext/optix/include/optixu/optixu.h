@@ -21,7 +21,7 @@
  
  /**
  * \file optixu.h
- * \brief Simple API for performing raytracing queries using OptiX or the CPU
+ * \brief Convenience functions for the OptiX API. 
  */
 
 #ifndef __optix_optixu_h__

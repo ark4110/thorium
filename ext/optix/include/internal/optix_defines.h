@@ -87,21 +87,15 @@ namespace optix {
 #define OPTIX_ASM_SIZE_T       "l"
 #define OPTIX_ASM_PTR_SIZE_STR "64"
 #define OPTIX_BITNESS_SUFFIX   "_64"
-namespace optix {
-#if defined( _WIN64 )
-  typedef unsigned __int64   optix_size_t;
-#else
-  typedef unsigned long long optix_size_t;
-#endif
-}
 #else
 #define OPTIX_ASM_PTR          "r"
 #define OPTIX_ASM_SIZE_T       "r"
 #define OPTIX_ASM_PTR_SIZE_STR "32"
 #define OPTIX_BITNESS_SUFFIX   ""
+#endif
+
 namespace optix {
   typedef size_t optix_size_t;
 }
-#endif
 
 #endif /* __optix_optix_defines_h__ */

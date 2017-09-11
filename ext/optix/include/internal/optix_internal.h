@@ -26,7 +26,9 @@
 #include "optix_defines.h"
 #include "../optix_sizet.h"
 
+#if !defined(__CUDACC_RTC__)
 #include <cstdio>
+#endif
 
 struct rtObject;
 

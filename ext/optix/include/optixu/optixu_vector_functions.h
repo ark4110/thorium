@@ -62,7 +62,7 @@ namespace optix {
 
 /* Some types didn't exist until CUDA 3.0.  CUDA_VERSION isn't defined while
  * building CUDA code, so we also need to check the CUDART_VERSION value. */
-#if (CUDA_VERSION >= 3000) || (CUDART_VERSION >= 3000)
+#if (CUDA_VERSION >= 3000) || (CUDART_VERSION >= 3000) || defined(__CUDACC_RTC__)
 #define RT_DEFINE_HELPER2(type) RT_DEFINE_HELPER(type)
 #else
 #define RT_DEFINE_HELPER2(type) \

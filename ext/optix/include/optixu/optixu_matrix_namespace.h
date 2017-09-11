@@ -31,7 +31,6 @@
 #define __optixu_optixu_matrix_namespace_h__
 
 #include "optixu_math_namespace.h"
-#include <assert.h>
 
 // __forceinline__ works in CUDA, VS, and with gcc.  Leave it as a macro in case
 // we need to make this per-platform or we want to switch off inlining globally.
@@ -198,7 +197,6 @@ namespace optix {
   template<unsigned int M, unsigned int N>
   OPTIXU_INLINE RT_HOSTDEVICE float Matrix<M,N>::operator[]( unsigned int i )const
   {
-  assert( i < M*N );
   return m_data[i];
   }
 
