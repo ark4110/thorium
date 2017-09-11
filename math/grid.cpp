@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <float.h>
 #include <string.h>
+#include <stdio.h>
 
 namespace math
 {
