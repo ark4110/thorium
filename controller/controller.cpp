@@ -36,7 +36,7 @@
 
 void PrintUsage()
 {
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]> <rays_count [1000000]> <distant_rays_count [50000]> <step count [1000]> <report interval [1]> <ray_caster type:(cpu/cuda/naive_cpu/naive_cuda/zgrid_cpu/zgrid_cuda/optix)[optix]> <binary output [0]>" << std::endl;
+  std::cout << "Usage: controller <input scene> <input task> <result output [-]>" << std::endl;
 }
 
 
@@ -51,10 +51,6 @@ int main(int argc, char* argv[])
   const char* input_scene = 0;
   const char* input_task = 0;
   const char* result_name = "-";
-  int n_rays = 1000 * 1000;
-  int n_distant_rays = 50000;
-  int n_steps = 10000;
-  float report_interval = 1.f;
 #if !(defined _WIN32 && !defined _WIN64)
   int type = RAY_CASTER_OPTIX;
 #else
@@ -77,44 +73,6 @@ int main(int argc, char* argv[])
     case 3:
       result_name = argv[i];
       break;
-
-    case 4:
-      n_rays = atoi(argv[i]);
-      break;
-
-    case 5:
-      n_distant_rays = atoi(argv[i]);
-      break;
-
-    case 6:
-      n_steps = atoi(argv[i]);
-      break;
-
-    case 7:
-      report_interval = (float)atof(argv[i]);
-      break;
-
-    case 8:
-      if (strcmp("cuda", argv[i]) == 0)
-        type = RAY_CASTER_ZGRID_CUDA;
-      else if (strcmp("cpu", argv[i]) == 0)
-        type = RAY_CASTER_ZGRID_CPU;
-      else if (strcmp("naive_cpu", argv[i]) == 0)
-        type = RAY_CASTER_NAIVE_CPU;
-      else if (strcmp("naive_cuda", argv[i]) == 0)
-        type = RAY_CASTER_NAIVE_CUDA;
-      else if (strcmp("zgrid_cpu", argv[i]) == 0)
-        type = RAY_CASTER_ZGRID_CPU;
-      else if (strcmp("zgrid_cuda", argv[i]) == 0)
-        type = RAY_CASTER_ZGRID_CUDA;
-      else if (strcmp("optix", argv[i]) == 0)
-        type = RAY_CASTER_OPTIX;
-      else
-        return -RAY_CASTER_NOT_SUPPORTED;
-
-    case 9:
-      binary_output = strcmp("1", argv[i]) == 0;
-      break;
     }
   }
 
@@ -134,6 +92,53 @@ int main(int argc, char* argv[])
   }
 
   thermal_solution::task_t* task = thermal_solution::task_create(0);
+  heat_source_equation::params_t heatSourceParams = { 0, 0 };
+  parallel_rays_emission_cpu::params_t exterior_emission_params = {};
+  planet_emission::params_t planet_emission_params = {};
+  thermal_solution::simulation_t simulation_params = {1000000, 1000000, 5.f, 600.f};
+
+  task->time_delta = 0.1f;
+  FILE* task_file = fopen(input_task, "r");
+  if (!task_file)
+  {
+    fprintf(stderr, "Failed to load task '%s'\n", input_task);
+    return -1;
+  }
+  else
+  {
+    r = obj_import::task(task_file, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, &simulation_params);
+    fclose(task_file);
+    if (r < 0)
+    {
+      fprintf(stderr, "Failed to load task '%s'\n", input_task);
+      return r;
+    }
+
+    if (task->current_time == 0)
+    {
+      task->current_time = 1486619909/*(double)time(0)*/;
+      fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
+    }
+    else
+    {
+      fprintf(stderr, "Start time is %lf\n", task->current_time);
+    }
+
+  }
+  int n_rays = simulation_params.n_emission_rays;
+  int n_distant_rays = simulation_params.n_solar_rays;
+  int n_steps = simulation_params.duration / task->time_delta;
+  fprintf(stderr, "Simulation steps count %d\n", n_steps);
+  float report_interval = simulation_params.frame_time_scale;
+  fprintf(stderr, "Frame report interval %f\n", report_interval);
+
+  // Distribute n_rays among all sources
+  float total_power = 0;
+  for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
+    total_power += exterior_emission_params.sources[source_idx].power;
+
+  for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
+    exterior_emission_params.sources[source_idx].n_rays = (int)(exterior_emission_params.sources[source_idx].power * n_distant_rays/ total_power);
 
   ballistics::prediction_t prediction;
   ballistics::system_t* predictor = 0;
@@ -154,51 +159,10 @@ int main(int argc, char* argv[])
   malley_cpu::params_t malley_emission_params;
   malley_emission_params.n_rays = n_rays;
 
-  parallel_rays_emission_cpu::params_t exterior_emission_params = {};
-  planet_emission::params_t planet_emission_params = {};
   planet_emission_params.predictor = predictor;
-
   planet_emission_params.n_rays = n_distant_rays;
   planet_emission_params.n_solar_rays = n_distant_rays;
   planet_emission_params.parallel_rays_emitter_type = EMISSION_PARALLEL_RAYS_CUDA;
-  
-  heat_source_equation::params_t heatSourceParams = { 0, 0 };
-  
-  task->time_delta = 0.1f;
-  FILE* task_file = fopen(input_task, "r");
-  if (!task_file)
-  {
-    fprintf(stderr, "Failed to load task '%s'\n", input_task);
-    return -1;
-  }
-  else
-  {
-    r = obj_import::task(task_file, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params);
-    fclose(task_file);
-    if (r < 0)
-    {
-      fprintf(stderr, "Failed to load task '%s'\n", input_task);
-      return r;
-    }
-
-    if (task->current_time == 0)
-    {
-      task->current_time = 1486619909/*(double)time(0)*/;
-      fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
-    }
-    else
-    {
-      fprintf(stderr, "Start time is %lf\n", task->current_time);
-    }
-
-    // Distribute n_rays among all sources
-    float total_power = 0;
-    for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
-      total_power += exterior_emission_params.sources[source_idx].power;
-
-    for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
-      exterior_emission_params.sources[source_idx].n_rays = (int)(exterior_emission_params.sources[source_idx].power * n_distant_rays / total_power);
-  }
 
   emission::system_t* interior_radiance_emitter = emission::system_create(EMISSION_MALLEY_CUDA, &malley_emission_params);
   if (!interior_radiance_emitter)
@@ -219,7 +183,7 @@ int main(int argc, char* argv[])
 
   if (r < scene->n_meshes)
   {
-    std::cerr << "There are not enough object temperatues defined in task. Initializing to default values." << std::endl;
+    std::cerr << "There are not enough object temperatures defined in task. Initializing to default value 300." << std::endl;
     task->temperatures = (float*)realloc(task->temperatures, scene->n_meshes * sizeof(float));
     for (; r != scene->n_meshes; ++r)
       task->temperatures[r] = 300;
@@ -277,7 +241,7 @@ int main(int argc, char* argv[])
   task->time_delta = 0;
   if (predictor)
     ballistics::predict_orbit(predictor, &prediction);
-  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
+  binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
 
   task->time_delta = temp;
 
@@ -311,7 +275,7 @@ int main(int argc, char* argv[])
       task->time_delta = time - prev_report_time;
       if (predictor)
         ballistics::predict_orbit(predictor, &prediction);
-      binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
+      binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
       
       task->time_delta = temp;
 
@@ -325,7 +289,7 @@ int main(int argc, char* argv[])
     if (predictor)
       ballistics::predict_orbit(predictor, &prediction);
     task->time_delta = time - prev_report_time;
-    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, &prediction);
+    binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
   }
   
   sdkStopTimer(&hTimer);

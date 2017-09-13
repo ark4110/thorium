@@ -48,6 +48,15 @@ namespace thermal_solution
     double current_time;
   };
 
+  /// @brief Simulation parameters.
+  struct simulation_t
+  {
+    int n_emission_rays;
+    int n_solar_rays;
+    float frame_time_scale; ///< Seconds per frame.
+    float duration;
+  };
+
   task_t* task_create(int n_meshes);
   void task_free(task_t* task);
   time_t task_clock(void* task);

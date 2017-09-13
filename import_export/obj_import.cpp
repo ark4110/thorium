@@ -497,7 +497,14 @@ namespace obj_import
   }
 #endif
 
-  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source, planet_emission::params_t* planet_emission_params)
+  int task(FILE* in
+          , int n_meshes
+          , thermal_solution::task_t* t
+          , heat_source_equation::params_t* heat_source
+          , parallel_rays_emission_cpu::params_t* distant_source
+          , planet_emission::params_t* planet_emission_params
+          , thermal_solution::simulation_t* simulation
+  )
   {
     char * line = NULL;
     size_t len = 0;
@@ -511,8 +518,24 @@ namespace obj_import
     {
       switch (line[0])
       {
+      case 'f':
+        if (sscanf(line, "frame_time_scale %f", &simulation->frame_time_scale) == 1)
+        {
+          fprintf(stderr, "Frame time scale %f\n", simulation->frame_time_scale);
+        }
+        else
+        {
+          free(line);
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+        break;
+
       case 'c':
-        if (sscanf(line, "current_time %lf", &t->current_time) != 1)
+        if (sscanf(line, "current_time %lf", &t->current_time) == 1)
+        {
+          fprintf(stderr, "Current time set to %lf\n", t->current_time);
+        }
+        else
         {
           free(line);
           return -OBJ_IMPORT_FORMAT_ERROR;
@@ -525,10 +548,41 @@ namespace obj_import
         break;
 
       case 's':
-        if (sscanf(line, "step %f", &t->time_delta) != 1)
+        if (strncmp(line, "step", 4) == 0)
         {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
+          if (sscanf(line, "step %f", &t->time_delta) == 1)
+          {
+            fprintf(stderr, "Simulation step %f\n", t->time_delta);
+          }
+          else
+          {
+            free(line);
+            return -OBJ_IMPORT_FORMAT_ERROR;
+          }
+        }
+        else if (strncmp(line, "simulation_duration", strlen("simulation_duration")) == 0)
+        {
+          if (sscanf(line, "simulation_duration %f", &simulation->duration) == 1)
+          {
+            fprintf(stderr, "Simulation duration %f seconds\n", simulation->duration);
+          }
+          else
+          {
+            free(line);
+            return -OBJ_IMPORT_FORMAT_ERROR;
+          }
+        }
+        else if (strncmp(line, "solar_rays_count", strlen("solar_rays_count")) == 0)
+        {
+          if (sscanf(line, "solar_rays_count %d", &simulation->n_solar_rays) == 1)
+          {
+            fprintf(stderr, "Solar (distant) rays count %d\n", simulation->n_solar_rays);
+          }
+          else
+          {
+            free(line);
+            return -OBJ_IMPORT_FORMAT_ERROR;
+          }
         }
         break;
 
@@ -568,36 +622,44 @@ namespace obj_import
 
       case 'e':
       {
-        if (!planet_emission_params)
+        if (strncmp(line, "emsplnt", 7) == 0)
         {
-          fprintf(stderr, "Ignored planet emission '%s'\n", line);
+          if (!planet_emission_params)
+          {
+            fprintf(stderr, "Ignored planet emission '%s'\n", line);
+          }
+          else if (sscanf(line, "emsplnt %f %f %f %f %d",
+                            &planet_emission_params->planet_radius,
+                            &planet_emission_params->planet_albedo,
+                            &planet_emission_params->planet_temperature,
+                            &planet_emission_params->solar_flux,
+                            &planet_emission_params->n_subdisivion) == 5)
+          {
+            fprintf(stderr, "Loaded planet emission:\n"
+                            "  radius\t%f\n"
+                            "  albedo\t%f\n"
+                            "  temper\t%f\n"
+                            "  solar\t%f\n"
+                            "  n_subdiv\t%d\n",
+                    planet_emission_params->planet_radius,
+                    planet_emission_params->planet_albedo,
+                    planet_emission_params->planet_temperature,
+                    planet_emission_params->solar_flux,
+                    planet_emission_params->n_subdisivion
+            );
+          }
+          else
+          {
+            fprintf(stderr,
+                    "Failed to parse planet emission format emsplnt planet_radius planet_albedo planet_temperature solar_flux n_subdisivion"
+                            " in:\n  '%s'\n", line);
+            free(line);
+            return -OBJ_IMPORT_FORMAT_ERROR;
+          }
         }
-        else if (sscanf(line, "emsplnt %f %f %f %f %d",
-          &planet_emission_params->planet_radius,
-          &planet_emission_params->planet_albedo,
-          &planet_emission_params->planet_temperature,
-          &planet_emission_params->solar_flux,
-          &planet_emission_params->n_subdisivion) != 5)
+        else if (sscanf(line, "emission_rays_count %d", &simulation->n_emission_rays) != 1)
         {
-          fprintf(stderr, "Failed to parse planet emission format emsplnt planet_radius planet_albedo planet_temperature solar_flux n_subdisivion"
-            " in:\n  '%s'\n", line);
-          free(line);
           return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-        else
-        {
-          fprintf(stderr, "Loaded planet emission:\n"
-            "  radius\t%f\n"
-            "  albedo\t%f\n"
-            "  temper\t%f\n"
-            "  solar\t%f\n"
-            "  n_subdiv\t%d\n",
-            planet_emission_params->planet_radius,
-            planet_emission_params->planet_albedo,
-            planet_emission_params->planet_temperature,
-            planet_emission_params->solar_flux,
-            planet_emission_params->n_subdisivion
-          );
         }
       }
       break;

@@ -56,7 +56,14 @@ namespace obj_import
       [optional] dstsrc Distant (parallel rays) radiocity heat source (W/m^2). dstsrc <power> <x direction> <y direction> <z direction>. Direction of (-1, 0, 0) is like source is left to the scene.
       [optional] htsrc Heat source or sink (W). htsrc <mesh zero-based index> <power>.
   */
-  int task(FILE* in, int n_meshes, thermal_solution::task_t* t, heat_source_equation::params_t* heat_source, parallel_rays_emission_cpu::params_t* distant_source, planet_emission::params_t* planet_emission_params);
+  int task(FILE* in
+          , int n_meshes
+          , thermal_solution::task_t* t
+          , heat_source_equation::params_t* heat_source
+          , parallel_rays_emission_cpu::params_t* distant_source
+          , planet_emission::params_t* planet_emission_params
+          , thermal_solution::simulation_t* simulation
+  );
 
   /**
     @brief Load satellite orbit description.
