@@ -55,6 +55,7 @@ namespace obj_import
       tmprt <mesh temeprature> List of mesh temperatures (K) from first to last.
       [optional] dstsrc Distant (parallel rays) radiocity heat source (W/m^2). dstsrc <power> <x direction> <y direction> <z direction>. Direction of (-1, 0, 0) is like source is left to the scene.
       [optional] htsrc Heat source or sink (W). htsrc <mesh zero-based index> <power>.
+      [optional] emsplnt Planet emission <planet radius(m)> <planet albedo> <planet temperature (K)> <solar flux (W/m^2)> <subdivisions count>
   */
   int task(FILE* in
           , int n_meshes

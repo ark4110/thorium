@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <functional>
 #include <set>
 #include <cstdlib>
 
@@ -506,183 +507,143 @@ namespace obj_import
           , thermal_solution::simulation_t* simulation
   )
   {
-    char * line = NULL;
-    size_t len = 0;
-    size_t read;
-    size_t n = 0;
+    struct action_t
+    {
+      std::function<bool(const char*)> process;
+      std::function<void()> report;
+    };
+
+    std::map<std::string, action_t> actions;
+    actions["frame_time_scale"] = { [&](const char* line) { return sscanf(line, "frame_time_scale %f", &simulation->frame_time_scale) == 1; },
+      [&]() { fprintf(stderr, "Frame time scale %f\n", simulation->frame_time_scale); } };
+
+    actions["current_time"] = { [&](const char* line) { return sscanf(line, "current_time %lf", &t->current_time) == 1; },
+      [&]() { fprintf(stderr, "Current time set to %lf\n", t->current_time); } };
+
+    actions["step"] = { [&](const char* line) { return sscanf(line, "step %f", &t->time_delta) == 1; },
+      [&]() {fprintf(stderr, "Simulation step %f\n", t->time_delta); } };
+
+    actions["simulation_duration"] = { [&](const char* line) { return sscanf(line, "simulation_duration %f", &simulation->duration) == 1; },
+      [&]() { fprintf(stderr, "Simulation duration %f seconds\n", simulation->duration); } };
+
+    actions["solar_rays_count"] = { [&](const char* line) { return sscanf(line, "solar_rays_count %d", &simulation->n_solar_rays) == 1; },
+      [&]() { fprintf(stderr, "Solar (distant) rays count %d\n", simulation->n_solar_rays); } };
+
+    size_t n_meshes_loaded = 0;
     size_t left = 0;
 
+    actions["tmprt"] = { [&](const char* line) {
+      if (left == 0)
+      {
+        left = 8;
+        t->temperatures = (float*)realloc(t->temperatures, (n_meshes_loaded + left) * sizeof(float));
+      }
+      bool result = sscanf(line, "tmprt %f", t->temperatures + (n_meshes_loaded++)) == 1;
+      --n_meshes;
+      --left;
+      return result;
+    },
+        [&]() {} };
+
+    actions["newfrm"] = { [&](const char*) {
+      left += n_meshes_loaded;
+      n_meshes_loaded = 0;
+      return true; },
+      [&]() {}
+    };
+
+    actions["htsrc"] = { [&](const char* line) {
+      heat_source_equation::heat_source_t source;
+
+      if (sscanf(line, "htsrc %d %f", &source.mesh_idx, &source.power) != 2)
+        return false;
+      heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
+      heat_source->sources[heat_source->n_sources++] = source;
+      return true;
+    },
+        [&]() {} };
+
+    actions["emsplnt"] = { [&](const char* line) {
+      if (!planet_emission_params)
+      {
+        fprintf(stderr, "Ignored planet emission '%s'\n", line);
+        return true;
+      }
+
+      return sscanf(line, "emsplnt %f %f %f %f %d",
+        &planet_emission_params->planet_radius,
+        &planet_emission_params->planet_albedo,
+        &planet_emission_params->planet_temperature,
+        &planet_emission_params->solar_flux,
+        &planet_emission_params->n_subdisivion) == 5;
+},
+      [&](){ fprintf(stderr, "Loaded planet emission:\n"
+        "  radius\t%f\n"
+        "  albedo\t%f\n"
+        "  temper\t%f\n"
+        "  solar\t%f\n"
+        "  n_subdiv\t%d\n",
+        planet_emission_params->planet_radius,
+        planet_emission_params->planet_albedo,
+        planet_emission_params->planet_temperature,
+        planet_emission_params->solar_flux,
+        planet_emission_params->n_subdisivion
+      ); }
+    };
+
+    actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "emission_rays_count %d", &simulation->n_emission_rays) == 1; },
+      [&]() { fprintf(stderr, "Emission rays count %d\n", simulation->n_emission_rays); }
+    };
+
+    actions["dstsrc"] = { [&](const char* line) {
+      distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+      parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
+      ++distant_source->n_sources;
+      return sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
+    },
+      [&]() { fprintf(stderr, "Loaded distant rays source with power %f\n", distant_source->sources[distant_source->n_sources - 1].power); }
+    };
+
+    char* line = 0;
+    size_t len = 0;
+    size_t read;
+        
     t->current_time = 0;
-    
+
     while (n_meshes > 0 && (read = getline(&line, &len, in)) != ~size_t(0))
     {
       switch (line[0])
       {
-      case 'f':
-        if (sscanf(line, "frame_time_scale %f", &simulation->frame_time_scale) == 1)
-        {
-          fprintf(stderr, "Frame time scale %f\n", simulation->frame_time_scale);
-        }
-        else
-        {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-        break;
-
-      case 'c':
-        if (sscanf(line, "current_time %lf", &t->current_time) == 1)
-        {
-          fprintf(stderr, "Current time set to %lf\n", t->current_time);
-        }
-        else
-        {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-        break;
-
-      case 'n':
-        left += n;
-        n = 0;
-        break;
-
-      case 's':
-        if (strncmp(line, "step", 4) == 0)
-        {
-          if (sscanf(line, "step %f", &t->time_delta) == 1)
-          {
-            fprintf(stderr, "Simulation step %f\n", t->time_delta);
-          }
-          else
-          {
-            free(line);
-            return -OBJ_IMPORT_FORMAT_ERROR;
-          }
-        }
-        else if (strncmp(line, "simulation_duration", strlen("simulation_duration")) == 0)
-        {
-          if (sscanf(line, "simulation_duration %f", &simulation->duration) == 1)
-          {
-            fprintf(stderr, "Simulation duration %f seconds\n", simulation->duration);
-          }
-          else
-          {
-            free(line);
-            return -OBJ_IMPORT_FORMAT_ERROR;
-          }
-        }
-        else if (strncmp(line, "solar_rays_count", strlen("solar_rays_count")) == 0)
-        {
-          if (sscanf(line, "solar_rays_count %d", &simulation->n_solar_rays) == 1)
-          {
-            fprintf(stderr, "Solar (distant) rays count %d\n", simulation->n_solar_rays);
-          }
-          else
-          {
-            free(line);
-            return -OBJ_IMPORT_FORMAT_ERROR;
-          }
-        }
-        break;
-
-      case 't':
-      { 
-        if (left == 0)
-        {
-          left = 8;
-          t->temperatures = (float*)realloc(t->temperatures, (n + left) * sizeof(float));
-        }
-
-        if (sscanf(line, "tmprt %f", t->temperatures + (n++)) != 1)
-        {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-
-        --n_meshes;
-        --left;
-      }
-      break;
-
-      case 'h':
-      {
-        heat_source_equation::heat_source_t source;
-
-        if (sscanf(line, "htsrc %d %f", &source.mesh_idx, &source.power) != 2)
-        {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-
-        heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
-        heat_source->sources[heat_source->n_sources++] = source;
-      }
-      break;
-
-      case 'e':
-      {
-        if (strncmp(line, "emsplnt", 7) == 0)
-        {
-          if (!planet_emission_params)
-          {
-            fprintf(stderr, "Ignored planet emission '%s'\n", line);
-          }
-          else if (sscanf(line, "emsplnt %f %f %f %f %d",
-                            &planet_emission_params->planet_radius,
-                            &planet_emission_params->planet_albedo,
-                            &planet_emission_params->planet_temperature,
-                            &planet_emission_params->solar_flux,
-                            &planet_emission_params->n_subdisivion) == 5)
-          {
-            fprintf(stderr, "Loaded planet emission:\n"
-                            "  radius\t%f\n"
-                            "  albedo\t%f\n"
-                            "  temper\t%f\n"
-                            "  solar\t%f\n"
-                            "  n_subdiv\t%d\n",
-                    planet_emission_params->planet_radius,
-                    planet_emission_params->planet_albedo,
-                    planet_emission_params->planet_temperature,
-                    planet_emission_params->solar_flux,
-                    planet_emission_params->n_subdisivion
-            );
-          }
-          else
-          {
-            fprintf(stderr,
-                    "Failed to parse planet emission format emsplnt planet_radius planet_albedo planet_temperature solar_flux n_subdisivion"
-                            " in:\n  '%s'\n", line);
-            free(line);
-            return -OBJ_IMPORT_FORMAT_ERROR;
-          }
-        }
-        else if (sscanf(line, "emission_rays_count %d", &simulation->n_emission_rays) != 1)
-        {
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-      }
-      break;
-
-      case 'd':
-      {
-        
-        distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
-        parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
-        ++distant_source->n_sources;
-        if (sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) != 4)
-        {
-          free(line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-      }
-      break;
-
       case '\0':
       case '#':
-      default:
         break;
+
+      default:
+      {
+        if (const char* delim = strchr(line, ' '))
+        {
+          std::string action(line, delim - line);
+          auto found = actions.find(action);
+          if (found != actions.end())
+          {
+            const action_t& action = found->second;
+            if (action.process(line))
+              action.report();
+            else
+            {
+              fprintf(stderr, "Failed to parse line %s.\n", line);
+              free(line);
+              return -OBJ_IMPORT_FILE_ERROR;
+            }
+          }
+          else
+          {
+            fprintf(stderr, "Unknown action in line %s.\n", line);
+          }
+        }
       }
+      break;
+      }      
     }
     free(line);
     
@@ -696,7 +657,7 @@ namespace obj_import
       }
     }
 
-    return (int)n;
+    return (int)n_meshes_loaded;
   }
 
   int orbit(const char* filename, ballistics::tle_orbit_t** target)
