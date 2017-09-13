@@ -432,9 +432,7 @@ namespace obj_import
 
       fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
 
-      if (int r = orbit(library_path.c_str(), &simulation_params->tle_orbit))
-        return false;
-      return true;
+      return orbit(library_path.c_str(), &simulation_params->tle_orbit) == OBJ_IMPORT_OK;
     },
       [&]() {}
     };
