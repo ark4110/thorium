@@ -181,7 +181,7 @@ namespace obj_import
     std::vector<subject::material_t> materials;
     typedef std::map<std::string, int> MaterialMap;
     MaterialMap material2IndexMap;
-    ballistics::tle_orbit_t* tle_orbit = 0;
+    
     std::string str;
     unsigned line = 0;
 
@@ -243,46 +243,6 @@ namespace obj_import
       // Ignore shading smoothing group
       case 's':
         continue;
-
-      case 't':
-      {
-        std::string::size_type pos = str.find_first_of(" \t");
-        if (pos == std::string::npos)
-        {
-          fprintf(stderr, "Failed to parse line %d '%s'\n", line, str.c_str());
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-
-        std::string token = str.substr(0, pos);
-        if (token == "tle_orbit")
-        {
-          std::string library_name = str.substr(10);
-          std::string library_path = library_name;
-
-          if (library_name.find("/\\") > library_name.length())
-          {
-            std::string base_name(filename);
-            size_t dir_pos = base_name.find_last_of("/\\");
-            if (dir_pos < base_name.length())
-              base_name = base_name.substr(0, dir_pos + 1);
-            else
-              base_name = "";
-            std::string library_name = str.substr(10);
-            library_path = base_name + library_name;
-          }
-
-          fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
-
-          if (int r = orbit(library_path.c_str(), &tle_orbit))
-            return r;
-        }
-        else
-        {
-          fprintf(stderr, "Invalid tle orbit token at line %d '%s'\n", line, str.c_str());
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-      }
-        break;
 
       case 'o':
       case 'g':
@@ -374,8 +334,6 @@ namespace obj_import
     subject::scene_t* result = subject::scene_create();
     *scene = result;
 
-    result->tle_orbit = tle_orbit;
-
     // Triangulation to vertices from face indices.
     result->n_faces = (int)faces.size();
     result->faces = (subject::face_t *)malloc(result->n_faces * sizeof(subject::face_t));
@@ -416,97 +374,23 @@ namespace obj_import
 
     return OBJ_IMPORT_OK;
   }
-  /// @note Mindflow mode off
 
-#ifdef _WIN32
-  /// @detail Copy-paste from here https://code.google.com/p/ea-utils/source/browse/trunk/clipper/getline.c
-  /* Read up to (and including) a TERMINATOR from STREAM into *LINEPTR
-  + OFFSET (and null-terminate it). *LINEPTR is a pointer returned from
-  malloc (or NULL), pointing to *N characters of space.  It is realloc'd
-  as necessary.  Return the number of characters read (not including the
-  null terminator), or -1 on error or EOF.  */
-
-  int getstr(char ** lineptr, size_t *n, FILE * stream, char terminator, int offset)
-  {
-    int nchars_avail;             /* Allocated but unused chars in *LINEPTR.  */
-    char *read_pos;               /* Where we're reading into *LINEPTR. */
-    int ret;
-
-    if (!lineptr || !n || !stream)
-      return -1;
-
-    if (!*lineptr)
-    {
-      *n = 64;
-      *lineptr = (char *)malloc(*n);
-      if (!*lineptr)
-        return -1;
-    }
-
-    nchars_avail = (int)(*n - offset);
-    read_pos = *lineptr + offset;
-
-    for (;;)
-    {
-      int c = getc(stream);
-
-      /* We always want at least one char left in the buffer, since we
-      always (unless we get an error while reading the first char)
-      NUL-terminate the line buffer.  */
-
-      if (nchars_avail < 1)
-      {
-        if (*n > 64)
-          *n *= 2;
-        else
-          *n += 64;
-
-        nchars_avail = (int)(*n + *lineptr - read_pos);
-        *lineptr = (char *)realloc(*lineptr, *n);
-        if (!*lineptr)
-          return -1;
-        read_pos = *n - nchars_avail + *lineptr;
-      }
-
-      if (c == EOF || ferror(stream))
-      {
-        /* Return partial line, if any.  */
-        if (read_pos == *lineptr)
-          return -1;
-        else
-          break;
-      }
-
-      *read_pos++ = c;
-      nchars_avail--;
-
-      if (c == terminator)
-        /* Return the line.  */
-        break;
-    }
-
-    /* Done - NUL terminate and return the number of chars read.  */
-    *read_pos = '\0';
-
-    ret = (int)(read_pos - (*lineptr + offset));
-    return ret;
-  }
-
-  size_t getline(char **lineptr, size_t *n, FILE *stream)
-  {
-    return getstr(lineptr, n, stream, '\n', 0);
-  }
-#endif
-
-  int task(FILE* in
-          , int n_meshes
-          , thermal_solution::task_t* t
-          , heat_source_equation::params_t* heat_source
-          , parallel_rays_emission_cpu::params_t* distant_source
-          , planet_emission::params_t* planet_emission_params
-          , thermal_solution::simulation_t* simulation
+  int task(const char* filename
+    , int n_meshes
+    , thermal_solution::task_t* t
+    , heat_source_equation::params_t* heat_source
+    , parallel_rays_emission_cpu::params_t* distant_source
+    , planet_emission::params_t* planet_emission_params
+    , subject::task_t* simulation_params
   )
   {
+    std::ifstream file(filename);
+    if (!file.is_open())
+    {
+      fprintf(stderr, "Task file '%s' not found.\n", filename);
+      return -OBJ_IMPORT_FILE_ERROR;
+    }
+
     struct action_t
     {
       std::function<bool(const char*)> process;
@@ -514,22 +398,51 @@ namespace obj_import
     };
 
     std::map<std::string, action_t> actions;
-    actions["frame_time_scale"] = { [&](const char* line) { return sscanf(line, "frame_time_scale %f", &simulation->frame_time_scale) == 1; },
-      [&]() { fprintf(stderr, "Frame time scale %f\n", simulation->frame_time_scale); } };
+    actions["frame_time_scale"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->frame_time_scale) == 1; },
+      [&]() { fprintf(stderr, "Frame time scale %f\n", simulation_params->frame_time_scale); } };
 
-    actions["current_time"] = { [&](const char* line) { return sscanf(line, "current_time %lf", &t->current_time) == 1; },
+    actions["current_time"] = { [&](const char* line) { return sscanf(line, "%lf", &t->current_time) == 1; },
       [&]() { fprintf(stderr, "Current time set to %lf\n", t->current_time); } };
 
-    actions["step"] = { [&](const char* line) { return sscanf(line, "step %f", &t->time_delta) == 1; },
+    actions["step"] = { [&](const char* line) { return sscanf(line, "%f", &t->time_delta) == 1; },
       [&]() {fprintf(stderr, "Simulation step %f\n", t->time_delta); } };
 
-    actions["simulation_duration"] = { [&](const char* line) { return sscanf(line, "simulation_duration %f", &simulation->duration) == 1; },
-      [&]() { fprintf(stderr, "Simulation duration %f seconds\n", simulation->duration); } };
+    actions["simulation_duration"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->duration) == 1; },
+      [&]() { fprintf(stderr, "Simulation duration %f seconds\n", simulation_params->duration); } };
 
-    actions["solar_rays_count"] = { [&](const char* line) { return sscanf(line, "solar_rays_count %d", &simulation->n_solar_rays) == 1; },
-      [&]() { fprintf(stderr, "Solar (distant) rays count %d\n", simulation->n_solar_rays); } };
+    actions["solar_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_solar_rays) == 1; },
+      [&]() { fprintf(stderr, "Solar (distant) rays count %d\n", simulation_params->n_solar_rays); } };
 
-    size_t n_meshes_loaded = 0;
+    actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_emission_rays) == 1; },
+      [&]() { fprintf(stderr, "Emission rays count %d\n", simulation_params->n_emission_rays); }
+    };
+
+    actions["tle_orbit"] = { [&](const char* line) {
+      std::string library_name = line;
+      std::string library_path = library_name;
+
+      if (library_name.find("/\\") > library_name.length())
+      {
+        std::string base_name(filename);
+        size_t dir_pos = base_name.find_last_of("/\\");
+        if (dir_pos < base_name.length())
+          base_name = base_name.substr(0, dir_pos + 1);
+        else
+          base_name = "";
+        library_path = base_name + library_name;
+      }
+
+      fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
+
+      if (int r = orbit(library_path.c_str(), &simulation_params->tle_orbit))
+        return false;
+      return true;
+    },
+      [&]() {}
+    };
+
+
+    int n_meshes_loaded = 0;
     size_t left = 0;
 
     actions["tmprt"] = { [&](const char* line) {
@@ -538,7 +451,7 @@ namespace obj_import
           left = 8;
           t->temperatures = (float*)realloc(t->temperatures, (n_meshes_loaded + left) * sizeof(float));
         }
-        bool result = sscanf(line, "tmprt %f", t->temperatures + (n_meshes_loaded++)) == 1;
+        bool result = sscanf(line, "%f", t->temperatures + (n_meshes_loaded++)) == 1;
         --n_meshes;
         --left;
         return result;
@@ -557,7 +470,7 @@ namespace obj_import
     actions["htsrc"] = { [&](const char* line) {
         heat_source_equation::heat_source_t source;
 
-        if (sscanf(line, "htsrc %d %f", &source.mesh_idx, &source.power) != 2)
+        if (sscanf(line, "%d %f", &source.mesh_idx, &source.power) != 2)
           return false;
         heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
         heat_source->sources[heat_source->n_sources++] = source;
@@ -572,14 +485,14 @@ namespace obj_import
           return true;
         }
 
-        return sscanf(line, "emsplnt %f %f %f %f %d",
+        return sscanf(line, "%f %f %f %f %d",
           &planet_emission_params->planet_radius,
           &planet_emission_params->planet_albedo,
           &planet_emission_params->planet_temperature,
           &planet_emission_params->solar_flux,
           &planet_emission_params->n_subdisivion) == 5;
       },
-      [&](){ fprintf(stderr, "Loaded planet emission:\n"
+      [&]() { fprintf(stderr, "Loaded planet emission:\n"
         "  radius\t%f\n"
         "  albedo\t%f\n"
         "  temper\t%f\n"
@@ -593,73 +506,47 @@ namespace obj_import
       ); }
     };
 
-    actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "emission_rays_count %d", &simulation->n_emission_rays) == 1; },
-      [&]() { fprintf(stderr, "Emission rays count %d\n", simulation->n_emission_rays); }
-    };
-
     actions["dstsrc"] = { [&](const char* line) {
         distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
         parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
         ++distant_source->n_sources;
-        return sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
+        return sscanf(line, "%f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
       },
       [&]() { fprintf(stderr, "Loaded distant rays source with power %f\n", distant_source->sources[distant_source->n_sources - 1].power); }
     };
 
-    char* line = 0;
-    size_t len = 0;
-    size_t read;
-        
+    std::string line;
+
     t->current_time = 0;
 
-    while (n_meshes > 0 && (read = getline(&line, &len, in)) != ~size_t(0))
+    while (n_meshes > 0 && getline(file, line))
     {
-      switch (line[0])
-      {
-      case '\0':
-      case '#':
-        break;
+      if (line == "" || line[0] == '#')
+        continue;
 
-      default:
+      const char* str = line.c_str();
+      const char* delim = strchr(str, ' ');
+      std::string token = delim ? std::string(str, delim - str) : line;
+      const char* params = delim ? delim + 1 : "";
+
+      auto found = actions.find(token);
+      if (found == actions.end())
       {
-        if (const char* delim = strchr(line, ' '))
-        {
-          std::string action(line, delim - line);
-          auto found = actions.find(action);
-          if (found != actions.end())
-          {
-            const action_t& action = found->second;
-            if (action.process(line))
-              action.report();
-            else
-            {
-              fprintf(stderr, "Failed to parse line %s.\n", line);
-              free(line);
-              return -OBJ_IMPORT_FILE_ERROR;
-            }
-          }
-          else
-          {
-            fprintf(stderr, "Unknown action in line %s.\n", line);
-          }
-        }
+        fprintf(stderr, "Unknown action in line %s.\n", line.c_str());
+        continue;
       }
-      break;
-      }      
-    }
-    free(line);
-    
-    while (!feof(in))
-    {
-      char c = fgetc(in);
-      if (c != '\n' && c != '\r')
+
+      const action_t& action = found->second;
+      if (!action.process(params))
       {
-        ungetc(c, in);
-        break;
+        fprintf(stderr, "Failed to parse line %s.\n", line.c_str());
+        return -OBJ_IMPORT_FILE_ERROR;
       }
+
+      action.report();
     }
 
-    return (int)n_meshes_loaded;
+    return n_meshes_loaded;
   }
 
   int orbit(const char* filename, ballistics::tle_orbit_t** target)

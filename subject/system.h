@@ -97,9 +97,21 @@ namespace subject
     mesh_t* meshes; ///< Meshes array.    
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
-
-    ballistics::tle_orbit_t* tle_orbit;
   };
+
+  /// @brief Simulation task parameters.
+  struct task_t
+  {
+    ballistics::tle_orbit_t* tle_orbit;
+
+    int n_emission_rays;
+    int n_solar_rays;
+    float frame_time_scale; ///< Seconds per frame.
+    float duration;
+  };
+
+  task_t* task_create();
+  void task_free(task_t* task);
 
   /// @brief Allocate memory for scene.
   scene_t* scene_create();

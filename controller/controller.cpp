@@ -95,41 +95,29 @@ int main(int argc, char* argv[])
   heat_source_equation::params_t heatSourceParams = { 0, 0 };
   parallel_rays_emission_cpu::params_t exterior_emission_params = {};
   planet_emission::params_t planet_emission_params = {};
-  thermal_solution::simulation_t simulation_params = {1000000, 1000000, 5.f, 600.f};
+  subject::task_t* simulation_params = subject::task_create();
 
   task->time_delta = 0.1f;
-  FILE* task_file = fopen(input_task, "r");
-  if (!task_file)
+  
+  r = obj_import::task(input_task, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
+  if (r < 0)
+    return r;
+
+  if (task->current_time == 0)
   {
-    fprintf(stderr, "Failed to load task '%s'\n", input_task);
-    return -1;
+    task->current_time = 1486619909/*(double)time(0)*/;
+    fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
   }
   else
   {
-    r = obj_import::task(task_file, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, &simulation_params);
-    fclose(task_file);
-    if (r < 0)
-    {
-      fprintf(stderr, "Failed to load task '%s'\n", input_task);
-      return r;
-    }
-
-    if (task->current_time == 0)
-    {
-      task->current_time = 1486619909/*(double)time(0)*/;
-      fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
-    }
-    else
-    {
-      fprintf(stderr, "Start time is %lf\n", task->current_time);
-    }
-
+    fprintf(stderr, "Start time is %lf\n", task->current_time);
   }
-  int n_rays = simulation_params.n_emission_rays;
-  int n_distant_rays = simulation_params.n_solar_rays;
-  int n_steps = simulation_params.duration / task->time_delta;
+
+  int n_rays = simulation_params->n_emission_rays;
+  int n_distant_rays = simulation_params->n_solar_rays;
+  int n_steps = simulation_params->duration / task->time_delta;
+  float report_interval = simulation_params->frame_time_scale;
   fprintf(stderr, "Simulation steps count %d\n", n_steps);
-  float report_interval = simulation_params.frame_time_scale;
   fprintf(stderr, "Frame report interval %f\n", report_interval);
 
   // Distribute n_rays among all sources
@@ -142,10 +130,10 @@ int main(int argc, char* argv[])
 
   ballistics::prediction_t prediction;
   ballistics::system_t* predictor = 0;
-  if (scene->tle_orbit)
+  if (simulation_params->tle_orbit)
   {
     libpredict_tle::params_t params;
-    params.orbit = *(scene->tle_orbit);
+    params.orbit = *(simulation_params->tle_orbit);
     params.clock = { &thermal_solution::task_clock, task };
     predictor = ballistics::system_create(BALLISTICS_TLE, &params);
 
@@ -299,6 +287,7 @@ int main(int argc, char* argv[])
   if (result_name[0] != '-')
     fclose(result_file);
 
+  subject::task_free(simulation_params);
   thermal_solution::task_free(task);
   thermal_solution::system_free(solution);
   for (int i = 0; i != sizeof(equations) / sizeof(equations[0]); ++i)

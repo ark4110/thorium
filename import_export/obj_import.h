@@ -57,13 +57,13 @@ namespace obj_import
       [optional] htsrc Heat source or sink (W). htsrc <mesh zero-based index> <power>.
       [optional] emsplnt Planet emission <planet radius(m)> <planet albedo> <planet temperature (K)> <solar flux (W/m^2)> <subdivisions count>
   */
-  int task(FILE* in
+  int task(const char* filename
           , int n_meshes
           , thermal_solution::task_t* t
           , heat_source_equation::params_t* heat_source
           , parallel_rays_emission_cpu::params_t* distant_source
           , planet_emission::params_t* planet_emission_params
-          , thermal_solution::simulation_t* simulation
+          , subject::task_t* simulation_params
   );
 
   /**

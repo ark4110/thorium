@@ -43,9 +43,29 @@ namespace subject
         free(scene->meshes[m].name);
       free(scene->meshes);
       free(scene->materials);
-      tle_orbit_free(scene->tle_orbit);
       free(scene);
     }
+  }
+
+  task_t* task_create()
+  {
+    task_t* t = (task_t*)calloc(1, sizeof(task_t));
+    *t = { 0, // orbit
+      1000000, 1000000, // rays_counts
+      1.f, // frame_time_scale
+      60.f // duration
+    };
+
+    return t;
+  }
+
+  void task_free(task_t* task)
+  {
+    if (!task)
+      return;
+    if (task->tle_orbit)
+      tle_orbit_free(task->tle_orbit);
+    free(task);
   }
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh)
