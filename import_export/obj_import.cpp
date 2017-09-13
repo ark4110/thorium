@@ -22,13 +22,11 @@
 #include "../math/operations.h"
 #include <cstring>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
 #include <map>
 #include <functional>
 #include <set>
-#include <cstdlib>
 
 #ifdef _WIN32
 #pragma warning(disable:4996)
