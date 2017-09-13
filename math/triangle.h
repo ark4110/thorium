@@ -93,7 +93,7 @@ namespace math
     @return Count of encoded verticies.
     @todo Support mapping of single vertex.
   */
-  int decode_vertex_mapping(int vertex_mapping, char*lp, char* rp);
+  int decode_vertex_mapping(int vertex_mapping, unsigned char*lp, unsigned char* rp);
 
   /**
     @brief Find adjacent vertices of two triangles.

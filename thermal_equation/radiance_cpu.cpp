@@ -160,7 +160,6 @@ namespace radiance_equation
 
     auto start_ptime = std::chrono::high_resolution_clock().now();
 
-    int n_rays_before_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
     int r = 0;
     for (int e = 0; e != system->params.n_emitters; ++e)
     {
@@ -170,8 +169,6 @@ namespace radiance_equation
     }
     auto emission_ptime = std::chrono::high_resolution_clock().now();
     
-    int n_rays_after_emission = emission_task->rays ? emission_task->rays->n_tasks : 0;
-
     // @todo Is nothing to do ok?
     if (system->emission_task->rays == 0)
       return THERMAL_EQUATION_OK;
@@ -184,10 +181,6 @@ namespace radiance_equation
       return r;
     auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
     
-
-    unsigned n_ray_counter[hit_drop + 1] = {};
-    float ray_power_counter[hit_drop + 2] = {};
-
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
     for (int r = 0; r != n_rays; ++r)

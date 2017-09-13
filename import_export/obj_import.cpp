@@ -176,7 +176,6 @@ namespace obj_import
 
     std::vector<math::vec3> vertices;
     std::vector<idx_face_t> faces;
-    int mesh_start_idx = -1;
     std::vector<subject::mesh_t> meshes;
     std::vector<subject::material_t> materials;
     typedef std::map<std::string, int> MaterialMap;
@@ -508,7 +507,7 @@ namespace obj_import
 
     t->current_time = 0;
     
-    while (n_meshes > 0 && (read = getline(&line, &len, in)) != -1)
+    while (n_meshes > 0 && (read = getline(&line, &len, in)) != ~size_t(0))
     {
       switch (line[0])
       {

@@ -59,8 +59,8 @@ namespace conductive_equation
       if (face2mesh[l] == face2mesh[r])
         return 0;
 
-      char lp[3];
-      char rp[3];
+      unsigned char lp[3];
+      unsigned char rp[3];
       if (math::decode_vertex_mapping(vertex_mapping, lp, rp) < 2)
         return 0;
       records.push_back({ l, r, vertex_mapping });
@@ -174,8 +174,8 @@ namespace conductive_equation
     if (l_mesh_idx == r_mesh_idx)
       return 0;
 
-    char lp[3];
-    char rp[3];
+    unsigned char lp[3];
+    unsigned char rp[3];
     if (math::decode_vertex_mapping(vertex_mapping, lp, rp) < 2)
       return 0;
 
@@ -188,7 +188,6 @@ namespace conductive_equation
     const math::vec3& l_center = mesh_centers[l_mesh_idx];
     float l_dist = norm(median - l_center);
 
-    const subject::face_t& r_face = scene->faces[r];
     const math::vec3& r_center = mesh_centers[r_mesh_idx];
     float r_dist = norm(median - r_center);
 

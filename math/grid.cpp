@@ -187,7 +187,7 @@ namespace math
 
   void report_countour(const rasterizer_countour_t& c, grid_traversal_callback callback, void* param)
   {
-    for (char i = 0; i != c.size; ++i)
+    for (unsigned char i = 0; i != c.size; ++i)
     {
       const boundary_t& b = c.values[i];
       for (int x = b.min; x <= b.max; ++x)
@@ -344,7 +344,6 @@ namespace math
     printf("Subdivision %dx%d\n", optimal.n_x, optimal.n_y);
     grid_2d_index_t* index = grid_make_index(&optimal);
     grid_index_triangles(&optimal, index, triangles, n_triangles);
-    int usage = grid_get_index_usage(index);
     grid_draw_usage_hist(index);
     grid_free_index(index);
   }
@@ -377,7 +376,6 @@ namespace math
   {
     vec3 volume = stat.aabb.max - stat.aabb.min;
     float total_area = volume.x * volume.y;
-    int n_avg_side = sqrtf(total_area / (stat.average_area * 1.5f));
     int n_avg_max_side = sqrtf(grid_rasterizer_countour_buffer_size * total_area / (2.5f * stat.average_area_xy));
     int n_max_side = sqrtf(grid_rasterizer_countour_buffer_size * total_area / (2.5f * stat.max_area_xy));
 

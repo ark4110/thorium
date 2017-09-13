@@ -207,7 +207,6 @@ namespace malley_cpu
 
     // Just syntactic sugar
     subject::scene_t* scene = system->scene;
-    const float* weights = system->face_weights;    
     const int n_meshes = system->scene->n_meshes;
 
     int n_ray = 0;

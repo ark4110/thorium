@@ -135,7 +135,6 @@ public:
   scene_t* MakePerpendicularPlanesScene(math::mat33 rotation)
   {
     int n_faces = 4;
-    float c = 1;
     face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
     faces[0] = make_floor_face1(math::make_vec3(0, 0, 0));
     faces[1] = make_floor_face2(math::make_vec3(0, 0, 0));
@@ -161,7 +160,6 @@ public:
   {
     math::vec3 v[] = { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }, { 0, 0, 1 }, { 1, 0, 1 }, { 1, 1, 1 }, { 0, 1, 1 } };
     int n_faces = 12;
-    int n_meshes = 1;
     face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
     faces[0] = make_face(v[0], v[1], v[2]);
     faces[1] = make_face(v[0], v[3], v[2]);    

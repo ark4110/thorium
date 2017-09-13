@@ -104,7 +104,7 @@ namespace subject
 
       for (int f = 0; f != n_faces; ++f)
       {
-        for (char p = 0; p != 3; ++p)
+        for (unsigned char p = 0; p != 3; ++p)
         {
           int point_idx = index_point(faces[f].points[p]);
           indexed_faces[f].points[p] = point_idx;
@@ -150,7 +150,7 @@ namespace subject
 
       while (fi1 != fe1 && fi2 != fe2 && fi3 != fe3)
       {
-        switch (math::three_way_less_t c = math::three_way_less(fi1->face, fi2->face, fi3->face))
+        switch (math::three_way_less(fi1->face, fi2->face, fi3->face))
         {
         case math::l3w_equal:
           if (f0 < fi1->face)
@@ -247,7 +247,7 @@ namespace subject
 
       while (fi1 != fe1 && fi2 != fe2)
       {
-        switch (math::two_way_less_t c = math::two_way_less(fi1->face, fi2->face))
+        switch (math::two_way_less(fi1->face, fi2->face))
         {
         case math::l2w_first_less:
           ++fi1;
@@ -287,7 +287,7 @@ namespace subject
     struct face_point_t
     {
       int face;
-      char point_index;
+      unsigned char point_index;
 
       bool operator<(const face_point_t& r) const
       {

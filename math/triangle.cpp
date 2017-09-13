@@ -252,7 +252,7 @@ namespace math
 #define DECODE_VERTEX_MAPPING2(l1, l2, r1, r2) lp[0] = l1, lp[1] = l2, rp[0] = r1, rp[1] = r2; return 2; break;
 #define DECODE_VERTEX_MAPPING3(r1, r2, r3) lp[0] = 0, lp[1] = 1, lp[2] = 2, rp[0] = r1, rp[1] = r2, rp[2] = r3; return 3; break;
 
-  int decode_vertex_mapping(int vertex_mapping, char*lp, char* rp)
+  int decode_vertex_mapping(int vertex_mapping, unsigned char*lp, unsigned char* rp)
   {
     switch (vertex_mapping)
     {

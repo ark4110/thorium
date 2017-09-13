@@ -94,8 +94,6 @@ namespace obj_export
     fprintf(out, "current_time %lf\n", task->current_time);
     if (p)
       prediction(out, *p);
-    const float* f = task->temperatures;
-    const subject::mesh_t* m = scene->meshes;
     for (int m = 0; m != scene->n_meshes; ++m)
     {
       float temperature = task->temperatures[m];

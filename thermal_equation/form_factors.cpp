@@ -102,7 +102,6 @@ namespace form_factors_equation
     const int n_meshes = system->scene->n_meshes;
     for (int m = 0; m != n_meshes; ++m)
     {
-      const int material_idx = system->scene->meshes[m].material_idx;
       const subject::material_t& material = mesh_material(system->scene, m);
       const float T = task->temperatures[m];
       float power = sigma * (T * T * T * T) * system->areas[m];

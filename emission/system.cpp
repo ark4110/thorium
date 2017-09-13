@@ -48,16 +48,13 @@ namespace emission
 
   int task_grow(task_t* task, int n_rays)
   {
-    int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_input_rays = ray_caster::task_grow(&task->rays, n_rays);
     return n_input_rays;
   }
 
   int task_reserve(task_t* task, int n_rays)
   {
-    int n_prev_reserved = task->rays ? task->rays->n_reserved : 0;
     int n_current_reserve = ray_caster::task_reserve(&task->rays, n_rays);
-    int n_target_reserve = task->rays->n_tasks + n_rays;
     return n_current_reserve;
   }
 

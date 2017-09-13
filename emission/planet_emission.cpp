@@ -92,7 +92,6 @@ namespace planet_emission
     const params_t& params = system->params;
     int n_elements = (2 * params.n_subdisivion - 1) * (2 * params.n_subdisivion - 1);
     int n_element_rays =  std::max<int>(1, params.n_rays / n_elements);
-    int n_rays = n_element_rays * n_elements;
 
     float inverse_na = 1.f / n_elements;
     
@@ -120,7 +119,6 @@ namespace planet_emission
 
     // Distance to earth
     float R = math::norm(prediction.earth_position);
-    float a = R - Re;
     float R2Re2 = (R * R- Re * Re);
 
     // Local 1-2-3 coordinate system and transformation from attitude coords to local.
@@ -131,7 +129,6 @@ namespace planet_emission
     math::vec3 s = math::normalize(local_transform * (prediction.sun_position - prediction.earth_position));
 
     // Field of satellite view angle
-    float alpha_max = asinf(Re / R);
     float cos_alpha_max = sqrtf(1 - Re * Re / R / R);
     float Amax = float(M_2PI) * (1 - cos_alpha_max);
     float A1 = Amax * inverse_na;

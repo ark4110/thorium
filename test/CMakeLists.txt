@@ -26,6 +26,13 @@ set(SOURCE_FILES
   triangle_math.cpp
     )
 
+
+configure_file(${CMAKE_SOURCE_DIR}/models/parallel_planes.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/parallel_planes.obj)
+configure_file(${CMAKE_SOURCE_DIR}/models/unknown_material.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/unknown_material.obj)
+configure_file(${CMAKE_SOURCE_DIR}/models/test_material.mtl ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_material.mtl)
+configure_file(${CMAKE_SOURCE_DIR}/models/test_material.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_material.obj)
+configure_file(${CMAKE_SOURCE_DIR}/models/zarya.orbit ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/zarya.orbit)
+
 add_executable(tests ${SOURCE_FILES})
 
 target_link_libraries(tests ${GTEST_BOTH_LIBRARIES})
