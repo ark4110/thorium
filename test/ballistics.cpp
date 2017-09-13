@@ -75,8 +75,8 @@ TEST_F(TleBallistics, EarthPositionAtNadirAttitude)
   Create(ATTITUDE_TYPE_NADIR);
   time_t t = time(0);
   ballistics::prediction_t prediction = Predict(t);
-  ASSERT_NEAR(0, prediction.earth_position.x, 2);
-  ASSERT_NEAR(0, prediction.earth_position.y, 2);
+  ASSERT_NEAR(0, prediction.earth_position.x, 5);
+  ASSERT_NEAR(0, prediction.earth_position.y, 5);
 
   ASSERT_LE(prediction.earth_position.z - earth_equatorial_radius, station_apogee);
   ASSERT_GE(prediction.earth_position.z - earth_polar_radius, station_perigee);
