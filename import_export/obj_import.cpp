@@ -533,50 +533,52 @@ namespace obj_import
     size_t left = 0;
 
     actions["tmprt"] = { [&](const char* line) {
-      if (left == 0)
-      {
-        left = 8;
-        t->temperatures = (float*)realloc(t->temperatures, (n_meshes_loaded + left) * sizeof(float));
-      }
-      bool result = sscanf(line, "tmprt %f", t->temperatures + (n_meshes_loaded++)) == 1;
-      --n_meshes;
-      --left;
-      return result;
-    },
-        [&]() {} };
+        if (left == 0)
+        {
+          left = 8;
+          t->temperatures = (float*)realloc(t->temperatures, (n_meshes_loaded + left) * sizeof(float));
+        }
+        bool result = sscanf(line, "tmprt %f", t->temperatures + (n_meshes_loaded++)) == 1;
+        --n_meshes;
+        --left;
+        return result;
+      },
+      [&]() {}
+    };
 
     actions["newfrm"] = { [&](const char*) {
-      left += n_meshes_loaded;
-      n_meshes_loaded = 0;
-      return true; },
+        left += n_meshes_loaded;
+        n_meshes_loaded = 0;
+        return true;
+      },
       [&]() {}
     };
 
     actions["htsrc"] = { [&](const char* line) {
-      heat_source_equation::heat_source_t source;
+        heat_source_equation::heat_source_t source;
 
-      if (sscanf(line, "htsrc %d %f", &source.mesh_idx, &source.power) != 2)
-        return false;
-      heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
-      heat_source->sources[heat_source->n_sources++] = source;
-      return true;
-    },
-        [&]() {} };
+        if (sscanf(line, "htsrc %d %f", &source.mesh_idx, &source.power) != 2)
+          return false;
+        heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
+        heat_source->sources[heat_source->n_sources++] = source;
+        return true;
+      },
+      [&]() {} };
 
     actions["emsplnt"] = { [&](const char* line) {
-      if (!planet_emission_params)
-      {
-        fprintf(stderr, "Ignored planet emission '%s'\n", line);
-        return true;
-      }
+        if (!planet_emission_params)
+        {
+          fprintf(stderr, "Ignored planet emission '%s'\n", line);
+          return true;
+        }
 
-      return sscanf(line, "emsplnt %f %f %f %f %d",
-        &planet_emission_params->planet_radius,
-        &planet_emission_params->planet_albedo,
-        &planet_emission_params->planet_temperature,
-        &planet_emission_params->solar_flux,
-        &planet_emission_params->n_subdisivion) == 5;
-},
+        return sscanf(line, "emsplnt %f %f %f %f %d",
+          &planet_emission_params->planet_radius,
+          &planet_emission_params->planet_albedo,
+          &planet_emission_params->planet_temperature,
+          &planet_emission_params->solar_flux,
+          &planet_emission_params->n_subdisivion) == 5;
+      },
       [&](){ fprintf(stderr, "Loaded planet emission:\n"
         "  radius\t%f\n"
         "  albedo\t%f\n"
@@ -596,11 +598,11 @@ namespace obj_import
     };
 
     actions["dstsrc"] = { [&](const char* line) {
-      distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
-      parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
-      ++distant_source->n_sources;
-      return sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
-    },
+        distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+        parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
+        ++distant_source->n_sources;
+        return sscanf(line, "dstsrc %f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
+      },
       [&]() { fprintf(stderr, "Loaded distant rays source with power %f\n", distant_source->sources[distant_source->n_sources - 1].power); }
     };
 
