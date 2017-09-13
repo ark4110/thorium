@@ -44,8 +44,8 @@ namespace subject
   {
     float specular_reflectance;
     float diffuse_reflectance;
-    float absorbance; ///< Êîýôôèöèåíò ïîãëîùåíèÿ (rus.)
-    float transmittance; ///< The ratio of the light energy falling on a body to that transmitted through it. Êîýôôèöèåíò ïðîïóñêàíèÿ (rus.)
+    float absorbance; ///< ÐšÐ¾ÑÑ„Ñ„Ð¸Ñ†Ð¸ÐµÐ½Ñ‚ Ð¿Ð¾Ð³Ð»Ð¾Ñ‰ÐµÐ½Ð¸Ñ (rus.)
+    float transmittance; ///< The ratio of the light energy falling on a body to that transmitted through it. ÐšÐ¾ÑÑ„Ñ„Ð¸Ñ†Ð¸ÐµÐ½Ñ‚ Ð¿Ñ€Ð¾Ð¿ÑƒÑÐºÐ°Ð½Ð¸Ñ (rus.)
   };
 
   /// @brief Properties of material that influence outgoing radiation
