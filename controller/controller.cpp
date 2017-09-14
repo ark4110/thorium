@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
   fprintf(stderr, "Simulation steps count %d\n", n_steps);
   fprintf(stderr, "Frame report interval %f\n", report_interval);
 
-  // Distribute n_rays among all sources
+  // Distribute n_rays among all distant sources
   float total_power = 0;
   for (int source_idx = 0; source_idx != exterior_emission_params.n_sources; ++source_idx)
     total_power += exterior_emission_params.sources[source_idx].power;
@@ -159,6 +159,13 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  emission::system_t* exterior_radiance_emitter = exterior_emission_params.n_sources > 0 ? emission::system_create(EMISSION_PARALLEL_RAYS_CUDA, &exterior_emission_params) : 0;
+  if (!exterior_radiance_emitter)
+  {
+    std::cerr << "Failed to create exterior emitter" << std::endl;
+    return 1;
+  }
+
   emission::system_t* planet_emitter = 0;
   if (planet_emission_params.n_subdisivion > 0 && !predictor)
   {
@@ -189,6 +196,13 @@ int main(int argc, char* argv[])
     emitters[radiance_params.n_emitters] = planet_emitter;
     ++radiance_params.n_emitters;
   }
+
+  if (exterior_radiance_emitter)
+  {
+    emitters[radiance_params.n_emitters] = exterior_radiance_emitter;
+    ++radiance_params.n_emitters;
+  }
+
   radiance_params.ray_caster = caster;
   radiance_equation::stats_t radiance_stats;
   radiance_params.stats = &radiance_stats;
