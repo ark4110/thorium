@@ -255,6 +255,16 @@ namespace
 
 namespace math
 {
+  static const float precision = 0.00001f;
+  bool near_enough(const vec3& a, const vec3& b)
+  {
+    vec3 diff = abs(a - b);
+    if (diff < make_vec3(precision, precision, precision))
+      return true;
+    vec3 scale = max(abs(a), abs(b));
+    return diff < scale * precision;
+  }
+
   bool operator < (const vec3& l, const vec3& r)
   {
     return !FloatingPoint<float>(l.x).AlmostEquals(FloatingPoint<float>(r.x)) ? l.x < r.x :

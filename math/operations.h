@@ -179,12 +179,8 @@ namespace math
   }
 
   /// @brief Checks for vector equality.
-  inline bool near_enough(vec3 a, vec3 b)
-  {
-    vec3 dist = a - b;
-    return dot(dist, dist) < _FLT_EPSILON;
-  }
-
+  bool near_enough(const vec3& a, const vec3& b);
+  
   /// @brief Union of two aabb (aabb to containing both aabb).
   inline aabb_t operator+(const aabb_t& l, const aabb_t& r)
   {
