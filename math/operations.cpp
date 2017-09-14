@@ -38,7 +38,7 @@ namespace math
   bool near_enough(const vec3& a, const vec3& b)
   {
     vec3 diff = abs(a - b);
-    if (diff < make_vec3(precision, precision, precision))
+    if (mod_less(diff, make_vec3(precision, precision, precision)))
       return true;
     vec3 scale = max(abs(a), abs(b));
     return mod_less(diff, scale * precision);
