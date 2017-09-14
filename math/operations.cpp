@@ -30,18 +30,11 @@ namespace math
     return diff < scale * precision;
   }
 
-  bool mod_less(const vec3& a, const vec3& b)
-  {
-    return a.x < b.x && a.y < b.y && a.z < b.z;
-  }
-
   bool near_enough(const vec3& a, const vec3& b)
   {
-    vec3 diff = abs(a - b);
-    if (mod_less(diff, make_vec3(precision, precision, precision)))
-      return true;
-    vec3 scale = max(abs(a), abs(b));
-    return mod_less(diff, scale * precision);
+    return near_enough(a.x, b.x) &&
+           near_enough(a.y, b.y) &&
+           near_enough(a.z, b.z);
   }
 
   bool operator < (const vec3& l, const vec3& r)
