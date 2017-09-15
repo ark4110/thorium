@@ -52,6 +52,8 @@ namespace obj_import
     std::string str;
     unsigned line = 0;
 
+    std::map<std::string, bool> known_unknown_attributes;
+
     while (getline(file, str))
     {
       ++line;
@@ -124,7 +126,12 @@ namespace obj_import
           MaterialPropertiesMap::const_iterator found = materialProperties.find(propertyName);
           if (found == materialProperties.end())
           {
-            fprintf(stderr, "Skip unknown material property '%s' at line %d\n", propertyName.c_str(), line);
+            bool& known = known_unknown_attributes[propertyName];
+            if (!known)
+            {
+              known = true;
+              fprintf(stderr, "Skip unknown material property '%s'. First at line %d\n", propertyName.c_str(), line);
+            }
             continue;
           }
 
