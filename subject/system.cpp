@@ -173,11 +173,11 @@ namespace subject
     return SCENE_ENGINE_OK;
   }
 
-  /*void host_scene_sort_geometry_groups(scene_t* scene)
+  void host_scene_sort_geometry_groups(scene_t* scene)
   {
     if (!scene->animation)
       return;
-  }*/
+  }
 
   int host_scene_relocate(scene_t* scene, int device)
   {

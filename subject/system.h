@@ -194,7 +194,7 @@ namespace subject
   int host_scene_relocate(scene_t* scene, int device);
 
   /**
-    @brief Sort geomtery in order:
+    @brief Sort geometry in order:
       1. Make sure meshes does not overlap with animation groups.
       2. Not animated geometry goes first.
       3. Animated geometry goes in order of animation groups.
