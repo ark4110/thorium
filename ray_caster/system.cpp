@@ -21,7 +21,6 @@
 
 #include "system.h"
 #include "naive_cpu.h"
-#include "zgrid_cpu.h"
 #include "../cuda_ray_caster/cuda_system.h"
 #include "../optix_ray_caster/optix_system.h"
 #include <stdlib.h>
@@ -189,12 +188,6 @@ namespace ray_caster
       return RAY_CASTER_NAIVE_CPU;      
       break;
 
-    case RAY_CASTER_ZGRID_CUDA:
-      fprintf(stderr, "No CUDA detected. Fallback ray caster to CPU.\n");
-    case RAY_CASTER_ZGRID_CPU:    
-      return RAY_CASTER_ZGRID_CPU;
-      break;
-
     case RAY_CASTER_OPTIX:
 #if !defined _WIN32 || defined _WIN64
       return RAY_CASTER_OPTIX;
@@ -224,14 +217,6 @@ namespace ray_caster
 
     case RAY_CASTER_NAIVE_CUDA:
       system = naive_cuda_ray_caster::system_create();
-      break;
-
-    case RAY_CASTER_ZGRID_CPU:
-      system = ray_caster_zgrid_cpu::system_create();
-      break;
-
-    case RAY_CASTER_ZGRID_CUDA:
-      system = zgrid_cuda_ray_caster::system_create();
       break;
 
     case RAY_CASTER_OPTIX:

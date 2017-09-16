@@ -48,7 +48,7 @@ public:
   system_t* System;
 };
 
-typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>, EngineType<RAY_CASTER_ZGRID_CPU>, EngineType<RAY_CASTER_ZGRID_CUDA>
+typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>
 #if defined _WIN64 || !defined  _WIN32
   , EngineType<RAY_CASTER_OPTIX>
 #endif

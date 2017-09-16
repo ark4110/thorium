@@ -64,49 +64,6 @@ namespace naive_cuda_ray_caster
   __global__ void cast_scene_faces_with_reduction(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, vec3* points);
 }
 
-namespace zgrid_cuda_ray_caster
-{
-  typedef float3 vec3;
-
-  struct face_t
-  {
-    vec3 points[3];
-  };
-
-  struct ray_t
-  {
-    vec3 origin;
-    vec3 direction;
-  };
-
-  struct grid_cell_t
-  {
-    int count;
-    int offset;
-  };
-
-  struct grid_t
-  {
-    vec3 base;
-    vec3 side;
-    vec3 size;
-    int n_x;
-    int n_y;
-    grid_cell_t* cells;
-    int* triangles;
-  };
-
-  /**
-  * @brief Cast rays on scene with n_faces.
-  * @param[in] faces[in] Array of faces.
-  * @param[in] n_faces[in] Number of faces in faces array.
-  * @param[in] rays Array of rays (kernel determines needed ray by blockIdx.x)
-  * @param[out] indices Array of intersection results with each face (-1 if no intersection or face index in faces array if intersected).
-  * @param[out] points Array of intersection points for each face in faces array.
-  */
-  __global__ void cast_scene(const face_t* faces, int n_faces, const grid_t* grid, const ray_t* rays, int n_rays, int* indices, vec3* points);
-}
-
 namespace cuda_math
 {
   typedef float3 vec3;

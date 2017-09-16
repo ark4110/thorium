@@ -123,7 +123,7 @@ namespace ray_caster
     /// @brief Checks system consistency and prepare scene for ray casting.
     int(*prepare)(system_t* system);
 
-    /// @brief Casts rays of given task task for prepared scene.
+      /// @brief Casts rays of given task task for prepared scene.
     /// @note Task's rays, rays hit faces indices and points are prepared by callee.
     int(*cast)(system_t* system, task_t* task);
 
@@ -137,8 +137,6 @@ namespace ray_caster
 
   #define RAY_CASTER_NAIVE_CPU 0
   #define RAY_CASTER_NAIVE_CUDA 1
-  #define RAY_CASTER_ZGRID_CPU 2
-  #define RAY_CASTER_ZGRID_CUDA 3
   #define RAY_CASTER_OPTIX 4
   #define RAY_CASTER_SYSTEMS_COUNT 5
 

@@ -255,7 +255,6 @@ int main(int argc, char* argv[])
   }
   else
   {
-    systemsToCheck[RAY_CASTER_ZGRID_CUDA] = 1;
     systemsToCheck[RAY_CASTER_OPTIX] = 1; 
   }
 
@@ -330,9 +329,6 @@ int main(int argc, char* argv[])
       n_rays = 100 * ss->n_faces;
       scene = (scene_t*)ss;
     }*/
-    
-    if (systemsToCheck[RAY_CASTER_ZGRID_CPU] || systemsToCheck[RAY_CASTER_ZGRID_CUDA])
-      math::grid_draw_hist(1024, scene->faces, scene->n_faces);
     
     printf("Generating %d collapsing rays...\n", n_rays);
     task_t* baseTask = MakeCollapsingRays(n_rays, radius, generator);    
