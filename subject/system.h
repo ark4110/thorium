@@ -87,6 +87,22 @@ namespace subject
     return{ first_idx, n_faces, material_idx };
   }
 
+  struct face_group_t
+  {
+    int n_start;
+    int n_length;
+  };
+
+  struct animation_t
+  {
+    int n_groups;
+    int n_frames;
+    float frame_time_step;
+    face_group_t* groups;
+    math::vec3 * translations; // n_frames x n_groups
+    math::mat33* rotations; // n_frames x n_groups
+  };
+
   /// @brief Scene representation.
   /// @note Must be binary compatible with ray caster scene.
   struct scene_t
@@ -97,6 +113,7 @@ namespace subject
     mesh_t* meshes; ///< Meshes array.    
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
+    animation_t* animation;
   };
 
   /// @brief Simulation task parameters.
@@ -109,6 +126,9 @@ namespace subject
     float frame_time_scale; ///< Seconds per frame.
     float duration;
   };
+
+  animation_t* animation_create(int n_groups, int n_frames);
+  void animation_free(animation_t* animation);
 
   task_t* task_create();
   void task_free(task_t* task);

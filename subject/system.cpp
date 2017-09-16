@@ -43,8 +43,30 @@ namespace subject
         free(scene->meshes[m].name);
       free(scene->meshes);
       free(scene->materials);
+      animation_free(scene->animation);
       free(scene);
     }
+  }
+
+  animation_t* animation_create(int n_groups, int n_frames)
+  {
+    animation_t* anim = (animation_t*)calloc(1, sizeof(animation_t));
+    anim->n_groups = n_groups;
+    anim->n_frames = n_frames;
+    anim->groups = (face_group_t*)malloc(n_groups * sizeof(face_group_t));
+    anim->translations = (math::vec3*)malloc(n_groups * n_frames * sizeof(math::vec3));
+    anim->rotations = (math::mat33*)malloc(n_groups * n_frames * sizeof(math::mat33));
+    return anim;
+  }
+
+  void animation_free(animation_t* anim)
+  {
+    if (!anim)
+      return;
+    free(anim->groups);
+    free(anim->translations);
+    free(anim->rotations);
+    free(anim);
   }
 
   task_t* task_create()
