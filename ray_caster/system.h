@@ -40,10 +40,8 @@ namespace ray_caster
 
     // @todo Move methods to separate table
     void(*free_data)(task_t*);
-    int(*grow)(task_t*, int addition);
-    
-    /// @detail  Looks useless but it is not. It allows to preserve knowledge about specific allocation.
-    int(*relocate)(task_t*, int device);
+    int(*grow)(task_t*, int addition);    
+    int(*relocate)(task_t*, int device); /// @detail Looks useless but it is not. It allows to preserve knowledge about specific allocation.
 
     int n_tasks;
     int n_reserved;

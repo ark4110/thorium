@@ -21,6 +21,8 @@
 
 namespace cuda_math
 {
+  typedef float3 vec3;
+
   struct face_t
   {
     float3 points[3];

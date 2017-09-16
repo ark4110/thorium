@@ -19,33 +19,61 @@
 */
 
 #include "system.h"
+#include "../math/operations.h"
 #include "../math/triangle.h"
+#include "../math/mat.h"
 #include <stdlib.h>
+#include <cstdio>
 
 namespace subject
 {
+  void host_scene_free_data(scene_t* scene)
+  {
+    free(scene->faces);
+    for (int m = 0; m != scene->n_meshes; ++m)
+      free(scene->meshes[m].name);
+    free(scene->meshes);
+    free(scene->materials);
+
+    if (scene->face_areas)
+      free(scene->face_areas);
+    if (scene->face_normals)
+      free(scene->face_normals);
+    if (scene->face_to_mesh)
+      free(scene->face_to_mesh);
+    if (scene->face_animation_group)
+      free(scene->face_animation_group);
+    if (scene->mesh_material)
+      free(mesh_material);
+
+    if (scene->base_faces)
+      free(scene->base_faces);
+
+    animation_free(scene->animation);
+  }
+  
+  void scene_free(scene_t* scene)
+  {
+    if (!scene)
+      return;
+    if (scene->free_data)
+      scene->free_data(scene);
+    free(scene);
+  }
+
   scene_t* scene_create()
   {
-    scene_t* s = (scene_t*)malloc(sizeof(scene_t));
-    *s = { 0, 0 // faces
-      , 0, 0 // materials
-      , 0, 0 // meshes
-    };
+    scene_t* s = (scene_t*)calloc(1, sizeof(scene_t));
+    s->free_data = &host_scene_free_data;
+    s->relocate = &host_scene_relocate;
+    s->set_frame = &host_scene_set_frame;
+    s->n_current_frame = -1;
     return s;
   }
 
-  void scene_free(scene_t* scene)
+  int scene_set_frame(scene_t* scene, int n_frame)
   {
-    if (scene)
-    {
-      free(scene->faces);
-      for (int m = 0; m != scene->n_meshes; ++m)
-        free(scene->meshes[m].name);
-      free(scene->meshes);
-      free(scene->materials);
-      animation_free(scene->animation);
-      free(scene);
-    }
+    return scene->set_frame(scene, n_frame);
   }
 
   animation_t* animation_create(int n_groups, int n_frames)
@@ -85,9 +113,169 @@ namespace subject
   {
     if (!task)
       return;
-    if (task->tle_orbit)
-      tle_orbit_free(task->tle_orbit);
+    
+    tle_orbit_free(task->tle_orbit);
+
     free(task);
+  }
+
+  int host_scene_finalize(scene_t* scene)
+  { 
+    host_scene_sort_geometry_groups(scene);
+
+    build_faces_areas(scene, &scene->face_areas);
+    build_face_normals(scene, &scene->face_normals);
+    build_face_to_mesh_index(scene, &scene->face_to_mesh);    
+    build_face_animation_group_index(scene, &scene->face_animation_group);
+    build_mesh_material_index(scene, &scene->mesh_material);
+
+    if (scene->animation && scene->animation->groups)
+    {
+      scene->base_faces = (face_t*)malloc(scene->n_faces * sizeof(face_t));
+      memcpy(scene->base_faces, scene->faces, scene->n_faces * sizeof(face_t));
+      if (int r = scene->set_frame(scene, 0))
+        return r;
+    }
+
+    return SCENE_ENGINE_OK;
+  }
+
+  int host_scene_set_frame(scene_t* scene, int n_frame)
+  {
+    if (!scene->animation)
+      return SCENE_ENGINE_OK;
+
+    if (scene->n_current_frame == n_frame)
+      return SCENE_ENGINE_OK;
+
+    const animation_t* anim = scene->animation;
+    if (n_frame >= anim->n_frames)
+      return -SCENE_ENGINE_FRAME_OUT_OF_RANGE;
+
+    math::vec3* face_normals = scene->face_normals;
+    const math::vec3* translation = &anim->translations[n_frame * anim->n_groups];
+    const math::mat33* rotation = &anim->rotations[n_frame * anim->n_groups];
+    face_t* source = scene->base_faces;
+    face_t* target = scene->faces;
+    for (int g = 0; g != anim->n_groups; ++g)
+    {
+      const face_group_t& group = anim->groups[g];
+      for (int f = group.n_offset; f != group.n_offset + group.n_length; ++f)
+      {
+        for (int i = 0; i != 3; ++i)
+          target[f].points[i] = rotation[g] * source[f].points[i] + translation[g];
+        face_normals[f] = normalize(triangle_normal(target[f]));
+      }
+    }
+
+    scene->n_current_frame = n_frame;
+
+    return SCENE_ENGINE_OK;
+  }
+
+  /*void host_scene_sort_geometry_groups(scene_t* scene)
+  {
+    if (!scene->animation)
+      return;
+  }*/
+
+  int host_scene_relocate(scene_t* scene, int device)
+  {
+    if (device == -1)
+      return SCENE_ENGINE_OK;
+    else
+      return -SCENE_ENGINE_NOT_SUPPORTED;
+  }
+
+  namespace subject_engine_host
+  {
+    struct system_t : subject::system_t
+    {
+    };
+
+    int init(system_t* system)
+    {
+      return SCENE_ENGINE_OK;
+    }
+
+    int shutdown(system_t* system)
+    {
+      return SCENE_ENGINE_OK;
+    }
+
+    int create_scene(system_t* system, scene_t** target)
+    {
+      *target = scene_create();
+      return SCENE_ENGINE_OK;
+    }
+
+    int finalize_scene(system_t* system, scene_t* scene)
+    {
+      return host_scene_finalize(scene);
+    }
+
+    /// @brief Creates virtual methods table from local methods.
+    const subject::system_methods_t methods =
+    {
+      (int(*)(subject::system_t* system))&init,
+      (int(*)(subject::system_t* system))&shutdown,
+      (int(*)(subject::system_t* system, subject::scene_t** scene))&create_scene,
+      (int(*)(subject::system_t* system, subject::scene_t* scene))&finalize_scene,
+    };
+
+    /// @brief Creates base system for ray caster.
+    subject::system_t* system_create()
+    {
+      system_t* s = (system_t*)calloc(1, sizeof(system_t));
+      s->methods = &methods;
+      return s;
+    }
+  }
+
+  system_t* system_create(int type)
+  {
+    system_t* system = 0;
+    switch (type)
+    {
+    case SCENE_ENGINE_HOST:
+      system = subject_engine_host::system_create();
+      break;
+
+    default:
+      fprintf(stderr, "Unknown engine system type %d.\n", type);
+    }
+
+    if (system)
+      system_init(system);
+
+    return system;
+  }
+
+  void system_free(system_t* system)
+  {
+    if (system)
+      system_shutdown(system);
+    free(system);
+  }
+
+  int system_init(system_t* system)
+  {
+    return system->methods->init(system);
+  }
+
+  int system_shutdown(system_t* system)
+  {
+    return system->methods->shutdown(system);
+  }
+
+  int system_create_scene(system_t* system, scene_t** scene)
+  {
+    return system->methods->create_scene(system, scene);
+  }
+
+  int system_finalize_scene(system_t* system, scene_t* scene)
+  {
+    return system->methods->finalize_scene(system, scene);
   }
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh)
@@ -149,6 +337,49 @@ namespace subject
       {
         (*index)[mesh.first_idx + f] = m;
       }
+    }
+  }
+
+  void build_face_to_mesh_index(const scene_t* scene, int** index)
+  {
+    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, index);
+  }
+
+  void build_face_normals(const scene_t* scene, math::vec3** normals)
+  {
+    if (!normals)
+      *normals = (math::vec3*)malloc(scene->n_faces * sizeof(math::vec3));
+    
+    for (int f = 0; f != scene->n_faces; ++f)
+      (*normals)[f] = normalize(triangle_normal(scene->faces[f]));
+  }
+
+  void build_mesh_material_index(const scene_t* scene, int** index)
+  {
+    free(*index);
+    *index = (int*)malloc(scene->n_meshes * sizeof(int));
+    for (int m = 0; m != scene->n_meshes; ++m)
+    {
+      (*index)[m] = scene->meshes[m].material_idx;
+    }
+  }
+
+  void build_face_animation_group_index(const scene_t* scene, int** index)
+  {
+    if (!scene->animation)
+      return;
+    const int n_first_animated_face = scene->animation->groups[0].n_offset;
+    const int n_animated_faces = scene->n_faces - n_first_animated_face;
+
+    if (!*index)
+      *index = (int*)malloc(n_animated_faces * sizeof(int));
+
+    const animation_t* animation = scene->animation;
+    for (int g = 0; g != animation->n_groups; ++g)
+    {
+      const face_group_t& group = animation->groups[g];
+      for (int i = 0; i != group.n_length; ++i)
+        (*index)[group.n_offset + i - n_first_animated_face] = g;
     }
   }
 

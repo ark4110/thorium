@@ -237,8 +237,6 @@ namespace ray_caster
   const char* system_names[RAY_CASTER_SYSTEMS_COUNT + 1] = {
     "naive cpu",
     "naive cuda",
-    "zgrid cpu",
-    "zgrid cuda",
     "optix",
     "unknown"
   };
@@ -254,8 +252,6 @@ namespace ray_caster
   const char* system_ids[RAY_CASTER_SYSTEMS_COUNT + 1] = {
     "naive_cpu",
     "naive_cuda",
-    "zgrid_cpu",
-    "zgrid_cuda",
     "optix",
     "unknown"
   };

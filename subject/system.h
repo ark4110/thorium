@@ -51,7 +51,7 @@ namespace subject
   /// @brief Properties of material that influence outgoing radiation
   struct emission_properties_t
   {
-    float emissivity; ///< emissivity coefficient - effectiveness in emiitting eneryy as thermal radiation
+    float emissivity; ///< emissivity coefficient - effectiveness in emitting energy as thermal radiation
   };
 
   struct radiance_properties_t
@@ -87,9 +87,14 @@ namespace subject
     return{ first_idx, n_faces, material_idx };
   }
 
+  /**
+    @detail Must be sorted by offset.
+    @detail Not animated geometry must be placed first, i.e. assert(first_animated_face_idx == animation->groups[0].n_offset).
+    @todo Ensure that data is properly prepared in system_finalize_scene().
+  */
   struct face_group_t
   {
-    int n_start;
+    int n_offset;
     int n_length;
   };
 
@@ -103,8 +108,10 @@ namespace subject
     math::mat33* rotations; // n_frames x n_groups
   };
 
-  /// @brief Scene representation.
-  /// @note Must be binary compatible with ray caster scene.
+  /**
+    @brief Scene representation.
+    @note Must be binary compatible with ray caster scene.
+  */
   struct scene_t
   {
     int n_faces; ///< Total number of polygons.
@@ -114,6 +121,19 @@ namespace subject
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
     animation_t* animation;
+    int n_current_frame;
+
+    void(*free_data)(scene_t*);
+    int(*relocate)(scene_t*, int device);
+    int(*set_frame)(scene_t*, int n_frame);
+
+    float* face_areas;
+    math::vec3* face_normals;    
+    int* face_to_mesh; ///< Face to its mesh index.
+    int* face_animation_group; ///< Index of face animation group.
+    int* mesh_material; ///< Mesh material index without indirection.
+
+    face_t* base_faces; ///< Faces without transformation applied.
   };
 
   /// @brief Simulation task parameters.
@@ -127,17 +147,59 @@ namespace subject
     float duration;
   };
 
+#define SCENE_ENGINE_HOST 0
+#define SCENE_ENGINE_CUDA 1
+
+  struct system_t
+  {
+    const struct system_methods_t* methods;
+  };
+
+#define SCENE_ENGINE_OK    0
+#define SCENE_ENGINE_ERROR 600
+#define SCENE_ENGINE_NOT_SUPPORTED 601
+#define SCENE_ENGINE_FRAME_OUT_OF_RANGE 602
+#define SCENE_ENGINE_PROTOCOL_VIOLATION 603
+
+  struct system_methods_t
+  {
+    int(*init)(system_t* system);
+    int(*shutdown)(system_t* system);
+    int(*create_scene)(system_t* system, scene_t** scene);
+    int(*finalize_scene)(system_t* system, scene_t* scene);
+  };
+
+  system_t* system_create(int type);
+  void system_free(system_t* system);
+  int system_init(system_t* system);
+  int system_shutdown(system_t* system);
+  int system_create_scene(system_t* system, scene_t** scene);
+  int system_finalize_scene(system_t* system, scene_t* scene);
+
   animation_t* animation_create(int n_groups, int n_frames);
   void animation_free(animation_t* animation);
 
   task_t* task_create();
   void task_free(task_t* task);
 
-  /// @brief Allocate memory for scene.
+  /// @depricated Use scene engine to create and finalize scene
   scene_t* scene_create();
 
-  /// @brief Free memory for scene.
-  void scene_free(scene_t* s);
+  void scene_free(scene_t* scene);
+  int scene_set_frame(scene_t* scene, int n_frame);
+
+  void host_scene_free_data(scene_t* scene);
+  int host_scene_finalize(scene_t* scene);
+  int host_scene_set_frame(scene_t* scene, int n_frame);
+  int host_scene_relocate(scene_t* scene, int device);
+
+  /**
+    @brief Sort geomtery in order:
+      1. Make sure meshes does not overlap with animation groups.
+      2. Not animated geometry goes first.
+      3. Animated geometry goes in order of animation groups.
+  */
+  void host_scene_sort_geometry_groups(scene_t* scene);
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh);
   float mesh_area(const scene_t* scene, int mesh_idx);
@@ -154,6 +216,17 @@ namespace subject
   /// @brief Build face to mesh index.
   /// @detail Reallocate target index array memory.
   void build_face_to_mesh_index(int n_faces, int n_meshes, const mesh_t* meshes, int** index);
+  void build_face_to_mesh_index(const scene_t* scene, int** index);
+
+  /// @brief Build face normalized normals.
+  /// @detail Reallocate target index array memory.
+  void build_face_normals(const scene_t* scene, math::vec3** normals);
+
+  /// @brief Build mesh idx to scene material index (get rid of one level of indirection).
+  /// @detail Reallocate target index array memory.
+  void build_mesh_material_index(const scene_t* scene, int** index);
+
+  void build_face_animation_group_index(const scene_t* scene, int** index);
 
   const material_t& mesh_material(const scene_t* scene, int mesh_idx);
 
