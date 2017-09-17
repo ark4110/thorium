@@ -91,9 +91,9 @@ namespace radiance_equation_cuda
     if (host_context.n_rays_alloc < n_rays)
     {
       host_context.n_rays_alloc = align_rays_count(n_rays);
-      if (host_context.hit_descision)
-        cudaFree(host_context.hit_descision);
-      checkCudaErrors(cudaMalloc(&host_context.hit_descision, sizeof(char) * host_context.n_rays_alloc));
+      if (host_context.hit_decision)
+        cudaFree(host_context.hit_decision);
+      checkCudaErrors(cudaMalloc(&host_context.hit_decision, sizeof(char) * host_context.n_rays_alloc));
       sync = true;
     }
 
@@ -269,7 +269,7 @@ namespace radiance_equation_cuda
     hit_missed = 5
   };
 
-  __device__ hit_decision make_hit_descision(context_t* ctx, const subject::optical_properties_t& optical)
+  __device__ hit_decision make_hit_decision(context_t* ctx, const subject::optical_properties_t& optical)
   {
     curandStateMtgp32* HSGenDescision = &ctx->HSGenDescision[blockIdx.x];
     float hit_dice = curand_uniform(HSGenDescision);
@@ -287,16 +287,16 @@ namespace radiance_equation_cuda
       return hit_drop;
   }
 
-  __global__ void make_ray_descisions(context_t* ctx, int n_rays, int* hit_face_idx, const float3* hit_point, ray_t* rays)
+  __global__ void make_ray_decisions(context_t* ctx, int n_rays, int* hit_face_idx, const float3* hit_point, ray_t* rays)
   {
-    char* hit_descisions = ctx->hit_descision;
+    char* hit_decisions = ctx->hit_decision;
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
       const int face_idx = hit_face_idx[ray_idx];
       if (face_idx < 0)
       {
-        hit_descisions[ray_idx] = hit_missed;
+        hit_decisions[ray_idx] = hit_missed;
         continue;
       }
 
@@ -310,10 +310,10 @@ namespace radiance_equation_cuda
       const subject::material_t& material = ctx->materials[ctx->mesh_materials[mesh_idx]];
       const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
-      hit_decision decision = make_hit_descision(ctx, optical);
+      hit_decision decision = make_hit_decision(ctx, optical);
       const float3 point = hit_point[ray_idx];
 
-      hit_descisions[ray_idx] = decision;
+      hit_decisions[ray_idx] = decision;
       switch (decision)
       {
       case hit_absorb:
@@ -342,20 +342,20 @@ namespace radiance_equation_cuda
     }
   }
 
-  inline __device__ bool is_postpone_descision(char descision)
+  inline __device__ bool is_postpone_decision(char decision)
   {
-    return descision == hit_reflect || descision == hit_diffuse || descision == hit_transmit;
+    return decision == hit_reflect || decision == hit_diffuse || decision == hit_transmit;
   }
 
   __global__ void precalc_postpone_offsets(context_t* ctx, int n_rays)
   {
-    const char* hit_descisions = ctx->hit_descision;
+    const char* hit_decisions = ctx->hit_decision;
     int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
     int n_thread_postponed = 0;
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
-      char descision = hit_descisions[ray_idx];
-      if (is_postpone_descision(descision))
+      char decision = hit_decisions[ray_idx];
+      if (is_postpone_decision(decision))
         ++n_thread_postponed;
     }
     ctx->postponed_offsets[threadIdx.x + blockIdx.x * blockDim.x] = n_thread_postponed;
@@ -365,12 +365,12 @@ namespace radiance_equation_cuda
   {
     int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
     int n_postponed_offset = ctx->postponed_offsets[ray_idx];
-    const char* hit_descisions = ctx->hit_descision;
+    const char* hit_decisions = ctx->hit_decision;
 
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
-      const char descision = hit_descisions[ray_idx];
-      if (is_postpone_descision(descision))
+      const char decision = hit_decisions[ray_idx];
+      if (is_postpone_decision(decision))
       {
         postponed_ray[n_postponed_offset] = rays[ray_idx];
         postponed_powers[n_postponed_offset] = powers[ray_idx];
@@ -385,7 +385,7 @@ namespace radiance_equation_cuda
     for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
     {
       const int mesh_idx = hit_mesh_idx[ray_idx];
-      if (mesh_idx >= 0 && ctx->hit_descision[ray_idx] == hit_absorb)
+      if (mesh_idx >= 0 && ctx->hit_decision[ray_idx] == hit_absorb)
       {
         atomicAdd(&ctx->mesh_power[mesh_idx], power[ray_idx]);
       }
@@ -448,7 +448,7 @@ namespace radiance_equation_cuda
     prepare_context(system, n_rays);
     cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
     
-    make_ray_descisions << <system->n_mtgp_blocks, 256 >> > (system->device_context
+    make_ray_decisions << <system->n_mtgp_blocks, 256 >> > (system->device_context
       , n_rays
       , ray_caster_task->hit_face_idx
       , (float3*)ray_caster_task->hit_point

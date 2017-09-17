@@ -42,7 +42,7 @@ namespace radiance_equation_cuda
 
     // Per step vars
     int n_rays_alloc;
-    char* hit_descision;
+    char* hit_decision;
     int* postponed_offsets;
   };
   
