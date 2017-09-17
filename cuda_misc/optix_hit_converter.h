@@ -37,14 +37,15 @@ namespace optix_hit_converter
   {
     int optix_buffer_type;
 
-    ray_caster::face_t* host_faces;
-    void* device_faces;
+    int convert_block_size;
+
+    subject::scene_t* scene;
 
     int n_hits;
     optix_hit_t* hits;
   };
 
-  state_t* state_init(const subject::scene_t* scene, bool force_cpu);
+  state_t* state_init(subject::scene_t* scene, bool force_cpu);
   void state_free(state_t* state);
 
   int state_prepare(state_t* state, ray_caster::task_t* task);

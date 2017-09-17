@@ -89,6 +89,9 @@ namespace cuda_scene_engine
       int n_animated_faces = source->n_faces - n_first_animated_face;
       checkCudaErrors(cudaMalloc((void**)&target->face_animation_group, sizeof(int) * n_animated_faces));
       checkCudaErrors(cudaMemcpy(target->face_animation_group, source->face_animation_group, sizeof(int) * n_animated_faces, cudaMemcpyHostToDevice));
+
+      checkCudaErrors(cudaMalloc((void**)&target->base_faces, sizeof(subject::face_t) * source->n_faces));
+      checkCudaErrors(cudaMemcpy(target->base_faces, source->base_faces, sizeof(subject::face_t) * source->n_faces, cudaMemcpyHostToDevice));
     }
 
     checkCudaErrors(cudaMalloc((void**)&target->face_areas, sizeof(float) * source->n_faces));
@@ -102,9 +105,6 @@ namespace cuda_scene_engine
 
     checkCudaErrors(cudaMalloc((void**)&target->mesh_material, sizeof(int) * source->n_meshes));
     checkCudaErrors(cudaMemcpy(target->mesh_material, source->mesh_material, sizeof(int) * source->n_meshes, cudaMemcpyHostToDevice));
-
-    checkCudaErrors(cudaMalloc((void**)&target->base_faces, sizeof(subject::face_t) * source->n_faces));
-    checkCudaErrors(cudaMemcpy(target->base_faces, source->base_faces, sizeof(subject::face_t) * source->n_faces, cudaMemcpyHostToDevice));
 
     *static_cast<subject::scene_t*>(scene) = *target;
     scene->n_current_device = device;

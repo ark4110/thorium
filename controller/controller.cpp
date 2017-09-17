@@ -33,12 +33,12 @@
 #include <helper_timer.h>
 #include <iostream>
 #include <cstring>
+#include <time.h>
 
 void PrintUsage()
 {
   std::cout << "Usage: controller <input scene> <input task> <result output [-]>" << std::endl;
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -84,10 +84,29 @@ int main(int argc, char* argv[])
   }
 
   int r = 0;
-  subject::scene_t* scene = 0;
-  if ((r = obj_import::scene(input_scene, &scene)) != OBJ_IMPORT_OK)
+  subject::system_t* scene_engine = subject::system_create(SCENE_ENGINE_CUDA);
+  if (!scene_engine)
   {
-    std::cerr << "Failed to load scene " << input_scene << std::endl;
+    fprintf(stderr, "Failed to create cuda scene engine\n");
+    return 1;
+  }
+
+  subject::scene_t* scene = 0;
+  if ((r = system_create_scene(scene_engine, &scene)) != SCENE_ENGINE_OK)
+  {
+    fprintf(stderr, "Failed to create scene with error code %d\n", r);
+    return r;
+  }
+
+  if ((r = obj_import::scene(input_scene, scene)) != OBJ_IMPORT_OK)
+  {
+    fprintf(stderr, "Failed to load scene %s with error code %d", input_scene, r);
+    return r;
+  }
+
+  if ((r = system_finalize_scene(scene_engine, scene)) != SCENE_ENGINE_OK)
+  {
+    fprintf(stderr, "Failed to finalize scene with error code %d\n", r);
     return r;
   }
 
@@ -104,13 +123,22 @@ int main(int argc, char* argv[])
     return r;
 
   if (task->current_time == 0)
-  {
-    task->current_time = 1486619909/*(double)time(0)*/;
-    fprintf(stderr, "Using current time %lf as start time\n", task->current_time);
+  { 
+    task->current_time = 1486619909;
+
+    time_t t = (time_t)task->current_time;
+    char human_time[256];
+    strftime(human_time, sizeof(human_time), "%c", localtime(&t));
+
+    fprintf(stderr, "Using fixed datetime %s (%lf) as start time\n", human_time, task->current_time);
   }
   else
   {
-    fprintf(stderr, "Start time is %lf\n", task->current_time);
+    time_t t = (time_t)task->current_time;
+    char human_time[256];
+    strftime(human_time, sizeof(human_time), "%c", localtime(&t));
+
+    fprintf(stderr, "Start time is %s (%lf)\n", human_time, task->current_time);
   }
 
   int n_rays = simulation_params->n_emission_rays;
@@ -160,7 +188,7 @@ int main(int argc, char* argv[])
   }
 
   emission::system_t* exterior_radiance_emitter = exterior_emission_params.n_sources > 0 ? emission::system_create(EMISSION_PARALLEL_RAYS_CUDA, &exterior_emission_params) : 0;
-  if (!exterior_radiance_emitter)
+  if (exterior_emission_params.n_sources > 0 && !exterior_radiance_emitter)
   {
     std::cerr << "Failed to create exterior emitter" << std::endl;
     return 1;
@@ -308,6 +336,8 @@ int main(int argc, char* argv[])
     thermal_equation::system_free(equations[i]);
   emission::system_free(interior_radiance_emitter);
   ray_caster::system_free(caster);
+  scene_free(scene);
+  system_free(scene_engine);
   
 	return 0;
 }

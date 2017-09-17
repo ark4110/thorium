@@ -31,15 +31,17 @@ using math::vec3;
 using math::make_vec3;
 using namespace testing;
 
-template <int EngineTypeID>
-struct EngineType
+template <int SceneEngineID, int EmissionEngineTypeID>
+struct BasicConfig
 {
-  static const int ID = EngineTypeID;
+  static const int SceneID = SceneEngineID;
+  static const int EmissionID = EmissionEngineTypeID;
 };
 
-template <int EquationEngineTypeID, int EmissionEngineTypeID, int RayCasterEngineTypeID>
+template <int SceneEngineID, int EquationEngineTypeID, int EmissionEngineTypeID, int RayCasterEngineTypeID>
 struct EnginesConfig
 {
+  static const int SceneEngine = SceneEngineID;
   static const int Equation = EquationEngineTypeID;
   static const int Emission = EmissionEngineTypeID;
   static const int RayCaster = RayCasterEngineTypeID;
@@ -51,11 +53,13 @@ class MalleyEmission : public Test
 public:
   MalleyEmission()
   {
+    SceneSystem = subject::system_create(EngineType::SceneID);
+
     malley_cpu::params_t params;
     params.n_rays = 1;
-    Emitter = emission::system_create(EngineType::ID, &params);
+    Emitter = emission::system_create(EngineType::EmissionID, &params);
     
-    Scene = ToSubjectScene(MakeFloorScene());
+    Scene = ToSubjectScene(MakeFloorScene(SceneSystem));
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
 
@@ -66,13 +70,15 @@ public:
   {
     system_free(Emitter);
     scene_free(Scene);
+    system_free(SceneSystem);
   }
 
+  subject::system_t* SceneSystem;
   emission::system_t* Emitter;
   subject::scene_t* Scene;
 };
 
-typedef ::testing::Types<EngineType<EMISSION_MALLEY_CPU>, EngineType<EMISSION_MALLEY_CUDA>> MalleyEmissionTypes;
+typedef ::testing::Types<BasicConfig<SCENE_ENGINE_HOST, EMISSION_MALLEY_CPU>, BasicConfig<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CUDA>> MalleyEmissionTypes;
 
 TYPED_TEST_CASE(MalleyEmission, MalleyEmissionTypes);
 
@@ -155,11 +161,14 @@ public:
 
   float GetTemperatureDiff()
   {
+    auto scene_engine = subject::system_create(EnginesConfig::SceneEngine);
     auto caster = ray_caster::system_create(EnginesConfig::RayCaster);
 
-    auto scene = ToSubjectScene(MakeFloorScene());
+    auto scene = ToSubjectScene(MakeFloorScene(scene_engine));
     AddMaterial(scene, subject::material_absolute_absorbance());
     AddMesh(scene, { 0, 2, 0 });
+
+    system_finalize_scene(scene_engine, scene);
 
     parallel_rays_emission_cpu::params_t emitterParams;
     emitterParams.n_sources = SourcesCount;
@@ -195,6 +204,7 @@ public:
     system_free(emitter);
     system_free(caster);
     scene_free(scene);
+    system_free(scene_engine);
 
     return temperatureDiff;
   }
@@ -214,13 +224,13 @@ typedef ::testing::Types<
   //EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_PARALLEL_RAYS_CUDA, RAY_CASTER_OPTIX>,
   //EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_OPTIX>,
 #if defined _WIN64 || !defined  _WIN32
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_OPTIX>
+  EnginesConfig<SCENE_ENGINE_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_OPTIX>
 #else
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_NAIVE_CPU>
+  EnginesConfig<SCENE_ENGINE_HOST, THERMAL_EQUATION_RADIANCE_CPU, EMISSION_PARALLEL_RAYS_CPU, RAY_CASTER_NAIVE_CPU>
 #endif
 > ParallelEmissionConfigs;
 
-typedef ::testing::Types<EngineType<EMISSION_PARALLEL_RAYS_CPU>, EngineType<EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
+typedef ::testing::Types<BasicConfig<SCENE_ENGINE_HOST, EMISSION_PARALLEL_RAYS_CPU>, BasicConfig<SCENE_ENGINE_CUDA, EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
 
 TYPED_TEST_CASE(ParallelEmission, ParallelEmissionConfigs);
 
@@ -269,6 +279,8 @@ class PlanetEmission : public Test
 public:
   PlanetEmission(float planet_albedo, float planet_temperature, float planet_radius, float solar_flux, int n_solar_rays)
   {
+    SceneSystem = subject::system_create(EngineType::SceneID);
+
     planet_emission::params_t params = {};
 
     params.planet_albedo = planet_albedo;
@@ -284,11 +296,11 @@ public:
     params.n_subdisivion = 30;
     params.n_rays = 10000;
     params.n_solar_rays = n_solar_rays;
-    params.parallel_rays_emitter_type = EngineType::ID;
+    params.parallel_rays_emitter_type = EngineType::EmissionID;
 
     Emitter = emission::system_create(EMISSION_PLANET_CPU, &params);
 
-    Scene = ToSubjectScene(MakeFloorScene());
+    Scene = ToSubjectScene(MakeFloorScene(SceneSystem));
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
 
@@ -299,6 +311,7 @@ public:
   {
     system_free(Emitter);
     scene_free(Scene);
+    system_free(SceneSystem);
   }
 
   static ballistics::prediction_t static_predictor(void* coords)
@@ -338,6 +351,7 @@ public:
     return flux;
   }
 
+  subject::system_t* SceneSystem;
   emission::system_t* Emitter;
   subject::scene_t* Scene;
   ballistics::prediction_t Prediction;

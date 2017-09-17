@@ -25,32 +25,36 @@ using math::vec3;
 using math::make_vec3;
 using namespace testing;
 
-template <int EngineTypeID>
-struct EngineType
+template <int SceneEngineTypeID, int RayCasterEngineTypeID>
+struct EngineConfig
 {
-  static const int ID = EngineTypeID;
+  static const int SceneID = SceneEngineTypeID;
+  static const int RayCasterID = RayCasterEngineTypeID;
 };
 
-template <typename EngineType>
+template <typename EngineConfig>
 class RayCaster : public Test
 {
 public:
   RayCaster()
   {
-    System = system_create(EngineType::ID);
+    SceneSystem = subject::system_create(EngineConfig::SceneID);
+    System = system_create(EngineConfig::RayCasterID);
   }
 
   ~RayCaster()
   {
     system_free(this->System);
+    system_free(this->SceneSystem);
   }
  
+  subject::system_t* SceneSystem;
   system_t* System;
 };
 
-typedef ::testing::Types<EngineType<RAY_CASTER_NAIVE_CPU>, EngineType<RAY_CASTER_NAIVE_CUDA>
+typedef ::testing::Types<EngineConfig<SCENE_ENGINE_HOST, RAY_CASTER_NAIVE_CPU>, EngineConfig<SCENE_ENGINE_CUDA, RAY_CASTER_NAIVE_CPU>, EngineConfig<SCENE_ENGINE_CUDA, RAY_CASTER_NAIVE_CUDA>
 #if defined _WIN64 || !defined  _WIN32
-  , EngineType<RAY_CASTER_OPTIX>
+  , EngineConfig<SCENE_ENGINE_CUDA, RAY_CASTER_OPTIX>
 #endif
 > RayCasterTypes;
 TYPED_TEST_CASE(RayCaster, RayCasterTypes);
@@ -63,14 +67,14 @@ TYPED_TEST(RayCaster, MemoryManagementIsCorrect)
 
 TYPED_TEST(RayCaster, AcceptEmptyScene)
 {
-  subject::scene_t* emptyScence = MakeEmptyScene();
+  subject::scene_t* emptyScence = MakeEmptyScene(this->SceneSystem);
   ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, emptyScence));
   scene_free(emptyScence);
 }
 
 TYPED_TEST(RayCaster, AcceptFloorScene)
 {
-  subject::scene_t* floorScene = MakeFloorScene();
+  subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
   ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, floorScene));
   scene_free(floorScene);
 }
@@ -82,8 +86,8 @@ TYPED_TEST(RayCaster, PrepareFailsForNoScene)
 
 TYPED_TEST(RayCaster, AcceptConsequencesSetScene)
 {
-  subject::scene_t* scene1 = MakeFloorScene();
-  subject::scene_t* scene2 = MakeFloorScene();
+  subject::scene_t* scene1 = MakeFloorScene(this->SceneSystem);
+  subject::scene_t* scene2 = MakeFloorScene(this->SceneSystem);
   ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, scene1));
   ASSERT_EQ(RAY_CASTER_OK, system_set_scene(this->System, scene2));
   scene_free(scene1);
@@ -92,7 +96,7 @@ TYPED_TEST(RayCaster, AcceptConsequencesSetScene)
 
 TYPED_TEST(RayCaster, PrepareFailsForEmptyScene)
 {
-  subject::scene_t* emptyScence = MakeEmptyScene();
+  subject::scene_t* emptyScence = MakeEmptyScene(this->SceneSystem);
   system_set_scene(this->System, emptyScence);
   ASSERT_EQ(-RAY_CASTER_ERROR, system_prepare(this->System));
   scene_free(emptyScence);
@@ -100,7 +104,7 @@ TYPED_TEST(RayCaster, PrepareFailsForEmptyScene)
 
 TYPED_TEST(RayCaster, PreparePassForNotEmptyScene)
 {
-  subject::scene_t* floorScene = MakeFloorScene();
+  subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
   system_set_scene(this->System, floorScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
   scene_free(floorScene);
@@ -108,7 +112,7 @@ TYPED_TEST(RayCaster, PreparePassForNotEmptyScene)
 
 TYPED_TEST(RayCaster, ProcessAllRays)
 {
-  subject::scene_t* floorScene = MakeFloorScene();
+  subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
 
   system_set_scene(this->System, floorScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -136,7 +140,7 @@ TYPED_TEST(RayCaster, ProcessAllRays)
 
 TYPED_TEST(RayCaster, JustWorks)
 {
-  subject::scene_t* floorScene = MakeFloorScene();
+  subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
 
   system_set_scene(this->System, floorScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -160,7 +164,7 @@ TYPED_TEST(RayCaster, JustWorks)
 
 TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
 {
-  subject::scene_t* stackScene = MakeStackScene();
+  subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -185,7 +189,7 @@ TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
 
 TYPED_TEST(RayCaster, FindNearestTriangle)
 {
-  subject::scene_t* stackScene = MakeStackScene();
+  subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -209,7 +213,7 @@ TYPED_TEST(RayCaster, FindNearestTriangle)
 
 TYPED_TEST(RayCaster, SkipTriangleNearButInOppositeDirection)
 {
-  subject::scene_t* stackScene = MakeStackScene();
+  subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -234,7 +238,7 @@ TYPED_TEST(RayCaster, SkipTriangleNearButInOppositeDirection)
 
 TYPED_TEST(RayCaster, IntersectTriganglesNotPlanes)
 {
-  subject::scene_t* stackScene = MakeStackScene();
+  subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
   ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
@@ -259,9 +263,12 @@ TYPED_TEST(RayCaster, IntersectTriganglesNotPlanes)
 
 TYPED_TEST(RayCaster, ProcessLargeScene)
 {
-  subject::scene_t* scene = subject::scene_create();
+  subject::scene_t* scene = 0;
+  ASSERT_EQ(SCENE_ENGINE_OK, system_create_scene(this->SceneSystem, &scene));
   scene->n_faces = 1000;
   scene->faces = (face_t*)malloc(sizeof(face_t)* scene->n_faces);
+
+  system_finalize_scene(this->SceneSystem, scene);
 
   face_t reference = make_floor_face1();
   for (int i = -scene->n_faces / 2; i != scene->n_faces / 2; ++i)

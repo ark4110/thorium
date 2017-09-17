@@ -199,7 +199,7 @@ namespace subject
 
   int host_scene_sort_groups(scene_t* scene)
   {
-    if (!scene->animation)
+    if (!scene->animation || scene->animation->n_groups == 0)
       return SCENE_ENGINE_OK;
 
     animation_t* animation = scene->animation;

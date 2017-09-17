@@ -32,9 +32,10 @@ using namespace testing;
 const float InitialAccuracy = 0.0025f;
 const float CurrentAccuracy = 0.0001f;
 
-template <int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
+template <int SceneEngineID, int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
 {
+  static const int SceneEngineID = SceneEngineID;
   static const int EquationEngine = EquationEngineID;
   static const int EmissionEngine = EmissionEngineID;
   static const int RayCasterEngine = RayCasterEngineID;
@@ -47,6 +48,7 @@ class RadianceSolution
 public:
   RadianceSolution()
   {
+    SceneEngine = subject::system_create(EnginesConfig::SceneEngineID);
     RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
     
     malley_cpu::params_t emitterParams;
@@ -62,11 +64,13 @@ public:
     thermal_solution::params_t solutionParams = { 1, &Equation };
     System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
 
+    Materials = (subject::material_t*)calloc(1, sizeof(subject::material_t));
     Materials[0] = subject::black_body();
     Materials[0].front.emission.emissivity = 0;
 
-    memcpy(Faces, subject::box(), sizeof(subject::face_t) * 12);
-    memcpy(Faces + 12, subject::box(), sizeof(subject::face_t) * 12);
+    subject::face_t* faces = (subject::face_t*)calloc(24, sizeof(subject::face_t));
+    memcpy(faces, subject::box(), sizeof(subject::face_t) * 12);
+    memcpy(faces + 12, subject::box(), sizeof(subject::face_t) * 12);
 
     Scale = 3;
 
@@ -75,7 +79,7 @@ public:
     math::vec3 shift = math::make_vec3(shift_value, shift_value, shift_value);
     for (int f = 0; f != 12; ++f)
     {
-      subject::face_t& face = Faces[12 + f];
+      subject::face_t& face = faces[12 + f];
       face.points[0] *= factor;
       face.points[1] *= factor;
       face.points[2] *= factor;
@@ -87,16 +91,21 @@ public:
       triangle_flip_normal(face);
     }
 
-    Meshes[0] = { 0, 12, 0 };
-    Meshes[1] = { 12, 12, 0 };
-    Scene = { 24, Faces,
-      2, Meshes,
-      1, Materials };
+    subject::mesh_t* meshes = (subject::mesh_t*)calloc(2, sizeof(subject::mesh_t));
+    meshes[0] = { 0, 12, 0 };
+    meshes[1] = { 12, 12, 0 };
+    system_create_scene(SceneEngine, &Scene);
+    Scene->n_faces = 24;
+    Scene->faces = faces;
+    Scene->n_meshes = 2;
+    Scene->meshes = meshes;
+    Scene->n_materials = 1;
+    Scene->materials = Materials;
 
     Temperatures[0] = 20.f;
     Temperatures[1] = 300.f;
 
-    Task = thermal_solution::task_create(Scene.n_meshes);
+    Task = thermal_solution::task_create(Scene->n_meshes);
     Task->time_delta = 0.1f;
   }
 
@@ -107,30 +116,31 @@ public:
     thermal_equation::system_free(Equation);
     emission::system_free(Emitter);
     ray_caster::system_free(RayCaster);
+    scene_free(Scene);
+    system_free(SceneEngine);
   }
   
+  subject::system_t* SceneEngine;
   ray_caster::system_t* RayCaster;
   emission::system_t* Emitter;
   thermal_equation::system_t* Equation;
   thermal_solution::system_t* System;
-  subject::material_t Materials[1];
+  subject::material_t* Materials;
   float Scale;
-  subject::face_t Faces[24];
-  subject::mesh_t Meshes[2];
-  subject::scene_t Scene;
+  subject::scene_t* Scene;
   float Temperatures[2];
   thermal_solution::task_t* Task;
 };
 
 #if defined _WIN64 || !defined  _WIN32
 typedef ::testing::Types<
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CUDA, RAY_CASTER_OPTIX>
+  EnginesConfig<SCENE_ENGINE_CUDA, THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<SCENE_ENGINE_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
+  EnginesConfig<SCENE_ENGINE_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CUDA, RAY_CASTER_OPTIX>
 > RadianceEquationTypes;
 #else
 typedef ::testing::Types<
-  EnginesConfig<THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_NAIVE_CPU>
+  EnginesConfig<SCENE_ENGINE_HOST, THERMAL_EQUATION_RADIANCE_CPU, EMISSION_MALLEY_CPU, RAY_CASTER_NAIVE_CPU>
 > RadianceEquationTypes;
 #endif
 
@@ -139,12 +149,14 @@ TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
 TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
 {
   using namespace thermal_solution;
-  this->Scene.n_faces = 12;
-  this->Scene.n_meshes = 1;
+  this->Scene->n_faces = 12;
+  this->Scene->n_meshes = 1;
+
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
 
   const float initialEnergy = this->Temperatures[0];
   int r = 0;
-  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  r = system_set_scene(this->System, this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 8; ++step)
   {
@@ -166,11 +178,13 @@ TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
 
 TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
 {
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
+
   using namespace thermal_solution;
   const float initialEnergy = this->Temperatures[0] * this->Scale * this->Scale + this->Temperatures[1];
 
   int r = 0;
-  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  r = system_set_scene(this->System, this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 8; ++step)
   {
@@ -195,14 +209,16 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
 TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
 {
   using namespace thermal_solution;
-  this->Scene.n_faces = 12;
-  this->Scene.n_meshes = 1;
+  this->Scene->n_faces = 12;
+  this->Scene->n_meshes = 1;
   this->Materials[0].rear.optical.absorbance = 0.5;
   this->Materials[0].rear.optical.specular_reflectance = 0.5;
 
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
+
   const float initialEnergy = this->Temperatures[0];
   int r = 0;
-  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  r = system_set_scene(this->System, this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 8; ++step)
   {
@@ -225,14 +241,16 @@ TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
 TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
 {
   using namespace thermal_solution;
-  this->Scene.n_faces = 12;
-  this->Scene.n_meshes = 1;
+  this->Scene->n_faces = 12;
+  this->Scene->n_meshes = 1;
   this->Materials[0].rear.optical.absorbance = 0.5;
   this->Materials[0].rear.optical.diffuse_reflectance = 0.5;
 
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
+
   const float initialEnergy = this->Temperatures[0];
   int r = 0;
-  r = system_set_scene(this->System, &this->Scene, this->Temperatures);
+  r = system_set_scene(this->System, this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 8; ++step)
   {

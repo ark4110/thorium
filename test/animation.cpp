@@ -51,6 +51,20 @@ TEST(AnimationImport, BasicImport)
   system_free(scene_system);
 }
 
+TEST(CudaSceneEngine, Relocation)
+{
+  auto system = subject::system_create(SCENE_ENGINE_CUDA);
+  subject::scene_t* scene = 0;
+  system_create_scene(system, &scene);
+  ASSERT_EQ(OBJ_IMPORT_OK, obj_import::scene("models/test_hierarchy.obj", scene));
+  system_finalize_scene(system, scene);
+  scene_relocate(scene, 0);
+  scene_relocate(scene, -1);
+
+  scene_free(scene);
+  system_free(system);
+}
+
 template <int EngineTypeID>
 struct SceneEngineType
 {

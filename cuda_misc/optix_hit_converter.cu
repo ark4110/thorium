@@ -24,6 +24,27 @@
 
 namespace optix_hit_converter
 {
+  __device__ float3 triangle_uv_to_point(face_t face, float u, float v)
+  {
+    return u * face.points[0] + v * face.points[1] + (1.f - u - v) * face.points[2];
+  }
+
+  __global__ void convert_hits(const optix_hit_t* __restrict__ hits, const face_t* __restrict__ faces, int n_rays, float3* hit_point, int* hit_face_idx)
+  {
+    int ray_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    for (; ray_idx < n_rays; ray_idx += gridDim.x * blockDim.x)
+    {
+      const optix_hit_t& hit = hits[ray_idx];
+      if (hit.distance < 0)
+        hit_face_idx[ray_idx] = -1;
+      else
+      {
+        hit_face_idx[ray_idx] = hit.triangle_id;
+        hit_point[ray_idx] = triangle_uv_to_point(faces[hit.triangle_id], hit.u, hit.v);
+      }
+    }
+  }
+
   bool resolve_supported()
   {
     int count = 0;
@@ -41,7 +62,7 @@ namespace optix_hit_converter
     return state->optix_buffer_type == 0x201;
   }
 
-  state_t* state_init(const subject::scene_t* scene, bool force_cpu)
+  state_t* state_init(subject::scene_t* scene, bool force_cpu)
   {
     state_t* state = (state_t*)calloc(1, sizeof(state_t));
 
@@ -49,28 +70,26 @@ namespace optix_hit_converter
 
     state->optix_buffer_type = supported ? 0x201 : 0x200; // RTP_BUFFER_TYPE_CUDA_LINEAR : RTP_BUFFER_TYPE_HOST
 
-    state->host_faces = scene->faces;
+    state->scene = scene;
     if (supported)
     {
-      checkCudaErrors(cudaMalloc((void**)&state->device_faces, sizeof(ray_caster::face_t) * scene->n_faces));
-      checkCudaErrors(cudaMemcpy(state->device_faces, scene->faces, sizeof(ray_caster::face_t) * scene->n_faces, cudaMemcpyHostToDevice));
-    }   
+      int minGridSize;
+      cudaOccupancyMaxPotentialBlockSize(&minGridSize, &state->convert_block_size, convert_hits, 0, 0);
+    }
 
     return state;
   }
 
   void state_free(state_t* state)
   {
-    if (state)
-    {
-      if (is_supported(state))
-      {
-        cudaFree(state->device_faces);
-        cudaFree(state->hits);
-      }
-      else
-        free(state->hits);
-    }
+    if (!state)
+      return;
+    
+    if (is_supported(state))
+      cudaFree(state->hits);
+    else
+      free(state->hits);
+
     free(state);
   }
 
@@ -102,32 +121,22 @@ namespace optix_hit_converter
     return RAY_CASTER_OK;
   }
 
-  __device__ float3 triangle_uv_to_point(face_t face, float u, float v)
-  {
-    return u * face.points[0] + v * face.points[1] + (1.f - u - v) * face.points[2];
-  }
-
-  __global__ void convert_hits(const optix_hit_t* __restrict__ hits, const face_t* __restrict__ faces, int n_rays, float3* hit_point, int* hit_face_idx)
-  {
-    int ray_idx = blockDim.x * blockIdx.x + threadIdx.x;
-    for (; ray_idx < n_rays; ray_idx += gridDim.x * blockDim.x)
-    {
-      const optix_hit_t& hit = hits[ray_idx];
-      if (hit.distance < 0)
-        hit_face_idx[ray_idx] = -1;
-      else
-      {
-        hit_face_idx[ray_idx] = hit.triangle_id;
-        hit_point[ray_idx] = triangle_uv_to_point(faces[hit.triangle_id], hit.u, hit.v);
-      }
-    }    
-  }
+  
 
   int convert_cuda(state_t* state, ray_caster::task_t* task)
   {
+    if (int r = scene_relocate(state->scene, 0))
+    {
+      if (r == -SCENE_ENGINE_NOT_SUPPORTED)
+        fprintf(stderr, "Optix ray caster requires CUDA enabled scene!\n");
+      return r;
+    }
     cudaThreadSetCacheConfig(cudaFuncCachePreferL1);
-    convert_hits << <128, 128 >> > (state->hits
-      , (const face_t*)state->device_faces
+
+    int n_grid_size = (task->n_tasks + state->convert_block_size - 1) / state->convert_block_size;
+
+    convert_hits << <n_grid_size, state->convert_block_size >> > (state->hits
+      , (const face_t*)state->scene->faces
       , task->n_tasks
       , (float3*)task->hit_point
       , task->hit_face_idx);
@@ -136,11 +145,19 @@ namespace optix_hit_converter
     checkCudaErrors(cudaDeviceSynchronize());
     cudaThreadSetCacheConfig(cudaFuncCachePreferNone);
 
+    // @todo Remove it
+    if (int r = scene_relocate(state->scene, -1))
+      return r;
+
     return RAY_CASTER_OK;
   }
 
   int convert_cpu(state_t* state, ray_caster::task_t* task)
   {
+    if (int r = scene_relocate(state->scene, -1))
+      return r;
+
+    const subject::scene_t* scene = state->scene;
     for (int r = 0; r != task->n_tasks; ++r)
     {
       const optix_hit_t& hit = state->hits[r];
@@ -149,7 +166,7 @@ namespace optix_hit_converter
       else
       {
         task->hit_face_idx[r] = hit.triangle_id;
-        task->hit_point[r] = math::triangle_uv_to_point(state->host_faces[hit.triangle_id], hit.u, hit.v);
+        task->hit_point[r] = math::triangle_uv_to_point(scene->faces[hit.triangle_id], hit.u, hit.v);
       }
     }
 

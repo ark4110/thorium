@@ -4,9 +4,12 @@
 
 namespace testing
 {
-  subject::scene_t* MakeEmptyScene()
+  subject::scene_t* MakeEmptyScene(subject::system_t* engine)
   {
-    return subject::scene_create();
+    subject::scene_t* scene;
+    system_create_scene(engine, &scene);
+    system_finalize_scene(engine, scene);
+    return scene;
   }
 
   ray_caster::face_t make_floor_face1()
@@ -36,23 +39,19 @@ namespace testing
     return make_face(a, b, c);
   }
 
-  subject::scene_t* MakeSceneFromFaces(int n_faces, ray_caster::face_t* faces)
+  subject::scene_t* MakeSceneFromFaces(subject::system_t* engine, int n_faces, ray_caster::face_t* faces)
   {
-    subject::scene_t* s = subject::scene_create();
-    *s = { /*.n_faces =*/ n_faces, /*.faces =*/ faces };
-    return s;
+    subject::scene_t* scene = 0;
+    system_create_scene(engine, &scene);
+    scene->n_faces = n_faces;
+    scene->faces = faces;
+    system_finalize_scene(engine, scene);
+    return scene;
   }
 
   subject::scene_t* ToSubjectScene(subject::scene_t* rcs)
   {
-    subject::scene_t* ss = subject::scene_create();
-    ss->faces = rcs->faces;
-    ss->n_faces = rcs->n_faces;
-
-    rcs->faces = 0;
-    scene_free(rcs);
-
-    return ss;
+    return rcs;
   }
 
   void AddMaterial(subject::scene_t* scene, subject::material_t material)
@@ -69,23 +68,23 @@ namespace testing
     ++scene->n_meshes;
   }
 
-  subject::scene_t* MakeFloorScene()
+  subject::scene_t* MakeFloorScene(subject::system_t* engine)
   {
     int n_faces = 2;
     ray_caster::face_t* faces = (ray_caster::face_t*)malloc(n_faces * sizeof(ray_caster::face_t));
     faces[0] = make_floor_face1();
     faces[1] = make_floor_face2();
 
-    return MakeSceneFromFaces(n_faces, faces);
+    return MakeSceneFromFaces(engine, n_faces, faces);
   }
 
-  subject::scene_t* MakeStackScene()
+  subject::scene_t* MakeStackScene(subject::system_t* engine)
   {
     int n_faces = 2;
     ray_caster::face_t* faces = (ray_caster::face_t*)malloc(n_faces * sizeof(ray_caster::face_t));
     faces[0] = make_floor_face1();
     faces[1] = make_stack_face();
 
-    return MakeSceneFromFaces(n_faces, faces);
+    return MakeSceneFromFaces(engine, n_faces, faces);
   }
 }

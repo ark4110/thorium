@@ -31,9 +31,10 @@ using namespace form_factors;
 using subject::scene_t;
 using subject::mesh_t;
 
-template <int EmitterTypeID, int RayCasterTypeID>
+template <int SceneEngineID, int EmitterTypeID, int RayCasterTypeID>
 struct EngineType
 {
+  static const int SceneEngineID = SceneEngineID;
   static const int EmitterID = EmitterTypeID;
   static const int RayCasterID = RayCasterTypeID;
 };
@@ -45,8 +46,8 @@ struct EngineType
 #endif
 
 typedef ::testing::Types<
-  EngineType<EMISSION_MALLEY_CPU, RAY_CASTER_SELECTOR>,
-  EngineType<EMISSION_MALLEY_CUDA, RAY_CASTER_SELECTOR>
+  EngineType<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_SELECTOR>,
+  EngineType<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CUDA, RAY_CASTER_SELECTOR>
 > FormFactorsTypes;
 
 template <typename EngineType>
@@ -55,6 +56,7 @@ class FormFactors : public Test
 public:
   FormFactors()
   {
+    SceneSystem = subject::system_create(EngineType::SceneEngineID);
     Scene = 0;
     malley_cpu::params_t emitter_params;
     emitter_params.n_rays = 40000;
@@ -70,6 +72,7 @@ public:
     system_free(RayCaster);
     system_free(Emitter);
     scene_free(Scene);
+    system_free(SceneSystem);
   }
 
   face_t make_floor_face1(math::vec3 offset)
@@ -124,12 +127,14 @@ public:
       faces[i].points[2] = rotation * faces[i].points[2];
     }
     
-    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));    
-    AddMaterial(s, subject::black_body());
-    AddMesh(s, { 0, 2, 0 });
-    AddMesh(s, { 2, 2, 0 });
-    Scene = s;    
-    return s;
+    Scene = MakeSceneFromFaces(SceneSystem, n_faces, faces);
+    AddMaterial(Scene, subject::black_body());
+    AddMesh(Scene, { 0, 2, 0 });
+    AddMesh(Scene, { 2, 2, 0 });
+
+    system_finalize_scene(SceneSystem, Scene);
+
+    return Scene;
   }
 
   scene_t* MakePerpendicularPlanesScene(math::mat33 rotation)
@@ -148,12 +153,14 @@ public:
       faces[i].points[2] = rotation * faces[i].points[2];
     }
 
-    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));
-    AddMaterial(s, subject::black_body());
-    AddMesh(s, { 0, 2, 0 });
-    AddMesh(s, { 2, 2, 0 });
-    Scene = s;
-    return s;
+    Scene = ToSubjectScene(MakeSceneFromFaces(SceneSystem, n_faces, faces));
+    AddMaterial(Scene, subject::black_body());
+    AddMesh(Scene, { 0, 2, 0 });
+    AddMesh(Scene, { 2, 2, 0 });
+
+    system_finalize_scene(SceneSystem, Scene);
+
+    return Scene;
   }
 
   scene_t* MakeBoxScene(math::mat33 rotation)
@@ -182,13 +189,16 @@ public:
       faces[i].points[2] = rotation * faces[i].points[2];
     }
 
-    scene_t* s = ToSubjectScene(MakeSceneFromFaces(n_faces, faces));
-    AddMaterial(s, subject::black_body());
-    AddMesh(s, { 0, n_faces, 0 });
-    Scene = s;
-    return s;
+    Scene = MakeSceneFromFaces(SceneSystem, n_faces, faces);
+    AddMaterial(Scene, subject::black_body());
+    AddMesh(Scene, { 0, n_faces, 0 });
+
+    system_finalize_scene(SceneSystem, Scene);
+
+    return Scene;
   }
 
+  subject::system_t* SceneSystem;
   scene_t* Scene;
   ray_caster::system_t* RayCaster;
   emission::system_t* Emitter;
