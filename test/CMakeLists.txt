@@ -7,6 +7,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 set(SOURCE_FILES
   adams_solution.cpp
+  animation.cpp
   ballistics.cpp
   conductive_solution.cpp
   emission.cpp

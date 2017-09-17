@@ -6,7 +6,7 @@ namespace testing
 {
   ray_caster::scene_t* MakeEmptyScene()
   {
-    return ray_caster::scene_create();
+    return subject::scene_create();
   }
 
   ray_caster::face_t make_floor_face1()
@@ -38,7 +38,7 @@ namespace testing
 
   ray_caster::scene_t* MakeSceneFromFaces(int n_faces, ray_caster::face_t* faces)
   {
-    ray_caster::scene_t* s = ray_caster::scene_create();
+    ray_caster::scene_t* s = subject::scene_create();
     *s = { /*.n_faces =*/ n_faces, /*.faces =*/ faces };
     return s;
   }

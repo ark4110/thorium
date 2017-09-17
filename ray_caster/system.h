@@ -22,10 +22,10 @@
 #pragma once
 
 #include "../math/types.h"
+#include "../subject/system.h"
 
 namespace ray_caster
 {
-  /// @todo: Why? Sources use math prefix.
   typedef math::triangle_t face_t;
   typedef math::ray_t ray_t;
 
@@ -52,17 +52,13 @@ namespace ray_caster
   };
 
   /// @brief Scene representation.
-  struct scene_t
-  {
-    int n_faces;
-    face_t *faces;
-  };
-
+  typedef subject::scene_t scene_t;
+  
   /// @brief Allocate memory for scene.
-  scene_t* scene_create();
+  //scene_t* scene_create();
 
   /// @brief Free memory for scene.
-  void scene_free(scene_t* s);
+  //void scene_free(scene_t* s);
 
   /// @brief Allocates memory for task with n_rays rays.
   task_t* task_create(int n_rays);
