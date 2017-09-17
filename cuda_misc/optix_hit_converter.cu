@@ -41,7 +41,7 @@ namespace optix_hit_converter
     return state->optix_buffer_type == 0x201;
   }
 
-  state_t* state_init(const ray_caster::scene_t* scene, bool force_cpu)
+  state_t* state_init(const subject::scene_t* scene, bool force_cpu)
   {
     state_t* state = (state_t*)calloc(1, sizeof(state_t));
 

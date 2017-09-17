@@ -31,20 +31,6 @@
 
 namespace ray_caster
 {
-  scene_t* scene_create()
-  {
-    scene_t* s = (scene_t*)malloc(sizeof(scene_t));
-    *s = { 0, 0 };
-    return s;
-  }
-
-  void scene_free(scene_t* scene)
-  {
-    if (scene)
-      free(scene->faces);
-    free(scene);
-  }
-
   void host_task_free_data(task_t* task)
   {
     free(task->ray);
@@ -285,7 +271,7 @@ namespace ray_caster
     return system->methods->shutdown(system);
   }
 
-  int system_set_scene(system_t* system, scene_t* scene)
+  int system_set_scene(system_t* system, subject::scene_t* scene)
   {
     return system->methods->set_scene(system, scene);
   }

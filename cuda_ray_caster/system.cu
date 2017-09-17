@@ -40,7 +40,7 @@ namespace naive_cuda_ray_caster
   /// @brief Extended base system_t (C-style polymorphism)
   struct cuda_system_t : ray_caster::system_t
   {
-    ray_caster::scene_t* scene;
+    subject::scene_t* scene;
     int n_faces;
     bb_face_t* faces;
     int dev_id;
@@ -74,7 +74,7 @@ namespace naive_cuda_ray_caster
   }
 
   /// @brief Sets loaded scene (polygons in meshes) for ray caster.
-  int set_scene(cuda_system_t* system, ray_caster::scene_t* scene)
+  int set_scene(cuda_system_t* system, subject::scene_t* scene)
   {
     if (system->faces)
     {
@@ -206,7 +206,7 @@ namespace naive_cuda_ray_caster
   {
     (int(*)(ray_caster::system_t* system))&init,
     (int(*)(ray_caster::system_t* system))&shutdown,
-    (int(*)(ray_caster::system_t* system, ray_caster::scene_t* scene))&set_scene,
+    (int(*)(ray_caster::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(ray_caster::system_t* system))&prepare,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task))&cast,
   };

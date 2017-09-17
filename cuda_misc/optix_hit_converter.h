@@ -44,7 +44,7 @@ namespace optix_hit_converter
     optix_hit_t* hits;
   };
 
-  state_t* state_init(const ray_caster::scene_t* scene, bool force_cpu);
+  state_t* state_init(const subject::scene_t* scene, bool force_cpu);
   void state_free(state_t* state);
 
   int state_prepare(state_t* state, ray_caster::task_t* task);

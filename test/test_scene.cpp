@@ -4,7 +4,7 @@
 
 namespace testing
 {
-  ray_caster::scene_t* MakeEmptyScene()
+  subject::scene_t* MakeEmptyScene()
   {
     return subject::scene_create();
   }
@@ -36,14 +36,14 @@ namespace testing
     return make_face(a, b, c);
   }
 
-  ray_caster::scene_t* MakeSceneFromFaces(int n_faces, ray_caster::face_t* faces)
+  subject::scene_t* MakeSceneFromFaces(int n_faces, ray_caster::face_t* faces)
   {
-    ray_caster::scene_t* s = subject::scene_create();
+    subject::scene_t* s = subject::scene_create();
     *s = { /*.n_faces =*/ n_faces, /*.faces =*/ faces };
     return s;
   }
 
-  subject::scene_t* ToSubjectScene(ray_caster::scene_t* rcs)
+  subject::scene_t* ToSubjectScene(subject::scene_t* rcs)
   {
     subject::scene_t* ss = subject::scene_create();
     ss->faces = rcs->faces;
@@ -69,7 +69,7 @@ namespace testing
     ++scene->n_meshes;
   }
 
-  ray_caster::scene_t* MakeFloorScene()
+  subject::scene_t* MakeFloorScene()
   {
     int n_faces = 2;
     ray_caster::face_t* faces = (ray_caster::face_t*)malloc(n_faces * sizeof(ray_caster::face_t));
@@ -79,7 +79,7 @@ namespace testing
     return MakeSceneFromFaces(n_faces, faces);
   }
 
-  ray_caster::scene_t* MakeStackScene()
+  subject::scene_t* MakeStackScene()
   {
     int n_faces = 2;
     ray_caster::face_t* faces = (ray_caster::face_t*)malloc(n_faces * sizeof(ray_caster::face_t));

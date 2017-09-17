@@ -51,15 +51,6 @@ namespace ray_caster
     float* power;
   };
 
-  /// @brief Scene representation.
-  typedef subject::scene_t scene_t;
-  
-  /// @brief Allocate memory for scene.
-  //scene_t* scene_create();
-
-  /// @brief Free memory for scene.
-  //void scene_free(scene_t* s);
-
   /// @brief Allocates memory for task with n_rays rays.
   task_t* task_create(int n_rays);
   
@@ -112,7 +103,7 @@ namespace ray_caster
     int(*shutdown)(system_t* system);
 
     /// @brief Sets loaded scene (polygons in meshes) for ray caster.
-    int(*set_scene)(system_t* system, scene_t* scene);
+    int(*set_scene)(system_t* system, subject::scene_t* scene);
 
     /// @brief Checks system consistency and prepare scene for ray casting.
     int(*prepare)(system_t* system);
@@ -152,7 +143,7 @@ namespace ray_caster
 
   int system_init(system_t* system);
   int system_shutdown(system_t* system);
-  int system_set_scene(system_t* system, scene_t* scene);
+  int system_set_scene(system_t* system, subject::scene_t* scene);
   int system_prepare(system_t* system);
   int system_cast(system_t* system, task_t* task);
   int system_relocate_task(system_t* system, task_t* task, int device);

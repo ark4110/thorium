@@ -92,8 +92,7 @@ namespace cpu_form_factors
     
     int r = 0;
     
-    ray_caster::scene_t* ray_caster_scene = (ray_caster::scene_t*)scene;
-    if ((r = system_set_scene(system->caster, ray_caster_scene)) < 0)
+    if ((r = system_set_scene(system->caster, scene)) < 0)
       return r;
     if ((r = system_prepare(system->caster)) < 0)
       return r;

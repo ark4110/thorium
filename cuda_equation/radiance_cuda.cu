@@ -210,7 +210,7 @@ namespace radiance_equation_cuda
     contex_free_scene(&system->host_context);
 
     system->scene = scene;
-    ray_caster::scene_t* ray_caster_scene = (ray_caster::scene_t*)scene; // slicing binary compatible scenes
+    subject::scene_t* ray_caster_scene = (subject::scene_t*)scene; // slicing binary compatible scenes
 
     int r = 0;
     if ((r = system_set_scene(system->params.ray_caster, ray_caster_scene)) < 0)

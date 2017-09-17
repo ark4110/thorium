@@ -86,10 +86,9 @@ namespace radiance_equation
   int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;
-    ray_caster::scene_t* ray_caster_scene = (ray_caster::scene_t*)scene; // slicing binary compatible scenes
 
     int r = 0;
-    if ((r = system_set_scene(system->params.ray_caster, ray_caster_scene)) < 0)
+    if ((r = system_set_scene(system->params.ray_caster, scene)) < 0)
       return r;
 
     if ((r = system_prepare(system->params.ray_caster)) < 0)

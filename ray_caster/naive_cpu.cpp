@@ -29,7 +29,7 @@ namespace raycaster_naive_cpu
   /// @brief Extended base system_t (C-style polymorphism)
   struct cpu_system_t : ray_caster::system_t
   {
-    ray_caster::scene_t* scene;
+    subject::scene_t* scene;
   };
 
   /// @brief Initializes system after creation.
@@ -46,7 +46,7 @@ namespace raycaster_naive_cpu
   }
 
   /// @brief Sets loaded scene (polygons in meshes) for ray caster.
-  int set_scene(cpu_system_t* system, ray_caster::scene_t* scene)
+  int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;
     return RAY_CASTER_OK;
@@ -101,7 +101,7 @@ namespace raycaster_naive_cpu
   {
     (int(*)(ray_caster::system_t* system))&init,
     (int(*)(ray_caster::system_t* system))&shutdown,
-    (int(*)(ray_caster::system_t* system, ray_caster::scene_t* scene))&set_scene,
+    (int(*)(ray_caster::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(ray_caster::system_t* system))&prepare,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task))&cast,
   };

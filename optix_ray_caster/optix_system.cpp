@@ -26,7 +26,7 @@ namespace optix_ray_caster
 {
   struct system_t : ray_caster::system_t
   {
-    ray_caster::scene_t* scene;
+    subject::scene_t* scene;
 
     RTPcontexttype context_type;
     
@@ -116,7 +116,7 @@ namespace optix_ray_caster
     system->scene = 0;
   }
 
-  int set_scene(system_t* system, ray_caster::scene_t* scene)
+  int set_scene(system_t* system, subject::scene_t* scene)
   {
     if (system->scene)
       system_release_scene_data(system);
@@ -213,7 +213,7 @@ namespace optix_ray_caster
   {
     (int(*)(ray_caster::system_t* system))&init,
     (int(*)(ray_caster::system_t* system))&shutdown,
-    (int(*)(ray_caster::system_t* system, ray_caster::scene_t* scene))&set_scene,
+    (int(*)(ray_caster::system_t* system, subject::scene_t* scene))&set_scene,
     (int(*)(ray_caster::system_t* system))&prepare,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task))&cast,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task, int device))&relocate,

@@ -43,11 +43,12 @@
 using namespace ray_caster;
 
 /// @brief Generates random triangles with vertices located on sphere's surface (confette scene).
-scene_t* MakeConfettiScene(int n_faces, float radius, subject::generator_t* generator)
+subject::scene_t* MakeConfettiScene(int n_faces, float radius, subject::generator_t* generator)
 {
   face_t* faces = (face_t*)malloc(n_faces * sizeof(face_t));
-  scene_t* scene = (scene_t*)malloc(sizeof(scene_t));
-  *scene = { n_faces, faces };
+  subject::scene_t* scene = subject::scene_create();
+  scene->n_faces = n_faces;
+  scene->faces = faces;
   for (int i = 0; i != n_faces; ++i)
   {
     math::vec3 scale_factor;
@@ -276,8 +277,8 @@ int main(int argc, char* argv[])
     
     subject::generator_t* generator = subject::generator_create_spherical();
     // Create random scene for ray caster.
-    scene_t* scene = 0;
-    ray_caster::scene_t* rs = 0;
+    subject::scene_t* scene = 0;
+    subject::scene_t* rs = 0;
     subject::scene_t* ss = 0;
 
     printf("Generating confetti scene with %d elements...\n", n_faces);
