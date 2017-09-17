@@ -1,0 +1,18 @@
+# Blender MTL File: 'test_hierarchy.blend'
+# Material Count: 1
+
+newmtl Lead_(Pb)_oxyde
+shell.density 11340.000000
+shell.heat_capacity 1130.000000
+shell.thermal_conductivity 35.299999
+shell.thickness 0.010000
+front.specular_reflectance 0.100000
+front.diffuse_reflectance 0.100000
+front.absorbance 0.800000
+front.transmittance 0.000000
+front.emissivity 0.000000
+rear.specular_reflectance 0.100000
+rear.diffuse_reflectance 0.100000
+rear.absorbance 0.800000
+rear.transmittance 0.000000
+rear.emissivity 0.000000
