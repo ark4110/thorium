@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="adams_solution.cpp" />
+    <ClCompile Include="animation.cpp" />
     <ClCompile Include="ballistics.cpp" />
     <ClCompile Include="conductive_solution.cpp" />
     <ClCompile Include="emission.cpp" />

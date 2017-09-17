@@ -107,4 +107,8 @@ namespace math
    * @return 3x3 rotation matrix
    */
   mat33 axis_rotation(float x, float y, float z);
+
+  bool load_from_string(const char* str, mat44& m);
+  vec3 translation(const mat44& m);
+  mat33 rotation(const mat44& m);
 }

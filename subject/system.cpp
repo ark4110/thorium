@@ -22,8 +22,13 @@
 #include "../math/operations.h"
 #include "../math/triangle.h"
 #include "../math/mat.h"
+#include "../cuda_misc/cuda_scene_engine.h"
 #include <stdlib.h>
 #include <cstdio>
+
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 namespace subject
 {
@@ -44,7 +49,7 @@ namespace subject
     if (scene->face_animation_group)
       free(scene->face_animation_group);
     if (scene->mesh_material)
-      free(mesh_material);
+      free(scene->mesh_material);
 
     if (scene->base_faces)
       free(scene->base_faces);
@@ -74,6 +79,11 @@ namespace subject
   int scene_set_frame(scene_t* scene, int n_frame)
   {
     return scene->set_frame(scene, n_frame);
+  }
+
+  int scene_relocate(scene_t* scene, int device)
+  {
+    return scene->relocate(scene, device);
   }
 
   animation_t* animation_create(int n_groups, int n_frames)
@@ -121,7 +131,8 @@ namespace subject
 
   int host_scene_finalize(scene_t* scene)
   { 
-    host_scene_sort_geometry_groups(scene);
+    if (int r = host_scene_sort_groups(scene))
+      return r;
 
     build_faces_areas(scene, &scene->face_areas);
     build_face_normals(scene, &scene->face_normals);
@@ -133,8 +144,6 @@ namespace subject
     {
       scene->base_faces = (face_t*)malloc(scene->n_faces * sizeof(face_t));
       memcpy(scene->base_faces, scene->faces, scene->n_faces * sizeof(face_t));
-      if (int r = scene->set_frame(scene, 0))
-        return r;
     }
 
     return SCENE_ENGINE_OK;
@@ -173,10 +182,92 @@ namespace subject
     return SCENE_ENGINE_OK;
   }
 
-  void host_scene_sort_geometry_groups(scene_t* scene)
+  template< typename order_iterator, typename value_iterator >
+  void reorder(order_iterator order_iter, order_iterator order_end, value_iterator values)
+  {
+    typedef typename std::iterator_traits< value_iterator >::value_type value_t;
+    std::vector<value_t> ordered;
+    ordered.reserve(order_end - order_iter);
+
+    for (; order_iter != order_end; ++order_iter)
+      ordered.push_back(values[*order_iter]);
+
+    int idx = 0;
+    for (auto v : ordered)
+      values[idx++] = v;
+  }
+
+  int host_scene_sort_groups(scene_t* scene)
   {
     if (!scene->animation)
-      return;
+      return SCENE_ENGINE_OK;
+
+    animation_t* animation = scene->animation;
+    
+    std::vector<int> order(animation->n_groups);
+    std::iota(order.begin(), order.end(), 0);
+    std::vector<int> correct_order = order;
+    std::sort(order.begin(), order.end(), [animation](int l, int r) { return animation->groups[l].n_offset < animation->groups[l].n_offset; });
+
+    if (order != correct_order)
+    {
+      reorder(order.begin(), order.end(), &animation->groups);
+      for (int f = 0; f != animation->n_frames; ++f)
+      {
+        reorder(order.begin(), order.end(), &animation->rotations[f * animation->n_groups]);
+        reorder(order.begin(), order.end(), &animation->translations[f * animation->n_groups]);
+      }
+    }
+
+    int n_first_animated = animation->groups[0].n_offset;
+    int n_total_animated = std::accumulate(animation->groups, animation->groups + animation->n_groups, 0, [](int s, const face_group_t& g) { return s + g.n_length; });
+
+    // sanity check
+    if (scene->n_faces != n_first_animated + n_total_animated)
+      return -SCENE_ENGINE_ANIMATION_GROUPS_BROKEN;
+
+    // groups overlap check
+    for (int i = 1; i != animation->n_groups; ++i)
+    {
+      const face_group_t& prev = animation->groups[i - 1];
+      const face_group_t& current = animation->groups[i];
+      if (prev.n_offset + prev.n_length > current.n_offset)
+        return -SCENE_ENGINE_ANIMATION_GROUPS_BROKEN;
+    }
+
+    struct face_group_less_t
+    {
+      bool operator()(const face_group_t& l, const face_group_t& r) const
+      {
+        return l.n_offset < r.n_offset;
+      }
+
+      bool operator()(const face_group_t& l, int r) const
+      {
+        return l.n_offset < r;
+      }
+
+      bool operator()(int l, const face_group_t& r) const
+      {
+        return l < r.n_offset;
+      }
+    };
+
+    // mesh groups boundary overlap check
+    for (int m = 0; m != scene->n_meshes; ++m)
+    {
+      const mesh_t& mesh = scene->meshes[m];
+      if (mesh.first_idx < n_first_animated && mesh.first_idx + mesh.n_faces > n_first_animated)
+        return -SCENE_ENGINE_ANIMATION_GROUPS_BROKEN;
+      auto found = std::lower_bound(animation->groups, animation->groups + animation->n_groups, mesh.first_idx, face_group_less_t());
+      if (found != animation->groups + animation->n_groups)
+      {
+        if (mesh.first_idx + mesh.n_faces > found->n_offset + found->n_length)
+          return -SCENE_ENGINE_ANIMATION_GROUPS_BROKEN;
+      }
+    }
+
+    return SCENE_ENGINE_OK;
   }
 
   int host_scene_relocate(scene_t* scene, int device)
@@ -239,6 +330,10 @@ namespace subject
     {
     case SCENE_ENGINE_HOST:
       system = subject_engine_host::system_create();
+      break;
+
+    case SCENE_ENGINE_CUDA:
+      system = cuda_scene_engine::system_create();
       break;
 
     default:
@@ -347,7 +442,7 @@ namespace subject
 
   void build_face_normals(const scene_t* scene, math::vec3** normals)
   {
-    if (!normals)
+    if (!*normals)
       *normals = (math::vec3*)malloc(scene->n_faces * sizeof(math::vec3));
     
     for (int f = 0; f != scene->n_faces; ++f)

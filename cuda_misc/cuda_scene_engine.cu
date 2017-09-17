@@ -90,7 +90,7 @@ namespace cuda_scene_engine
     if (int r = cuda_relocate_scene(scene, 0))
       return r;
 
-    int n_first_animated_face = scene->animation->groups[0].n_offset;
+    int n_first_animated_face = scene->host_scene->animation->groups[0].n_offset;
     int n_animated_faces = scene->n_faces - n_first_animated_face;
     int n_grid_size = (n_animated_faces + system->set_frame_block_size - 1) / system->set_frame_block_size;
 
@@ -99,7 +99,7 @@ namespace cuda_scene_engine
     const cuda_math::mat33* rotation = (const cuda_math::mat33*)&scene->animation->rotations[scene->animation->n_groups * n_frame];
     const cuda_math::vec3* translation = (const cuda_math::vec3*)&scene->animation->translations[scene->animation->n_groups * n_frame];
     cuda_math::face_t* target = (cuda_math::face_t*)&scene->faces[n_first_animated_face];
-    cuda_math::vec3* normals = (cuda_math::vec3*)scene->face_normals;
+    cuda_math::vec3* normals = (cuda_math::vec3*)&scene->face_normals[n_first_animated_face];
 
     device_set_frame << < n_grid_size, system->set_frame_block_size >> > (n_animated_faces, source, face_group_idx, rotation, translation, target, normals);
 

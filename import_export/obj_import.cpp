@@ -20,13 +20,16 @@
 
 #include "obj_import.h"
 #include "../math/operations.h"
+#include "../math/mat.h"
 #include <cstring>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <map>
 #include <functional>
 #include <set>
+#include <tuple>
 
 #ifdef _WIN32
 #pragma warning(disable:4996)
@@ -170,9 +173,153 @@ namespace obj_import
     return OBJ_IMPORT_OK;
   }
 
-  /// @note Mindflow mode on
-  int scene(const char* filename, subject::scene_t** scene)
+  struct frame_t
   {
+    std::map<std::string, math::mat44> transformations;
+  };
+
+  auto animation(const char* filename, subject::scene_t* scene)
+  {
+    int r = OBJ_IMPORT_OK;
+
+    std::map<int, frame_t> frames;
+    std::set<std::string> roots;
+    std::map<std::string, std::string> hierarchy;
+    
+    int current_frame = -1;
+
+    std::ifstream file(filename);
+    if (!file.is_open())
+      fprintf(stderr, "No scene animation '%s' found.\n", filename);
+    else
+    {
+      typedef std::function<bool(const char*)> action_t;
+
+      std::map<std::string, action_t> actions;
+
+      actions["object_root"] = [&](const char* line) {
+        std::string obj, parent;
+        std::istringstream(line) >> obj >> parent;
+        roots.insert(parent);
+        hierarchy[obj] = parent;
+        return obj != "" && parent != "";
+      };
+
+      actions["frame"] = [&](const char* line) {
+        return sscanf(line, "%d", &current_frame) == 1;
+      };
+
+      actions["transform"] = [&](const char* line) {
+        const char* delim = strchr(line, ' ');
+        if (!delim)
+          return false;
+        std::string name(line, delim - line);
+        return load_from_string(delim + 1, frames[current_frame].transformations[name]);
+      };
+
+      std::string line;
+      while (getline(file, line))
+      {
+        if (line == "" || line[0] == '#')
+          continue;
+
+        const char* str = line.c_str();
+        const char* delim = strchr(str, ' ');
+        std::string token = delim ? std::string(str, delim - str) : line;
+        const char* params = delim ? delim + 1 : "";
+
+        auto found = actions.find(token);
+        if (found == actions.end())
+        {
+          fprintf(stderr, "ERROR: Unknown animation action in line %s.\n", line.c_str());
+          continue;
+        }
+
+        const action_t& action = found->second;
+        if (!action(params))
+        {
+          fprintf(stderr, "ERROR: Failed to parse animation at line %s.\n", line.c_str());
+          r = -OBJ_IMPORT_FILE_ERROR;
+          break;
+        }
+      }
+    }
+
+    int n_groups = (int)roots.size();
+    int n_frames = frames.empty() ? 0 : frames.rbegin()->first + 1;
+    if (!frames.empty())
+    {
+      for (int frame = frames.rbegin()->first; frame >= 0; --frame)
+      {
+        if (frames.find(frame) == frames.end())
+        {
+          fprintf(stderr, "WARNING: Extrapolating animation frame %d\n", frame);
+          frames[frame] = frames[frame + 1];
+        }
+      }
+    }
+
+    animation_free(scene->animation);
+    scene->animation = subject::animation_create(n_groups, n_frames);
+
+    for (const auto& frame_iter : frames)
+    {
+      int n_frame = frame_iter.first;
+      const frame_t& frame = frame_iter.second;
+      
+      int n_group = 0;
+      for (const auto& root : roots)
+      {
+        auto found = frame.transformations.find(root);
+        if (found == frame.transformations.end())
+        {
+          fprintf(stderr, "ERROR: No transformation for object %s at frame %d\n", root.c_str(), n_frame);
+          r = -OBJ_IMPORT_FORMAT_ERROR;
+          break;
+        }
+        const math::mat44& transformation = found->second;
+        scene->animation->translations[n_frame * n_groups + n_group] = translation(transformation);
+        scene->animation->rotations[n_frame * n_groups + n_group] = rotation(transformation);
+        ++n_group;
+      }
+
+      if (r)
+        break;
+    }
+
+    if (r == OBJ_IMPORT_OK)
+    {
+      fprintf(stderr, "INFO: Loaded %d animation frames\n", n_frames);
+      fprintf(stderr, "INFO: Loaded %d animation groups\n", n_groups);
+    }
+
+    return std::make_tuple(r, frames, roots, hierarchy);
+  }
+
+  int scene(const char* filename, subject::scene_t** result)
+  {
+    *result = subject::scene_create();
+    return scene(filename, *result);
+  }
+
+  std::string get_animation_filename(std::string basename)
+  {
+    return basename.substr(0, basename.find_last_of('.')) + ".anim";
+  }
+
+  int scene(const char* filename, subject::scene_t* scene)
+  {
+    auto animation_result = animation(get_animation_filename(filename).c_str(), scene);
+    if (std::get<0>(animation_result))
+      return std::get<0>(animation_result);
+
+    std::map<int, frame_t> frames = std::move(std::get<1>(animation_result));
+    std::set<std::string> roots = std::move(std::get<2>(animation_result));
+    std::map<std::string, std::string> parents = std::move(std::get<3>(animation_result));
+    std::multimap<std::string, std::string> children;
+    for (const auto& i : parents)
+      children.insert(std::make_pair(i.second, i.first));
+
     std::ifstream file(filename);
     if (!file.is_open())
     {
@@ -181,8 +328,9 @@ namespace obj_import
     }
 
     std::vector<math::vec3> vertices;
-    std::vector<idx_face_t> faces;
-    std::vector<subject::mesh_t> meshes;
+    std::vector<idx_face_t> loaded_faces;
+    std::string current_mesh_name;
+    std::map<std::string, subject::mesh_t> meshes;
     std::vector<subject::material_t> materials;
     typedef std::map<std::string, int> MaterialMap;
     MaterialMap material2IndexMap;
@@ -241,7 +389,7 @@ namespace obj_import
         }
 
         idx_face_t face = { i0 - 1, i1 - 1, i2 - 1 };
-        faces.push_back(face);
+        loaded_faces.push_back(face);
       }
       break;
 
@@ -252,14 +400,25 @@ namespace obj_import
       case 'o':
       case 'g':
       { 
-        subject::mesh_t mesh;
-        mesh.first_idx = (int)faces.size();
+        if (current_mesh_name != "")
+          meshes[current_mesh_name].n_faces = (int)(loaded_faces.size() - meshes[current_mesh_name].first_idx);
+        
+        
+        current_mesh_name = str.substr(2); 
+        if (current_mesh_name == "")
+        {
+          char buf[100];
+          sprintf(buf, "mesh_%d", (int)meshes.size());
+          current_mesh_name = buf;
+
+          fprintf(stderr, "WARNING: Autonaming mesh %s\n", current_mesh_name.c_str());
+        }
+
+        subject::mesh_t& mesh = meshes[current_mesh_name];
+
+        mesh.name = strdup(current_mesh_name.c_str());
+        mesh.first_idx = (int)loaded_faces.size();
         mesh.material_idx = 0;
-        if (!meshes.empty())
-          meshes.back().n_faces = (int)(faces.size() - meshes.back().first_idx);
-        if (str.length() > 2)
-        mesh.name = strdup(str.c_str() + 2);
-        meshes.push_back(mesh);
       }
       break;
 
@@ -283,7 +442,7 @@ namespace obj_import
             return -OBJ_IMPORT_MATERIAL_NOT_DEFINED;
           }
 
-          meshes.back().material_idx = found->second;
+          meshes[current_mesh_name].material_idx = found->second;
         }        
         else
         {
@@ -329,52 +488,95 @@ namespace obj_import
         fprintf(stderr, "Unknown directive '%s' at line %d\n", str.c_str(), line);
         continue;
         break;
-      }
-    
+      }    
     }
+
+    meshes[current_mesh_name].n_faces = (int)loaded_faces.size() - meshes[current_mesh_name].first_idx;
 
     file.close();
-
-    // Preparing scene.
-    subject::scene_t* result = subject::scene_create();
-    *scene = result;
-
+    
     // Triangulation to vertices from face indices.
-    result->n_faces = (int)faces.size();
-    result->faces = (subject::face_t *)malloc(result->n_faces * sizeof(subject::face_t));
-    for (int i = 0; i < result->n_faces; ++i)
+    scene->n_faces = (int)loaded_faces.size();
+    scene->faces = (subject::face_t *)malloc(scene->n_faces * sizeof(subject::face_t));
+    int n_current_face = 0;
+
+    scene->n_meshes = std::max(1, (int)meshes.size());
+    scene->meshes = (subject::mesh_t *)malloc(sizeof(subject::mesh_t) * scene->n_meshes);
+    int n_current_mesh = 0;
+
+    // Write not animated geometry
+    for (auto& mesh_iter : meshes)
     {
-      idx_face_t idx_face = faces[i];
-      result->faces[i] = {
-        vertices[idx_face.indices[0]],
-        vertices[idx_face.indices[1]],
-        vertices[idx_face.indices[2]]
-      };
+      const std::string& mesh_name = mesh_iter.first;
+      if (parents.find(mesh_name) != parents.end())
+        continue;
+
+      subject::mesh_t& mesh = mesh_iter.second;
+      int mesh_first_idx = n_current_face;
+      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
+      {
+        idx_face_t idx_face = loaded_faces[f];
+        scene->faces[n_current_face++] = {
+          vertices[idx_face.indices[0]],
+          vertices[idx_face.indices[1]],
+          vertices[idx_face.indices[2]]
+        };
+      }
+      mesh.first_idx = mesh_first_idx;
+      scene->meshes[n_current_mesh++] = mesh;
     }
 
-    result->n_meshes = std::max(1, (int)meshes.size());
-    result->meshes = (subject::mesh_t *)malloc(sizeof(subject::mesh_t) * result->n_meshes);
-    if (meshes.empty())
+    int current_group = 0;
+    // Write animated geometry
+    for (const auto& root_name : roots)
     {
-      result->meshes[0].first_idx = 0;
-      result->meshes[0].material_idx = 0;
-      result->n_faces = result->meshes[0].n_faces = (int)faces.size();
-    }
-    else
-    {
-      meshes.back().n_faces = (int)(faces.size() - meshes.back().first_idx);
-      memcpy(result->meshes, meshes.data(), sizeof(subject::mesh_t) * result->n_meshes);
+      auto range = children.equal_range(root_name);
+      int n_group_start_face = n_current_face;
+      scene->animation->groups[current_group].n_offset = n_group_start_face;
+      for (; range.first != range.second; ++range.first)
+      {
+        const std::string& child_name = range.first->second;
+        auto found = meshes.find(child_name);
+        if (found == meshes.end())
+        {
+          fprintf(stderr, "ERROR: Missing animated mesh %s\n", child_name.c_str());
+          return -OBJ_IMPORT_OBJECT_NOT_FOUND;
+        }
+
+        subject::mesh_t& mesh = found->second;
+
+        int mesh_first_idx = n_current_face;
+        for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
+        {
+          idx_face_t idx_face = loaded_faces[f];
+          scene->faces[n_current_face++] = {
+            vertices[idx_face.indices[0]],
+            vertices[idx_face.indices[1]],
+            vertices[idx_face.indices[2]]
+          };
+        }
+        mesh.first_idx = mesh_first_idx;
+        scene->meshes[n_current_mesh++] = mesh;
+      }
+
+      scene->animation->groups[current_group++].n_length = n_current_face - n_group_start_face;
     }
 
-    result->n_materials = std::max(1, (int)materials.size());
-    result->materials = (subject::material_t*)malloc(sizeof(subject::material_t) * result->n_materials);
+    if (n_current_mesh != (int)meshes.size())
+    {
+      fprintf(stderr, "ERROR: Loaded %d and written %d meshes count mismatch\n", (int)meshes.size(), n_current_mesh);
+      return -OBJ_IMPORT_ERROR;
+    }
+
+    scene->n_materials = std::max(1, (int)materials.size());
+    scene->materials = (subject::material_t*)malloc(sizeof(subject::material_t) * scene->n_materials);
     if (materials.empty())
     {
-      result->materials[0] = subject::black_body();
+      scene->materials[0] = subject::black_body();
     }
     else
     {
-      memcpy(result->materials, materials.data(), sizeof(subject::material_t) * result->n_materials);
+      memcpy(scene->materials, materials.data(), sizeof(subject::material_t) * scene->n_materials);
     }
 
     return OBJ_IMPORT_OK;

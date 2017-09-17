@@ -55,4 +55,26 @@ namespace math
     math::mat33 rz = math::make_mat33(cosf(z), -sinf(z), 0, sinf(z), cosf(z), 0, 0, 0, 1);
     return rx * ry * rz;
   }
+
+  bool load_from_string(const char* str, mat44& m)
+  {
+    return sscanf(str, "%f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
+      m.p + 0, m.p + 1, m.p + 2, m.p + 3,
+      m.p + 4, m.p + 5, m.p + 6, m.p + 7,
+      m.p + 8, m.p + 9, m.p + 10, m.p + 11,
+      m.p + 12, m.p + 13, m.p + 14, m.p + 15) == 16;
+  }
+
+  vec3 translation(const mat44& m)
+  {
+    return make_vec3(m._14, m._24, m._34);
+  }
+
+  mat33 rotation(const mat44& m)
+  {
+    return make_mat33(m._11, m._12, m._13,
+      m._21, m._22, m._23,
+      m._31, m._32, m._33
+      );
+  }
 }

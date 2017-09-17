@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 
   int n_rays = simulation_params->n_emission_rays;
   int n_distant_rays = simulation_params->n_solar_rays;
-  int n_steps = simulation_params->duration / task->time_delta;
+  int n_steps = int(simulation_params->duration / task->time_delta);
   float report_interval = simulation_params->frame_time_scale;
   fprintf(stderr, "Simulation steps count %d\n", n_steps);
   fprintf(stderr, "Frame report interval %f\n", report_interval);

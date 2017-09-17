@@ -30,12 +30,14 @@
 namespace obj_import
 {
 #define OBJ_IMPORT_OK 0
+#define OBJ_IMPORT_ERROR 20
 #define OBJ_IMPORT_FILE_ERROR 21
 #define OBJ_IMPORT_FORMAT_ERROR 22
 #define OBJ_IMPORT_MATERIAL_NOT_DEFINED 23
 #define OBJ_IMPORT_MATERIAL_NOT_ENOUGH_PARAMETERS 24
 #define OBJ_IMPORT_MATERIAL_INVALID_PARAMETER_VALUE 25
 #define OBJ_IMPORT_NOT_SUPPORTED 26
+#define OBJ_IMPORT_OBJECT_NOT_FOUND 27
 
   /**
    * @brief Loads scene from obj-file.
@@ -43,6 +45,7 @@ namespace obj_import
    * or @see OBJ_IMPORT_FORMAT_ERROR if there is format errors.
    */
   int scene(const char* filename, subject::scene_t** scene);
+  int scene(const char* filename, subject::scene_t* scene);
 
   /**
     @brief Load thermal solution task values from file of obj-like format.

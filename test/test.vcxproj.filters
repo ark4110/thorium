@@ -19,6 +19,7 @@
     <ClCompile Include="test_scene.cpp" />
     <ClCompile Include="ballistics.cpp" />
     <ClCompile Include="math_quaternion.cpp" />
+    <ClCompile Include="animation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test_scene.h" />

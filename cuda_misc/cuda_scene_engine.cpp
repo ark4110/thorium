@@ -37,8 +37,11 @@ namespace cuda_scene_engine
       return SCENE_ENGINE_OK;
     }
 
+    if (device == 0)
+      device = 1;
+
     int device_idx = device - 1;
-    if (scene->n_devices > device_idx && scene->device_scenes[device_idx])
+    if (scene->n_devices > device_idx && scene->device_scenes && scene->device_scenes[device_idx])
     {
       *static_cast<subject::scene_t*>(scene) = *scene->device_scenes[device_idx];
       scene->n_current_device = device;
@@ -47,14 +50,14 @@ namespace cuda_scene_engine
 
     if (scene->n_devices < device)
     {
-      scene->device_scenes = (subject::scene_t**)realloc(scene->device_scenes, device * sizeof(subject::scene_t*));
+      scene->device_scenes = (subject::scene_t**)realloc(scene->device_scenes, (1 + device) * sizeof(subject::scene_t*));
       for (int d = scene->n_devices; d != device; ++d)
         scene->device_scenes[d] = 0;
       scene->n_devices = device;
     }
 
     scene->device_scenes[device_idx] = (subject::scene_t*)malloc(sizeof(subject::scene_t));
-    *scene->device_scenes[device_idx] = *scene->device_scenes[0];
+    *scene->device_scenes[device_idx] = *scene->host_scene;
 
     // @todo Set CUDA device here.
     subject::scene_t* source = scene->host_scene; // host is source
@@ -103,6 +106,7 @@ namespace cuda_scene_engine
     checkCudaErrors(cudaMalloc((void**)&target->base_faces, sizeof(subject::face_t) * source->n_faces));
     checkCudaErrors(cudaMemcpy(target->base_faces, source->base_faces, sizeof(subject::face_t) * source->n_faces, cudaMemcpyHostToDevice));
 
+    *static_cast<subject::scene_t*>(scene) = *target;
     scene->n_current_device = device;
 
     return SCENE_ENGINE_OK;

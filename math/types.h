@@ -103,6 +103,19 @@ namespace math
     point_t p[9];
   };
 
+  union mat44
+  {
+    struct
+    {
+      float _11, _12, _13, _14;
+      float _21, _22, _23, _24;
+      float _31, _32, _33, _34;
+      float _41, _42, _43, _44;
+    };
+
+    float p[16];
+  };
+
   /// @brief Creates 3x3 matrix from 3 scalar points
   inline mat33 make_mat33(point_t a00, point_t a01, point_t a02, point_t a10, point_t a11, point_t a12, point_t a20, point_t a21, point_t a22)
   {

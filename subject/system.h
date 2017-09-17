@@ -160,6 +160,7 @@ namespace subject
 #define SCENE_ENGINE_NOT_SUPPORTED 601
 #define SCENE_ENGINE_FRAME_OUT_OF_RANGE 602
 #define SCENE_ENGINE_PROTOCOL_VIOLATION 603
+#define SCENE_ENGINE_ANIMATION_GROUPS_BROKEN 604
 
   struct system_methods_t
   {
@@ -187,6 +188,7 @@ namespace subject
 
   void scene_free(scene_t* scene);
   int scene_set_frame(scene_t* scene, int n_frame);
+  int scene_relocate(scene_t* scene, int device);
 
   void host_scene_free_data(scene_t* scene);
   int host_scene_finalize(scene_t* scene);
@@ -194,12 +196,12 @@ namespace subject
   int host_scene_relocate(scene_t* scene, int device);
 
   /**
-    @brief Sort geometry in order:
-      1. Make sure meshes does not overlap with animation groups.
+    @detail 
+      1. Make sure meshes does not overlap animation groups.
       2. Not animated geometry goes first.
-      3. Animated geometry goes in order of animation groups.
+      3. Groups space cover all faces.
   */
-  void host_scene_sort_geometry_groups(scene_t* scene);
+  int host_scene_sort_groups(scene_t* scene);
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh);
   float mesh_area(const scene_t* scene, int mesh_idx);
