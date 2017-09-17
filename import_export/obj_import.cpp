@@ -55,7 +55,7 @@ namespace obj_import
     std::string str;
     unsigned line = 0;
 
-    std::map<std::string, bool> known_unknown_attributes;
+    std::map<std::string, bool> known_unknown_attributes = { {"Ns", true}, {"Ka", true}, {"Kd", true}, {"Ks", true}, {"Ke", true}, {"Ni", true}, {"d", true}, {"illum", true} };
 
     while (getline(file, str))
     {
@@ -351,6 +351,9 @@ namespace obj_import
 
       switch (str[0])
       {
+      case 'l': // Some unknown obj directive
+        continue;
+
       case 'v':
       {        
         if (str[1] == 'n' || str[1] == 't')
@@ -700,8 +703,8 @@ namespace obj_import
       [&]() { fprintf(stderr, "Loaded planet emission:\n"
         "  radius\t%f\n"
         "  albedo\t%f\n"
-        "  temper\t%f\n"
-        "  solar\t%f\n"
+        "  planet temper\t%f\n"
+        "  solar flux\t%f\n"
         "  n_subdiv\t%d\n",
         planet_emission_params->planet_radius,
         planet_emission_params->planet_albedo,
