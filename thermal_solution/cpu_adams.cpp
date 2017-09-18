@@ -37,7 +37,6 @@ namespace cpu_adams
     float* energy;
   };
 
-  /// @brief Initializes system with given ray caster after creation.
   int init(cpu_system_t* system, thermal_solution::params_t* params)
   {
     system->params = *params;
@@ -184,8 +183,9 @@ namespace cpu_adams
 
     if (system->scene->animation)
     {
-      int n_frame = (int)task->current_time / system->scene->animation->frame_time_step;
-      if (system->scene->n_current_frame != n_frame)
+      subject::animation_t* anim = system->scene->animation;
+      int n_frame = (int)(task->current_time / anim->frame_time_step);
+      if (anim->n_current_frame != n_frame)
       {
         if ((r = scene_set_frame(system->scene, n_frame)))
           return r;

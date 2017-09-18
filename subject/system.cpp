@@ -72,13 +72,19 @@ namespace subject
     s->free_data = &host_scene_free_data;
     s->relocate = &host_scene_relocate;
     s->set_frame = &host_scene_set_frame;
-    s->n_current_frame = -1;
     return s;
   }
 
   int scene_set_frame(scene_t* scene, int n_frame)
   {
-    return scene->set_frame(scene, n_frame);
+    if (!scene->animation)
+      return SCENE_ENGINE_OK;
+    animation_t* anim = scene->animation;
+    if (anim->n_current_frame == n_frame)
+      return SCENE_ENGINE_OK;
+    int r = scene->set_frame(scene, n_frame);
+    anim->n_current_frame = n_frame;
+    return r;
   }
 
   int scene_relocate(scene_t* scene, int device)
@@ -91,6 +97,7 @@ namespace subject
     animation_t* anim = (animation_t*)calloc(1, sizeof(animation_t));
     anim->n_groups = n_groups;
     anim->n_frames = n_frames;
+    anim->n_current_frame = -1;
     anim->groups = (face_group_t*)malloc(n_groups * sizeof(face_group_t));
     anim->translations = (math::vec3*)malloc(n_groups * n_frames * sizeof(math::vec3));
     anim->rotations = (math::mat33*)malloc(n_groups * n_frames * sizeof(math::mat33));
@@ -154,7 +161,7 @@ namespace subject
     if (!scene->animation)
       return SCENE_ENGINE_OK;
 
-    if (scene->n_current_frame == n_frame)
+    if (scene->animation->n_current_frame == n_frame)
       return SCENE_ENGINE_OK;
 
     const animation_t* anim = scene->animation;
@@ -176,8 +183,6 @@ namespace subject
         face_normals[f] = normalize(triangle_normal(target[f]));
       }
     }
-
-    scene->n_current_frame = n_frame;
 
     return SCENE_ENGINE_OK;
   }

@@ -102,6 +102,7 @@ namespace subject
   {
     int n_groups;
     int n_frames;
+    int n_current_frame;
     float frame_time_step;
     face_group_t* groups;
     math::vec3 * translations; // n_frames x n_groups
@@ -121,7 +122,6 @@ namespace subject
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
     animation_t* animation;
-    int n_current_frame; // @todo Move to animation?
 
     void(*free_data)(scene_t*);
     int(*relocate)(scene_t*, int device);
