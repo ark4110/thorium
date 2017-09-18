@@ -72,7 +72,7 @@ namespace cuda_scene_engine
     checkCudaErrors(cudaMalloc((void**)&target->materials, sizeof(subject::material_t) * source->n_materials));
     checkCudaErrors(cudaMemcpy(target->materials, source->materials, sizeof(subject::material_t) * source->n_materials, cudaMemcpyHostToDevice));
 
-    if (source->animation)
+    if (source->animation && source->animation->n_groups)
     {
       target->animation = (subject::animation_t*)calloc(1, sizeof(subject::animation_t));
       *target->animation = *source->animation;

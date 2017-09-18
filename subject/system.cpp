@@ -78,8 +78,9 @@ namespace subject
 
   int scene_set_frame(scene_t* scene, int n_frame)
   {
-    if (!scene->animation)
+    if (!scene->animation || !scene->animation->n_groups)
       return SCENE_ENGINE_OK;
+
     animation_t* anim = scene->animation;
     if (anim->n_current_frame == n_frame)
       return SCENE_ENGINE_OK;

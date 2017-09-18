@@ -90,8 +90,9 @@ namespace cuda_scene_engine
     if (int r = cuda_relocate_scene(scene, 0))
       return r;
 
-    int n_first_animated_face = scene->host_scene->animation->groups[0].n_offset;
-    int n_animated_faces = scene->n_faces - n_first_animated_face;
+    int n_first_animated_face = scene_static_faces_count(scene);
+    int n_animated_faces = scene_animated_faces_count(scene);
+
     int n_grid_size = (n_animated_faces + system->set_frame_block_size - 1) / system->set_frame_block_size;
 
     const cuda_math::face_t* source = (const cuda_math::face_t*)&scene->base_faces[n_first_animated_face];
