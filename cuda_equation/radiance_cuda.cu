@@ -623,6 +623,8 @@ namespace radiance_equation_cuda
     for (int i = 0; i != 5; ++i)
       thrust::exclusive_scan(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
 
+    // @detail Align interaction groups on cache-line boundary to speedup further interaction kernel application.
+    // @detail Yet alignment it is not crucial for ray index resolving.
     const int n_diffused_offset = align_interaction_count(n_absorbed);
     const int n_reflected_offset = n_diffused_offset + align_interaction_count(n_absorbed);
     const int n_transmitted_offset = n_reflected_offset + align_interaction_count(n_reflected);
