@@ -187,6 +187,7 @@ namespace obj_import
     std::map<std::string, std::string> hierarchy;
     
     int current_frame = -1;
+    float frame_time_scale = 1.f;
 
     std::ifstream file(filename);
     if (!file.is_open())
@@ -208,6 +209,10 @@ namespace obj_import
       actions["frame"] = [&](const char* line) {
         return sscanf(line, "%d", &current_frame) == 1;
       };
+
+      actions["frame_time_scale"] = [&](const char* line) {
+        return sscanf(line, "%f", &frame_time_scale) == 1;
+      }; 
 
       actions["transform"] = [&](const char* line) {
         const char* delim = strchr(line, ' ');
@@ -261,6 +266,7 @@ namespace obj_import
 
     animation_free(scene->animation);
     scene->animation = subject::animation_create(n_groups, n_frames);
+    scene->animation->frame_time_step = frame_time_scale;
 
     for (const auto& frame_iter : frames)
     {

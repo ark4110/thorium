@@ -1,4 +1,5 @@
 #frames_count 121
+frame_time_scale 5.000000
 #static_object Standalone
 #static_object Sun
 object_root Parent Parent

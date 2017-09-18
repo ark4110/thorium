@@ -94,7 +94,7 @@ namespace cpu_form_factors
     
     if ((r = system_set_scene(system->caster, scene)) < 0)
       return r;
-    if ((r = system_prepare(system->caster)) < 0)
+    if ((r = system_update(system->caster)) < 0)
       return r;
     if ((r = emission::system_set_scene(system->emitter, system->scene)) < 0)
       return r;

@@ -181,6 +181,17 @@ namespace cpu_adams
     task->n_step = ++system->n_step;
 
     task->current_time += task->time_delta;
+
+    if (system->scene->animation)
+    {
+      int n_frame = (int)task->current_time / system->scene->animation->frame_time_step;
+      if (system->scene->n_current_frame != n_frame)
+      {
+        if ((r = scene_set_frame(system->scene, n_frame)))
+          return r;
+      }
+        
+    }
  
     return THERMAL_SOLUTION_OK;
   }

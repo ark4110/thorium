@@ -140,10 +140,10 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
     if (rtpModelSetTriangles(system->model, 0, system->vertices) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;
-    if (rtpModelFinish(system->model) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;
+    //if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
+    //  return -RAY_CASTER_ERROR;
+    //if (rtpModelFinish(system->model) != RTP_SUCCESS)
+    //  return -RAY_CASTER_ERROR;
     
     bool force_cpu = system->context_type == RTP_CONTEXT_TYPE_CPU;
     system->converter_state = optix_hit_converter::state_init(scene, force_cpu);
@@ -155,6 +155,12 @@ namespace optix_ray_caster
   {
     if (!system->scene || system->scene->n_faces == 0)
       return -RAY_CASTER_ERROR;
+
+    if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;
+    if (rtpModelFinish(system->model) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;
+
     return RAY_CASTER_OK;
   }
 

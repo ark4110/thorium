@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
       printf("Casting scene on %s ...\n", ray_caster::system_get_name(s));
       ray_caster::system_t* system = systems[s];
       system_set_scene(system, scene);
-      system_prepare(system);
+      system_update(system);
       sdkResetTimer(&hTimer);
       sdkStartTimer(&hTimer);
       system_cast(system, tasks[s]);

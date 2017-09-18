@@ -278,6 +278,19 @@ namespace subject
       return -SCENE_ENGINE_NOT_SUPPORTED;
   }
 
+  int scene_static_faces_count(const scene_t* scene)
+  {
+    return scene->n_faces - scene_animated_faces_count(scene);
+  }
+
+  int scene_animated_faces_count(const scene_t* scene)
+  {
+    if (scene->animation && scene->animation->n_groups)
+      return scene->animation->groups[0].n_offset;
+    else
+      return 0;
+  }
+
   namespace subject_engine_host
   {
     struct system_t : subject::system_t

@@ -81,7 +81,7 @@ TYPED_TEST(RayCaster, AcceptFloorScene)
 
 TYPED_TEST(RayCaster, PrepareFailsForNoScene)
 { 
-  ASSERT_EQ(-RAY_CASTER_ERROR, system_prepare(this->System));
+  ASSERT_EQ(-RAY_CASTER_ERROR, system_update(this->System));
 }
 
 TYPED_TEST(RayCaster, AcceptConsequencesSetScene)
@@ -98,7 +98,7 @@ TYPED_TEST(RayCaster, PrepareFailsForEmptyScene)
 {
   subject::scene_t* emptyScence = MakeEmptyScene(this->SceneSystem);
   system_set_scene(this->System, emptyScence);
-  ASSERT_EQ(-RAY_CASTER_ERROR, system_prepare(this->System));
+  ASSERT_EQ(-RAY_CASTER_ERROR, system_update(this->System));
   scene_free(emptyScence);
 }
 
@@ -106,7 +106,7 @@ TYPED_TEST(RayCaster, PreparePassForNotEmptyScene)
 {
   subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
   system_set_scene(this->System, floorScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
   scene_free(floorScene);
 }
 
@@ -115,7 +115,7 @@ TYPED_TEST(RayCaster, ProcessAllRays)
   subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
 
   system_set_scene(this->System, floorScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(2);
 
@@ -143,7 +143,7 @@ TYPED_TEST(RayCaster, JustWorks)
   subject::scene_t* floorScene = MakeFloorScene(this->SceneSystem);
 
   system_set_scene(this->System, floorScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
   
   task_t* task = task_create(1);
 
@@ -167,7 +167,7 @@ TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
   subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(1);
 
@@ -192,7 +192,7 @@ TYPED_TEST(RayCaster, FindNearestTriangle)
   subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(1);
 
@@ -216,7 +216,7 @@ TYPED_TEST(RayCaster, SkipTriangleNearButInOppositeDirection)
   subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(1);
 
@@ -241,7 +241,7 @@ TYPED_TEST(RayCaster, IntersectTriganglesNotPlanes)
   subject::scene_t* stackScene = MakeStackScene(this->SceneSystem);
 
   system_set_scene(this->System, stackScene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(1);
 
@@ -282,7 +282,7 @@ TYPED_TEST(RayCaster, ProcessLargeScene)
   }
 
   system_set_scene(this->System, scene);
-  ASSERT_EQ(RAY_CASTER_OK, system_prepare(this->System));
+  ASSERT_EQ(RAY_CASTER_OK, system_update(this->System));
 
   task_t* task = task_create(1);
 

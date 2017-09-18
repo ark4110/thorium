@@ -280,9 +280,9 @@ namespace ray_caster
     return system->methods->set_scene(system, scene);
   }
 
-  int system_prepare(system_t* system)
+  int system_update(system_t* system)
   {
-    return system->methods->prepare(system);
+    return system->methods->update(system);
   }
 
   int system_cast(system_t* system, task_t* task)

@@ -216,7 +216,7 @@ namespace radiance_equation_cuda
     if ((r = system_set_scene(system->params.ray_caster, ray_caster_scene)) < 0)
       return r;
 
-    if ((r = system_prepare(system->params.ray_caster)) < 0)
+    if ((r = system_update(system->params.ray_caster)) < 0)
       return r;
 
     for (int e = 0; e != system->params.n_emitters; ++e)

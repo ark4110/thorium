@@ -121,8 +121,6 @@ namespace optix_hit_converter
     return RAY_CASTER_OK;
   }
 
-  
-
   int convert_cuda(state_t* state, ray_caster::task_t* task)
   {
     if (int r = scene_relocate(state->scene, 0))

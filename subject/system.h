@@ -121,7 +121,7 @@ namespace subject
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
     animation_t* animation;
-    int n_current_frame;
+    int n_current_frame; // @todo Move to animation?
 
     void(*free_data)(scene_t*);
     int(*relocate)(scene_t*, int device);
@@ -189,6 +189,8 @@ namespace subject
   void scene_free(scene_t* scene);
   int scene_set_frame(scene_t* scene, int n_frame);
   int scene_relocate(scene_t* scene, int device);
+  int scene_static_faces_count(const scene_t* scene);
+  int scene_animated_faces_count(const scene_t* scene);
 
   void host_scene_free_data(scene_t* scene);
   int host_scene_finalize(scene_t* scene);

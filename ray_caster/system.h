@@ -106,7 +106,7 @@ namespace ray_caster
     int(*set_scene)(system_t* system, subject::scene_t* scene);
 
     /// @brief Checks system consistency and prepare scene for ray casting.
-    int(*prepare)(system_t* system);
+    int(*update)(system_t* system);
 
       /// @brief Casts rays of given task task for prepared scene.
     /// @note Task's rays, rays hit faces indices and points are prepared by callee.
@@ -145,7 +145,7 @@ namespace ray_caster
   int system_init(system_t* system);
   int system_shutdown(system_t* system);
   int system_set_scene(system_t* system, subject::scene_t* scene);
-  int system_prepare(system_t* system);
+  int system_update(system_t* system);
   int system_cast(system_t* system, task_t* task);
   int system_relocate_task(system_t* system, task_t* task, int device);
 }
