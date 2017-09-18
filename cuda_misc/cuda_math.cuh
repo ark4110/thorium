@@ -90,7 +90,7 @@ namespace cuda_math
     return make_mat33(1, 0, 0, 0, 1, 0, 0, 0, 1);
   }
 
-  /// @brief Rotation matrix whiñh reverse vector direction.
+  /// @brief Rotation matrix whiï¿½h reverse vector direction.
   inline __device__ mat33 make_reverse()
   {
     return make_mat33(1, 0, 0, 0, -1, 0, 0, 0, -1);
@@ -210,6 +210,10 @@ namespace cuda_math
   inline __device__ bool ray_check_hit_front(const ray_t& ray, const prep_face_t& plane)
   { 
     return dot(plane.normalized_normal, ray.direction) < 0;
+  }
+  inline __device__ bool ray_check_hit_front(const ray_t& ray, float3 normalized_normal)
+  {
+    return dot(normalized_normal, ray.direction) < 0;
   }
 
   inline __device__ ray_t ray_reflect(const ray_t& ray, const float3& normalized_normal, const float3& hit_point)

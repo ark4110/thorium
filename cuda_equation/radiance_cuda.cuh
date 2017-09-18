@@ -38,13 +38,16 @@ namespace radiance_equation_cuda
     int* mesh_materials;
     float* mesh_power;
 
-    curandStateMtgp32* HSGenDescision;
+    curandStatePhilox4_32_10_t* PhiloxGenDecision;
 
     // Per step vars
     int n_rays_alloc;
     float* ray_random;
     char* hit_decision;
     int* postponed_offsets;
+
+    int n_interaction_rays;
+    int* ray_interaction_idx;
   };
   
   __global__ void process_rays(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_point, ray_t* rays, char* hit_status);
