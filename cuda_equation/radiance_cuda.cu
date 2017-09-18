@@ -623,7 +623,6 @@ namespace radiance_equation_cuda
     for (int i = 0; i != 5; ++i)
       thrust::exclusive_scan(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
 
-    cudaMemset(system->host_context.ray_interaction_idx, 0, sizeof(int) * (system->host_context.n_rays_alloc + 4 * n_interaction_alignment));
     const int n_diffused_offset = align_interaction_count(n_absorbed);
     const int n_reflected_offset = n_diffused_offset + align_interaction_count(n_absorbed);
     const int n_transmitted_offset = n_reflected_offset + align_interaction_count(n_reflected);
