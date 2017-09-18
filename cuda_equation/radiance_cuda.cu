@@ -91,8 +91,11 @@ namespace radiance_equation_cuda
     if (host_context.n_rays_alloc < n_rays)
     {
       host_context.n_rays_alloc = align_rays_count(n_rays);
+      if (host_context.ray_random)
+        cudaFree(host_context.ray_random);
       if (host_context.hit_decision)
         cudaFree(host_context.hit_decision);
+      checkCudaErrors(cudaMalloc(&host_context.ray_random, sizeof(float) * host_context.n_rays_alloc));
       checkCudaErrors(cudaMalloc(&host_context.hit_decision, sizeof(char) * host_context.n_rays_alloc));
       sync = true;
     }
@@ -134,7 +137,7 @@ namespace radiance_equation_cuda
     system->n_tpb = deviceProp.maxThreadsPerBlock;
     system->n_warp_size = deviceProp.warpSize;
 
-    int n_mtgp_blocks = 64;
+    int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
     context_t& host_context = system->host_context;
@@ -186,13 +189,18 @@ namespace radiance_equation_cuda
     cudaFree(system->host_context.HSGenR);
     cudaFree(system->host_context.HSGenTheta);
     cudaFree(system->host_context.HSGenDescision);
+    cudaFree(system->host_context.ray_random);
+    cudaFree(system->host_context.hit_decision);
+    cudaFree(system->host_context.postponed_offsets);
 
     system->host_context = {};
+
     cudaFree(system->device_context);
     system->device_context = 0;
 
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
+
 
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
