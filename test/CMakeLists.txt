@@ -34,6 +34,11 @@ configure_file(${CMAKE_SOURCE_DIR}/models/test_material.mtl ${CMAKE_RUNTIME_OUTP
 configure_file(${CMAKE_SOURCE_DIR}/models/test_material.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_material.obj)
 configure_file(${CMAKE_SOURCE_DIR}/models/zarya.orbit ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/zarya.orbit)
 
+configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.obj)
+configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.mtl ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.mtl)
+configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.anim ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.anim)
+configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.task ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.task)
+
 add_executable(tests ${SOURCE_FILES})
 
 target_link_libraries(tests ${GTEST_BOTH_LIBRARIES})

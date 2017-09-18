@@ -25,6 +25,7 @@
 #include "../cuda_misc/cuda_scene_engine.h"
 #include <stdlib.h>
 #include <cstdio>
+#include <cstring>
 
 #include <algorithm>
 #include <numeric>

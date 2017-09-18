@@ -76,11 +76,10 @@ class AnimatedScene : public Test
 {
 public:
   AnimatedScene()
-    : LastErrorCode(0)
   {
     SceneSystem = subject::system_create(SceneEngineType::ID);
-    LastErrorCode = system_create_scene(SceneSystem, &Scene);
-    LastErrorCode = LastErrorCode ? LastErrorCode : obj_import::scene("models/test_hierarchy.obj", Scene);
+    system_create_scene(SceneSystem, &Scene);
+    obj_import::scene("models/test_hierarchy.obj", Scene);
   }
 
   ~AnimatedScene()
@@ -90,7 +89,6 @@ public:
   }
 
 public:
-  int LastErrorCode;
   subject::system_t* SceneSystem;
   subject::scene_t* Scene;
 };
@@ -101,23 +99,22 @@ TYPED_TEST_CASE(AnimatedScene, SceneEnginesTypes);
 
 TYPED_TEST(AnimatedScene, FinalizationTest)
 {
-  ASSERT_EQ(0, LastErrorCode);
   int r = 0;
-  r = system_finalize_scene(SceneSystem, Scene);
+  r = system_finalize_scene(this->SceneSystem, this->Scene);
   ASSERT_EQ(SCENE_ENGINE_OK, r);
-  ASSERT_NE(nullptr, Scene->face_areas);
-  ASSERT_NE(nullptr, Scene->face_normals);
-  ASSERT_NE(nullptr, Scene->face_to_mesh);
-  ASSERT_NE(nullptr, Scene->face_animation_group);
-  ASSERT_NE(nullptr, Scene->mesh_material);
-  ASSERT_NE(nullptr, Scene->base_faces);
+  ASSERT_NE(nullptr, this->Scene->face_areas);
+  ASSERT_NE(nullptr, this->Scene->face_normals);
+  ASSERT_NE(nullptr, this->Scene->face_to_mesh);
+  ASSERT_NE(nullptr, this->Scene->face_animation_group);
+  ASSERT_NE(nullptr, this->Scene->mesh_material);
+  ASSERT_NE(nullptr, this->Scene->base_faces);
 }
 
 TYPED_TEST(AnimatedScene, SetFrameTest)
 {  
-  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(SceneSystem, Scene));
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneSystem, this->Scene));
 
   int r = 0;
-  r = scene_set_frame(Scene, 0);
+  r = scene_set_frame(this->Scene, 0);
   ASSERT_EQ(SCENE_ENGINE_OK, r);
 }

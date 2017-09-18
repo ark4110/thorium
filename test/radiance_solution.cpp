@@ -35,7 +35,7 @@ const float CurrentAccuracy = 0.0001f;
 template <int SceneEngineID, int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
 {
-  static const int SceneEngineID = SceneEngineID;
+  static const int SceneEngine = SceneEngineID;
   static const int EquationEngine = EquationEngineID;
   static const int EmissionEngine = EmissionEngineID;
   static const int RayCasterEngine = RayCasterEngineID;
@@ -48,7 +48,7 @@ class RadianceSolution
 public:
   RadianceSolution()
   {
-    SceneEngine = subject::system_create(EnginesConfig::SceneEngineID);
+    SceneEngine = subject::system_create(EnginesConfig::SceneEngine);
     RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
     
     malley_cpu::params_t emitterParams;

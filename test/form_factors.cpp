@@ -31,10 +31,10 @@ using namespace form_factors;
 using subject::scene_t;
 using subject::mesh_t;
 
-template <int SceneEngineID, int EmitterTypeID, int RayCasterTypeID>
+template <int SceneEngineTypeID, int EmitterTypeID, int RayCasterTypeID>
 struct EngineType
 {
-  static const int SceneEngineID = SceneEngineID;
+  static const int SceneEngineID = SceneEngineTypeID;
   static const int EmitterID = EmitterTypeID;
   static const int RayCasterID = RayCasterTypeID;
 };
