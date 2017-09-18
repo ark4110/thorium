@@ -102,6 +102,8 @@ namespace subject
   {
     int n_groups;
     int n_frames;
+    int n_static_faces;
+    int n_dynamic_faces;
     int n_current_frame;
     float frame_time_step;
     face_group_t* groups;

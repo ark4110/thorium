@@ -87,11 +87,14 @@ namespace cuda_scene_engine
 
   int system_set_frame(system_t* system, scene_t* scene, int n_frame)
   {
+    int n_first_animated_face = scene_static_faces_count(scene->host_scene);
+    int n_animated_faces = scene_animated_faces_count(scene->host_scene);
+
+    if (!n_animated_faces)
+      return SCENE_ENGINE_OK;
+
     if (int r = cuda_relocate_scene(scene, 0))
       return r;
-
-    int n_first_animated_face = scene_static_faces_count(scene);
-    int n_animated_faces = scene_animated_faces_count(scene);
 
     int n_grid_size = (n_animated_faces + system->set_frame_block_size - 1) / system->set_frame_block_size;
 

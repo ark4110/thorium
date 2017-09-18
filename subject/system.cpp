@@ -78,7 +78,7 @@ namespace subject
 
   int scene_set_frame(scene_t* scene, int n_frame)
   {
-    if (!scene->animation || !scene->animation->n_groups)
+    if (!scene->animation)
       return SCENE_ENGINE_OK;
 
     animation_t* anim = scene->animation;
@@ -287,15 +287,12 @@ namespace subject
 
   int scene_static_faces_count(const scene_t* scene)
   {
-    return scene->n_faces - scene_animated_faces_count(scene);
+    return scene->animation ? scene->animation->n_static_faces : scene->n_faces;
   }
 
   int scene_animated_faces_count(const scene_t* scene)
   {
-    if (scene->animation && scene->animation->n_groups)
-      return scene->animation->groups[0].n_offset;
-    else
-      return 0;
+    return scene->animation ? scene->animation->n_dynamic_faces : 0;
   }
 
   namespace subject_engine_host
