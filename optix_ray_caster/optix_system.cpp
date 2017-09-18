@@ -26,6 +26,7 @@ namespace optix_ray_caster
 {
   struct system_t : ray_caster::system_t
   {
+    bool use_cpu;
     subject::scene_t* scene;
 
     RTPcontexttype context_type;
@@ -62,7 +63,7 @@ namespace optix_ray_caster
 
     system->context_type = RTP_CONTEXT_TYPE_CUDA;
     int r = 0;
-    if (false /* force CPU for benchmarking */)
+    if (system->use_cpu)
     {
       system->context_type = RTP_CONTEXT_TYPE_CPU;
       if (rtpContextCreate(RTP_CONTEXT_TYPE_CPU, &system->context) != RTP_SUCCESS)
@@ -219,10 +220,11 @@ namespace optix_ray_caster
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task, int device))&relocate,
   };
 
-  ray_caster::system_t* system_create()
+  ray_caster::system_t* system_create(bool use_cpu)
   {
     system_t* s = (system_t*)malloc(sizeof(system_t));
     s->methods = &methods;
+    s->use_cpu = use_cpu;
     return s;
   }
 }

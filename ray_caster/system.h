@@ -123,7 +123,8 @@ namespace ray_caster
   #define RAY_CASTER_NAIVE_CPU 0
   #define RAY_CASTER_NAIVE_CUDA 1
   #define RAY_CASTER_OPTIX 4
-  #define RAY_CASTER_SYSTEMS_COUNT 5
+  #define RAY_CASTER_OPTIX_CPU 5
+  #define RAY_CASTER_SYSTEMS_COUNT 6
 
   /**
    * @brief Factory method for ray caster creation.

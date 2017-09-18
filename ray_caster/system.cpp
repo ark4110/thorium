@@ -205,11 +205,15 @@ namespace ray_caster
       system = naive_cuda_ray_caster::system_create();
       break;
 
-    case RAY_CASTER_OPTIX:
 #if !defined _WIN32 || defined _WIN64
-      system = optix_ray_caster::system_create();
-#endif
+    case RAY_CASTER_OPTIX:
+      system = optix_ray_caster::system_create(false);
       break;
+    
+    case RAY_CASTER_OPTIX_CPU:
+      system = optix_ray_caster::system_create(true);
+      break;
+#endif
 
     default:
       fprintf(stderr, "Unknown ray caster system type %d.\n", type);
