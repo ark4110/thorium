@@ -30,10 +30,106 @@
 #include <cstring>
 #include <chrono>
 
+#include <map>
+#include <thrust/system/cuda/vector.h>
+
 #include <helper_cuda.h>
 namespace {
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>
+}
+
+namespace {
+  class cached_allocator
+  {
+  public:
+    // just allocate bytes
+    typedef char value_type;
+
+    cached_allocator() {}
+
+    ~cached_allocator()
+    {
+      // free all allocations when cached_allocator goes out of scope
+      free_all();
+    }
+
+    char *allocate(std::ptrdiff_t num_bytes)
+    {
+      char *result = 0;
+
+      // search the cache for a free block
+      free_blocks_type::iterator free_block = free_blocks.find(num_bytes);
+
+      if (free_block != free_blocks.end())
+      {
+        // get the pointer
+        result = free_block->second;
+
+        // erase from the free_blocks map
+        free_blocks.erase(free_block);
+      }
+      else
+      {
+        // no allocation of the right size exists
+        // create a new one with cuda::malloc
+        // throw if cuda::malloc can't satisfy the request
+        try
+        {
+          // allocate memory and convert cuda::pointer to raw pointer
+          result = thrust::cuda::malloc<char>(num_bytes).get();
+        }
+        catch (std::runtime_error &e)
+        {
+          throw;
+        }
+      }
+
+      // insert the allocated pointer into the allocated_blocks map
+      allocated_blocks.insert(std::make_pair(result, num_bytes));
+
+      return result;
+    }
+
+    void deallocate(char *ptr, size_t n)
+    {
+      // erase the allocated block from the allocated blocks map
+      allocated_blocks_type::iterator iter = allocated_blocks.find(ptr);
+      std::ptrdiff_t num_bytes = iter->second;
+      allocated_blocks.erase(iter);
+
+      // insert the block into the free blocks map
+      free_blocks.insert(std::make_pair(num_bytes, ptr));
+    }
+
+  private:
+    typedef std::multimap<std::ptrdiff_t, char*> free_blocks_type;
+    typedef std::map<char *, std::ptrdiff_t>     allocated_blocks_type;
+
+    free_blocks_type      free_blocks;
+    allocated_blocks_type allocated_blocks;
+
+    void free_all()
+    {
+      // deallocate all outstanding blocks in both lists
+      for (free_blocks_type::iterator i = free_blocks.begin();
+        i != free_blocks.end();
+        ++i)
+      {
+        // transform the pointer to cuda::pointer before calling cuda::free
+        thrust::cuda::free(thrust::cuda::pointer<char>(i->second));
+      }
+
+      for (allocated_blocks_type::iterator i = allocated_blocks.begin();
+        i != allocated_blocks.end();
+        ++i)
+      {
+        // transform the pointer to cuda::pointer before calling cuda::free
+        thrust::cuda::free(thrust::cuda::pointer<char>(i->first));
+      }
+    }
+
+  };
 }
 
 #include <thrust/device_ptr.h>
@@ -68,7 +164,7 @@ namespace radiance_equation_cuda
 
     auto_block_size_t block_size;
 
-    cudaStream_t* streams;
+    cached_allocator* thrust_allocator;
 
     context_t host_context;
     context_t* device_context;
@@ -167,6 +263,8 @@ namespace radiance_equation_cuda
     cudaFree(system->host_context.hit_decision);
     cudaFree(system->host_context.postponed_offsets);
     cudaFree(system->host_context.ray_interaction_idx);
+
+    delete system->thrust_allocator;
 
     system->host_context = {};
 
@@ -472,6 +570,8 @@ namespace radiance_equation_cuda
     int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
+    system->thrust_allocator = new cached_allocator();
+
     int _not_used;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_random, make_ray_random, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
@@ -561,6 +661,8 @@ namespace radiance_equation_cuda
     int n[n_interaction_types_count];
   };
 
+  
+
   int calculate(system_t* system, thermal_equation::task_t* task)
   {
     const int n_meshes = system->scene->n_meshes;
@@ -639,12 +741,12 @@ namespace radiance_equation_cuda
     interaction_counts_t n_counts;
     
     for (int i = 0; i != n_interaction_types_count; ++i)
-      n_counts.n[i] = thrust::reduce(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride);
+      n_counts.n[i] = thrust::reduce(thrust::cuda::par(*system->thrust_allocator), postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride);
     
     int n_postponed = n_counts.postponed();
     const int n_missed = n_rays - n_counts.named.n_absorbed - n_postponed;
     for (int i = 0; i != n_interaction_types_count; ++i)
-      thrust::exclusive_scan(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
+      thrust::exclusive_scan(thrust::cuda::par(*system->thrust_allocator), postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
 
     // @detail Yet alignment it is not crucial for ray index resolving.
     // @todo Does align of interaction groups on cache-line boundary speedup further interaction kernel application?
