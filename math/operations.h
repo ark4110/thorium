@@ -198,6 +198,12 @@ namespace math
     return sqrtf(dot(diff, diff));
   }
 
+  inline float square_distance(vec3 a, vec3 b)
+  {
+    vec3 diff = a - b;
+    return dot(diff, diff);
+  }
+
   inline vec3 abs(vec3 a)
   {
     return make_vec3(a.x < 0 ? -a.x : a.x, a.y < 0 ? -a.y : a.y, a.z < 0 ? -a.z : a.z);

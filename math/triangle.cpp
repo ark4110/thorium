@@ -336,6 +336,72 @@ namespace math
     return result;
   }
 
+  math::vec3 point_most_remote(vec3 p, const vec3* points, int n_points)
+  {
+    float max_distance = 0;
+    math::vec3 result = p;
+
+    for (int i = 0; i != n_points; ++i)
+    {
+      vec3 d = points[i] - p;      
+      float distance = dot(d, d);
+      if (distance > max_distance)
+      {
+        max_distance = distance;
+        result = points[i];
+      }
+    }
+
+    return result;
+  }
+
+  int sphere_find_outside_sqr(const sphere_t& s, const vec3* points, int n_points, float& distance)
+  {
+    for (int i = 0; i != n_points; ++i)
+    {
+      distance = square_distance(s.center, points[i]);
+      if (distance > s.radius)
+        return i;
+    }
+
+    return n_points;
+  }
+
+  sphere_t point_ritter_bsphere(const vec3* points, int n_points)
+  {
+    sphere_t result;
+    vec3 x = points[0];
+    vec3 y = point_most_remote(x, points, n_points);
+    vec3 z = point_most_remote(y, points, n_points);
+
+    result.center = (y + z) / 2.f;
+    result.radius = square_distance(y, z) / 4.f;
+
+    int outside_idx = 0;
+    float distance;
+
+    while ((outside_idx = sphere_find_outside_sqr(result, points, n_points, distance)) != n_points)
+    {
+      const vec3& outside = points[outside_idx];
+      float r = sqrtf(result.radius);
+      float d = sqrtf(distance);
+      float nr = (r + d) / 2.f;
+      vec3 center = result.center + (outside - result.center) / d * (nr - r);
+
+      result.center = center;
+      result.radius = nr * nr * 1.01f;
+    }
+
+    result.radius = sqrtf(result.radius);
+
+    return result;
+  }
+
+  sphere_t triangles_ritter_bsphere(const triangle_t* triangles, int n_triangles)
+  {
+    return point_ritter_bsphere(triangles[0].points, 3 * n_triangles);
+  }
+
   sphere_t triangles_bsphere(const triangle_t* triangles, int n_triangles)
   {
     vec3 geom_center = make_vec3(0, 0, 0);

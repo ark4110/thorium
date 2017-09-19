@@ -22,6 +22,7 @@
     <ClCompile Include="adams_solution.cpp" />
     <ClCompile Include="animation.cpp" />
     <ClCompile Include="ballistics.cpp" />
+    <ClCompile Include="bounding_volume.cpp" />
     <ClCompile Include="conductive_solution.cpp" />
     <ClCompile Include="emission.cpp" />
     <ClCompile Include="export.cpp" />

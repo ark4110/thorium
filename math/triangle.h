@@ -122,6 +122,9 @@ namespace math
   /// @brief Calculate bounding sphere for triangles.
   sphere_t triangles_bsphere(const triangle_t* triangles, int n_triangles);
 
+  sphere_t point_ritter_bsphere(const vec3* points, int n_points);
+  sphere_t triangles_ritter_bsphere(const triangle_t* triangles, int n_triangles);  
+
   struct triangles_analysis_t
   {
     aabb_t aabb;
