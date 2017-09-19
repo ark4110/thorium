@@ -9,6 +9,7 @@ set(SOURCE_FILES
   adams_solution.cpp
   animation.cpp
   ballistics.cpp
+  bounding_volume.cpp
   conductive_solution.cpp
   emission.cpp
   export.cpp
