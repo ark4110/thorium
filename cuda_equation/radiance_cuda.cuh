@@ -24,18 +24,11 @@
 
 namespace radiance_equation_cuda
 {
-  using cuda_math::prep_face_t;
   using cuda_math::ray_t;
   
   struct context_t : malley_cuda::context_t
   {
-    prep_face_t* faces;
-    int* face_to_mesh_index;
-    
-    subject::material_t* materials;
-
     int n_meshes;
-    int* mesh_materials;
     float* mesh_power;
 
     curandStatePhilox4_32_10_t* PhiloxGenDecision;

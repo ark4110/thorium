@@ -25,7 +25,6 @@ namespace malley_cuda
 {
   using cuda_math::ray_t;
   using cuda_math::face_t;
-  using cuda_math::prep_face_t;
 
   struct context_t
   {
@@ -57,9 +56,9 @@ namespace malley_cuda
     return ray_malley_align(malley_ray, rotation, origin);
   }
 
-  inline __device__ ray_t ray_malley_emmit(float3 malley_ray, const prep_face_t& face, float3 origin)
+  inline __device__ ray_t ray_malley_emmit(float3 malley_ray, const float3& face_normalized_normal, float3 origin)
   {
-    const cuda_math::mat33& rotation = cuda_math::pick_face_rotation(face);
+    const cuda_math::mat33& rotation = cuda_math::pick_face_rotation(face_normalized_normal);
     return ray_malley_align(malley_ray, rotation, origin);
   }
 }

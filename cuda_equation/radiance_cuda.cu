@@ -20,6 +20,7 @@
 #include "../math/triangle.h"
 #include "../math/operations.h"
 #include "../math/ray.h"
+#include "../thermal_equation/radiance_cpu.h"
 #include <float.h>
 #include <cmath>
 #include <random>
@@ -39,7 +40,6 @@ namespace {
 #include <thrust/scan.h>
 #include <thrust/reduce.h>
 #include <thrust/execution_policy.h>
-#include <thermal_equation/radiance_cpu.h>
 
 #define CURAND_CALL(x) do { if((x) != CURAND_STATUS_SUCCESS) { \
   printf("Error at %s:%d\n",__FILE__,__LINE__); \
@@ -54,8 +54,21 @@ namespace radiance_equation_cuda
     int n_tpb;
     int n_warp_size;
     int n_mtgp_blocks;
-    int n_make_ray_random_block_size;
     int n_postpone_blocks;
+
+    struct auto_block_size_t
+    {
+      int n_make_ray_random;
+      int n_ray_absorption;
+      int n_ray_diffusion;
+      int n_ray_reflection;
+      int n_ray_transmition;
+      int n_ray_postponement;
+    };
+
+    auto_block_size_t block_size;
+
+    cudaStream_t* streams;
 
     context_t host_context;
     context_t* device_context;
@@ -86,7 +99,9 @@ namespace radiance_equation_cuda
   }
 
   const int n_interaction_alignment = 32;
-  int align_interaction_count(int n)
+  const int n_interaction_types_count = 5;
+
+  int align_interactions_count(int n)
   {
     return n + (n_interaction_alignment - n % n_interaction_alignment) % n_interaction_alignment;
   }
@@ -115,8 +130,6 @@ namespace radiance_equation_cuda
       sync_context_to_device(system);
   }
 
-
-
   __global__ void setup_ray_random(curandStatePhilox4_32_10_t *state)
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -134,83 +147,8 @@ namespace radiance_equation_cuda
     ctx->PhiloxGenDecision[blockIdx.x * blockDim.x + threadIdx.x] = local_state;
   }
 
-  /// @brief Initializes system with given ray caster after creation.
-  int init(system_t* system, params_t* params)
-  {
-    assert(sizeof(float3) == sizeof(math::vec3));
-    assert(sizeof(ray_t) == sizeof(math::ray_t));
-
-    system->params = *params;
-
-    system->host_context = {};
-    system->device_context = 0;
-    system->kernel_params = 0;
-
-    system->emission_task = emission::task_create();    
-    system->postponed_task = emission::task_create();
-
-    // Level-up emission tasks
-    system_relocate_task(system->params.ray_caster, system->emission_task->rays, 0);
-    system_relocate_task(system->params.ray_caster, system->postponed_task->rays, 0);
-    for (int i = 0; i != params->n_emitters; ++i)
-    {
-      system_relocate_task(params->emitters[i], system->emission_task, 0);
-      system_relocate_task(params->emitters[i], system->postponed_task, 0);
-    }
-
-    system->face_to_mesh_index = 0;
-
-    const char* argv[] = { "" };
-    int device_id = findCudaDevice(1, (const char **)argv);
-    cudaDeviceProp deviceProp;
-    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
-    system->n_tpb = deviceProp.maxThreadsPerBlock;
-    system->n_warp_size = deviceProp.warpSize;
-
-    int n_mtgp_blocks = 128;
-    system->n_mtgp_blocks = n_mtgp_blocks;
-
-    context_t& host_context = system->host_context;
-    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-
-    checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
-    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenR, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 3));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenTheta, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 4));
-
-    int _not_used;
-    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->n_make_ray_random_block_size, make_ray_random, 0, 0);
-    checkCudaErrors(cudaMalloc((void **)&host_context.PhiloxGenDecision, n_mtgp_blocks * system->n_make_ray_random_block_size * sizeof(curandStateMtgp32)));
-    setup_ray_random<<<system->n_mtgp_blocks, system->n_make_ray_random_block_size>>>(host_context.PhiloxGenDecision);
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    system->n_postpone_blocks = 256;
-    const int n_interaction_types_count = 4;
-    checkCudaErrors(cudaMalloc((void **)&host_context.postponed_offsets, sizeof(int) * n_interaction_types_count * system->n_postpone_blocks * system->n_tpb));
-
-    return THERMAL_EQUATION_OK;
-  }
-
   void contex_free_scene(context_t* ctx)
   {
-    if (ctx->faces)
-      cudaFree(ctx->faces);
-    ctx->faces = 0;
-
-    if (ctx->face_to_mesh_index)
-      cudaFree(ctx->face_to_mesh_index);
-    ctx->face_to_mesh_index = 0;
-
-    if (ctx->materials)
-      cudaFree(ctx->materials);
-    ctx->materials = 0;
-
-    if (ctx->mesh_materials)
-      cudaFree(ctx->mesh_materials);
-    ctx->mesh_materials = 0;
-
     if (ctx->mesh_power)
       cudaFree(ctx->mesh_power);
     ctx->mesh_power = 0;
@@ -228,6 +166,7 @@ namespace radiance_equation_cuda
     cudaFree(system->host_context.ray_random);
     cudaFree(system->host_context.hit_decision);
     cudaFree(system->host_context.postponed_offsets);
+    cudaFree(system->host_context.ray_interaction_idx);
 
     system->host_context = {};
 
@@ -269,33 +208,6 @@ namespace radiance_equation_cuda
 
     context_t& host_context = system->host_context;
 
-    // Prepare device faces
-    cuda_math::prep_face_t* faces = (cuda_math::prep_face_t*)calloc(scene->n_faces, sizeof(cuda_math::prep_face_t));
-    for (int i = 0; i != scene->n_faces; ++i)
-      faces[i].normalized_normal = math2cuda(normalize(triangle_normal(scene->faces[i])));
-    checkCudaErrors(cudaMalloc(&host_context.faces, sizeof(cuda_math::prep_face_t) * scene->n_faces));
-    checkCudaErrors(cudaMemcpy(host_context.faces, faces, sizeof(cuda_math::prep_face_t) * scene->n_faces, cudaMemcpyHostToDevice));
-    free(faces);
-
-    // Init device face to mesh index
-    free(system->face_to_mesh_index);
-    system->face_to_mesh_index = 0;
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
-    checkCudaErrors(cudaMalloc(&host_context.face_to_mesh_index, sizeof(int) * scene->n_faces));
-    checkCudaErrors(cudaMemcpy(host_context.face_to_mesh_index, system->face_to_mesh_index, sizeof(int) * scene->n_faces, cudaMemcpyHostToDevice));
-    
-    // Init device materials
-    checkCudaErrors(cudaMalloc((void**)&host_context.materials, sizeof(subject::material_t) * scene->n_materials));
-    checkCudaErrors(cudaMemcpy(host_context.materials, scene->materials, sizeof(subject::material_t) * scene->n_materials, cudaMemcpyHostToDevice));
-
-    // Init device mesh material index
-    int* mesh_materials = (int*)calloc(scene->n_meshes, sizeof(int));
-    for (int i = 0; i != scene->n_meshes; ++i)
-      mesh_materials[i] = scene->meshes[i].material_idx;
-    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_materials, sizeof(int) * scene->n_meshes));
-    checkCudaErrors(cudaMemcpy(host_context.mesh_materials, mesh_materials, sizeof(int) * scene->n_meshes, cudaMemcpyHostToDevice));
-    free(mesh_materials);
-
     checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * scene->n_meshes)); 
 
     sync_context_to_device(system);
@@ -311,7 +223,8 @@ namespace radiance_equation_cuda
     hit_transmit = 3,
     hit_drop = 4,
     hit_missed = 5,
-    hit_diffuse_back = 6,
+    hit_diffuse_front = 6,
+    hit_diffuse_rear = 7,
   };
 
   __device__ hit_decision make_hit_decision(float hit_dice, const subject::optical_properties_t& optical)
@@ -329,7 +242,7 @@ namespace radiance_equation_cuda
       return hit_drop;
   }
 
-  __global__ void make_ray_decisions2(int n_rays, int* hit_face_idx, const ray_t* rays, const float* ray_random,
+  __global__ void make_ray_decisions(int n_rays, int* hit_face_idx, const ray_t* rays, const float* ray_random,
                                       const float3* face_normal,
                                       const int* face_to_mesh,
                                       const subject::material_t* materials,
@@ -342,7 +255,8 @@ namespace radiance_equation_cuda
     int stride = blockDim.x * gridDim.x;
 
     int absorbed = 0;
-    int diffused = 0;
+    int diffused_front = 0;
+    int diffused_rear = 0;
     int reflected = 0;
     int transmitted = 0;
     int missed = 0;
@@ -379,8 +293,16 @@ namespace radiance_equation_cuda
       }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
       {
-        ++diffused;
-        decision = hit_front ? hit_diffuse : hit_diffuse_back;
+        if (hit_front)
+        {
+          ++diffused_front;
+          decision = hit_diffuse_front;
+        }
+        else
+        {
+          ++diffused_rear;
+          decision = hit_diffuse_rear;
+        }
       }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance + optical.transmittance)
       {
@@ -394,28 +316,33 @@ namespace radiance_equation_cuda
 
     int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
     reducer_count[thread_id + 0 * stride] = absorbed;
-    reducer_count[thread_id + 1 * stride] = diffused;
-    reducer_count[thread_id + 2 * stride] = reflected;
-    reducer_count[thread_id + 3 * stride] = transmitted;
+    reducer_count[thread_id + 1 * stride] = diffused_front;
+    reducer_count[thread_id + 2 * stride] = diffused_rear;
+    reducer_count[thread_id + 3 * stride] = reflected;
+    reducer_count[thread_id + 4 * stride] = transmitted;
   }
 
-  __global__ void resolve_interaction(int n_rays, const char* hit_decision, const int* thread_offset, int n_diffused_offset, int n_reflected_offset, int n_transmitted_offset, int* ray_interaction_idx)
+  __global__ void resolve_interaction(int n_rays, const char* hit_decision, const int* thread_offset, int n_diffused_front_offset, int n_diffused_rear_offset, int n_reflected_offset, int n_transmitted_offset, int* ray_interaction_idx)
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     int* absorbed = ray_interaction_idx + thread_offset[id];
-    int* diffused = ray_interaction_idx + n_diffused_offset + thread_offset[id + 1 * stride];
-    int* reflected = ray_interaction_idx + n_reflected_offset + thread_offset[id + 2 * stride];
-    int* transmitted = ray_interaction_idx + n_transmitted_offset + thread_offset[id + 3 * stride];
+    int* diffused_front = ray_interaction_idx + n_diffused_front_offset + thread_offset[id + 1 * stride];
+    int* diffused_rear = ray_interaction_idx + n_diffused_rear_offset + thread_offset[id + 2 * stride];
+    int* reflected = ray_interaction_idx + n_reflected_offset + thread_offset[id + 3 * stride];
+    int* transmitted = ray_interaction_idx + n_transmitted_offset + thread_offset[id + 4 * stride];
 
     for (; id < n_rays; id += stride)
     {
       switch (hit_decision[id])
       {
-        case hit_diffuse:
-        case hit_diffuse_back:
-          (*diffused++) = id;
+        case hit_diffuse_front:
+          (*diffused_front++) = id;
+          break;
+
+        case hit_diffuse_rear:
+          (*diffused_rear++) = id;
           break;
 
         case hit_absorb:
@@ -435,110 +362,204 @@ namespace radiance_equation_cuda
     }
   }
 
-  __global__ void make_ray_decisions(context_t* ctx, int n_rays, int* hit_face_idx, const float3* hit_point, ray_t* rays)
+  __global__ void ray_absorption(int n_rays, const int* interaction_ray_idx, const int* hit_face_idx, const int* face_to_mesh, const float* ray_power, float* mesh_power)
   {
-    char* hit_decisions = ctx->hit_decision;
-    int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; id < n_rays; id += stride)
     {
-      const int face_idx = hit_face_idx[ray_idx];
-      if (face_idx < 0)
-      {
-        hit_decisions[ray_idx] = hit_missed;
-        continue;
-      }
-
-      hit_face_idx[ray_idx] = ctx->face_to_mesh_index[face_idx];
-
-      const ray_t ray = rays[ray_idx];    
-      const prep_face_t face = ctx->faces[face_idx];
-      bool hit_front = cuda_math::ray_check_hit_front(ray, face);
-
-      const int mesh_idx = ctx->face_to_mesh_index[face_idx];
-      const subject::material_t& material = ctx->materials[ctx->mesh_materials[mesh_idx]];
-      const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
-
-      hit_decision decision = make_hit_decision(ctx->ray_random[ray_idx], optical);
-      const float3 point = hit_point[ray_idx];
-
-      hit_decisions[ray_idx] = decision;
-      switch (decision)
-      {
-      case hit_absorb:
-        break;
-
-      case hit_reflect:
-        rays[ray_idx] = cuda_math::ray_reflect(ray, face, point);
-        break;
-
-      case hit_diffuse:
-      {
-        float3 malley_ray = malley_cuda::pick_uniform_ray(ctx);
-        if (!hit_front)
-          malley_ray = cuda_math::invert_z(malley_ray);
-        rays[ray_idx] = malley_cuda::ray_malley_emmit(malley_ray, face, hit_point[ray_idx]);
-      }
-      break;
-
-      case hit_transmit:
-        rays[ray_idx] = cuda_math::ray_transmit(ray, point);
-        break;
-
-      default:
-        break;
-      }
+      int ray_idx = interaction_ray_idx[id];
+      int face_idx = hit_face_idx[ray_idx];
+      int mesh_idx = face_to_mesh[face_idx];
+      atomicAdd(&mesh_power[mesh_idx], ray_power[ray_idx]);
     }
   }
 
-  inline __device__ bool is_postpone_decision(char decision)
+  template <bool front>
+  __global__ void ray_diffusion(context_t* ctx, int n_rays, const int* interaction_ray_idx, const int* hit_face_idx, const float3* hit_points, const float3* face_normals, ray_t* rays)
   {
-    return decision == hit_reflect || decision == hit_diffuse || decision == hit_transmit;
-  }
-
-  __global__ void precalc_postpone_offsets(context_t* ctx, int n_rays)
-  {
-    const char* hit_decisions = ctx->hit_decision;
-    int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
-    int n_thread_postponed = 0;
-    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; id < n_rays; id += stride)
     {
-      char decision = hit_decisions[ray_idx];
-      if (is_postpone_decision(decision))
-        ++n_thread_postponed;
-    }
-    ctx->postponed_offsets[threadIdx.x + blockIdx.x * blockDim.x] = n_thread_postponed;
-  }
-  
-  __global__ void postpone_rays(context_t* ctx, int n_rays, const ray_t* rays, ray_t* postponed_ray, const float* powers, float* postponed_powers)
-  {
-    int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
-    int n_postponed_offset = ctx->postponed_offsets[ray_idx];
-    const char* hit_decisions = ctx->hit_decision;
+      int ray_idx = interaction_ray_idx[id];
+      int face_idx = hit_face_idx[ray_idx];
+      float3 hit_point = hit_points[ray_idx];
+      float3 face_normal = face_normals[face_idx];
+      float3 malley_ray = malley_cuda::pick_uniform_ray(ctx);
+      
+      if (!front)
+        malley_ray = cuda_math::invert_z(malley_ray);
 
-    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
-    {
-      const char decision = hit_decisions[ray_idx];
-      if (is_postpone_decision(decision))
-      {
-        postponed_ray[n_postponed_offset] = rays[ray_idx];
-        postponed_powers[n_postponed_offset] = powers[ray_idx];
-        ++n_postponed_offset;
-      }
+      rays[ray_idx] = malley_cuda::ray_malley_emmit(malley_ray, face_normal, hit_point);
     }
   }
 
-  __global__ void mesh_absorption(const context_t* ctx, int n_rays, const int* hit_mesh_idx, const float* power)
-  { 
-    int ray_idx = threadIdx.x + blockIdx.x * blockDim.x;
-    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
+  __global__ void ray_reflection(int n_rays, const int* interaction_ray_idx, const int* hit_face_idx, const float3* hit_points, const float3* face_normals, ray_t* rays)
+  {
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; id < n_rays; id += stride)
     {
-      const int mesh_idx = hit_mesh_idx[ray_idx];
-      if (mesh_idx >= 0 && ctx->hit_decision[ray_idx] == hit_absorb)
-      {
-        atomicAdd(&ctx->mesh_power[mesh_idx], power[ray_idx]);
-      }
+      int ray_idx = interaction_ray_idx[id];
+      const ray_t& ray = rays[ray_idx];
+      int face_idx = hit_face_idx[ray_idx];
+      float3 hit_point = hit_points[ray_idx];
+      float3 face_normal = face_normals[face_idx];
+
+      rays[ray_idx] = cuda_math::ray_reflect(ray, face_normal, hit_point);
     }
   }
+
+  __global__ void ray_transmition(int n_rays, const int* interaction_ray_idx, const float3* hit_points, ray_t* rays)
+  {
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; id < n_rays; id += stride)
+    {
+      int ray_idx = interaction_ray_idx[id];
+      const ray_t& ray = rays[ray_idx];
+      float3 hit_point = hit_points[ray_idx];
+      
+      rays[ray_idx] = cuda_math::ray_transmit(ray, hit_point);
+    }
+  }
+
+  __global__ void ray_postponement(int n_rays, const int* interaction_ray_idx, const ray_t* rays, const float* powers, ray_t* postponed_rays, float* postponed_powers)
+  {
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; id < n_rays; id += stride)
+    {
+      int ray_idx = interaction_ray_idx[id];
+      postponed_rays[id] = rays[ray_idx];
+      postponed_powers[id] = powers[ray_idx];
+    }
+  }
+
+  int init(system_t* system, params_t* params)
+  {
+    assert(sizeof(float3) == sizeof(math::vec3));
+    assert(sizeof(ray_t) == sizeof(math::ray_t));
+
+    system->params = *params;
+
+    system->host_context = {};
+    system->device_context = 0;
+    system->kernel_params = 0;
+
+    system->emission_task = emission::task_create();
+    system->postponed_task = emission::task_create();
+
+    // Level-up emission tasks
+    system_relocate_task(system->params.ray_caster, system->emission_task->rays, 0);
+    system_relocate_task(system->params.ray_caster, system->postponed_task->rays, 0);
+    for (int i = 0; i != params->n_emitters; ++i)
+    {
+      system_relocate_task(params->emitters[i], system->emission_task, 0);
+      system_relocate_task(params->emitters[i], system->postponed_task, 0);
+    }
+
+    system->face_to_mesh_index = 0;
+
+    const char* argv[] = { "" };
+    int device_id = findCudaDevice(1, (const char **)argv);
+    cudaDeviceProp deviceProp;
+    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
+    system->n_tpb = deviceProp.maxThreadsPerBlock;
+    system->n_warp_size = deviceProp.warpSize;
+
+    int n_mtgp_blocks = 128;
+    system->n_mtgp_blocks = n_mtgp_blocks;
+
+    int _not_used;
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_random, make_ray_random, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_diffusion, ray_diffusion<true>, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_reflection, ray_reflection, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_transmition, ray_transmition, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_postponement, ray_postponement, 0, 0);
+
+    context_t& host_context = system->host_context;
+    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+
+    checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
+    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenR, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 3));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenTheta, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 4));
+
+    checkCudaErrors(cudaMalloc((void **)&host_context.PhiloxGenDecision, n_mtgp_blocks * system->block_size.n_make_ray_random * sizeof(curandStatePhilox4_32_10_t)));
+    setup_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random >> >(host_context.PhiloxGenDecision);
+
+    system->n_postpone_blocks = 256;
+    
+    checkCudaErrors(cudaMalloc((void **)&host_context.postponed_offsets, sizeof(int) * n_interaction_types_count * system->n_postpone_blocks * system->n_tpb));
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    return THERMAL_EQUATION_OK;
+  }
+
+  union interaction_counts_t
+  {
+    struct named_t
+    {
+      int n_absorbed;
+      int n_diffused_front;
+      int n_diffused_rear;
+      int n_reflected;
+      int n_transmitted;
+    } named;
+
+    int postponed() const
+    {
+      return named.n_diffused_front + named.n_diffused_rear + named.n_reflected + named.n_transmitted;
+    }
+
+    int n[n_interaction_types_count];
+  };
+
+  union source_interaction_offsets_t
+  {
+    source_interaction_offsets_t(const interaction_counts_t& c)
+    {
+      n[0] = 0;
+      for (int i = 1; i != n_interaction_types_count; ++i)
+        n[i] = n[i - 1] + align_interactions_count(c.n[i - 1]);
+    }
+
+    struct named_t
+    {
+      int n_absorbed;
+      int n_diffused_front;
+      int n_diffused_rear;
+      int n_reflected;
+      int n_transmitted;
+    } named;
+    int n[n_interaction_types_count];
+  };
+
+  union target_interaction_offsets_t
+  {
+    target_interaction_offsets_t(const interaction_counts_t& c)
+    {
+      n[0] = 0;
+      for (int i = 1; i != n_interaction_types_count; ++i)
+        n[i] = n[i - 1] + c.n[i];
+    }
+
+    struct named_t
+    {
+      int n_absorbed;
+      int n_diffused_front;
+      int n_diffused_rear;
+      int n_reflected;
+      int n_transmitted;
+    } named;
+    int n[n_interaction_types_count];
+  };
 
   int calculate(system_t* system, thermal_equation::task_t* task)
   {
@@ -599,10 +620,10 @@ namespace radiance_equation_cuda
     prepare_context(system, n_rays);
     cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
 
-    make_ray_random << <system->n_mtgp_blocks, system->n_make_ray_random_block_size >> > (system->device_context, n_rays);
+    make_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random>> > (system->device_context, n_rays);
 
     subject::scene_t* scene = system->scene;
-    make_ray_decisions2<<<system->n_postpone_blocks, system->n_tpb>>>(n_rays,
+    make_ray_decisions<<<system->n_postpone_blocks, system->n_tpb>>>(n_rays,
                         ray_caster_task->hit_face_idx,
                         (ray_t*)ray_caster_task->ray,
                         system->host_context.ray_random,
@@ -614,58 +635,122 @@ namespace radiance_equation_cuda
                         system->host_context.postponed_offsets);
     const int n_reducer_stride = system->n_postpone_blocks * system->n_tpb;
     thrust::device_ptr<int> postponed_offsets(system->host_context.postponed_offsets);
-    const int n_absorbed = thrust::reduce(postponed_offsets, postponed_offsets + n_reducer_stride);
-    const int n_diffused = thrust::reduce(postponed_offsets + 1 * n_reducer_stride, postponed_offsets + 2 * n_reducer_stride);
-    const int n_reflected = thrust::reduce(postponed_offsets + 2 * n_reducer_stride, postponed_offsets + 3 * n_reducer_stride);
-    const int n_transmitted = thrust::reduce(postponed_offsets + 3 * n_reducer_stride, postponed_offsets + 4 * n_reducer_stride);
-    int n_postponed = n_diffused + n_reflected + n_transmitted;
-    const int n_missed = n_rays - n_absorbed - n_postponed;
-    for (int i = 0; i != 5; ++i)
+
+    interaction_counts_t n_counts;
+    
+    for (int i = 0; i != n_interaction_types_count; ++i)
+      n_counts.n[i] = thrust::reduce(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride);
+    
+    int n_postponed = n_counts.postponed();
+    const int n_missed = n_rays - n_counts.named.n_absorbed - n_postponed;
+    for (int i = 0; i != n_interaction_types_count; ++i)
       thrust::exclusive_scan(postponed_offsets + i * n_reducer_stride, postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
 
-    // @detail Align interaction groups on cache-line boundary to speedup further interaction kernel application.
     // @detail Yet alignment it is not crucial for ray index resolving.
-    const int n_diffused_offset = align_interaction_count(n_absorbed);
-    const int n_reflected_offset = n_diffused_offset + align_interaction_count(n_absorbed);
-    const int n_transmitted_offset = n_reflected_offset + align_interaction_count(n_reflected);
+    // @todo Does align of interaction groups on cache-line boundary speedup further interaction kernel application?
+    // @todo Without alignment we can run single postpone kernel.
+
+    source_interaction_offsets_t n_source_offsets(n_counts);
+    target_interaction_offsets_t n_target_offsets(n_counts);
+
     resolve_interaction<<<system->n_postpone_blocks, system->n_tpb>>>(n_rays,
             system->host_context.hit_decision,
             system->host_context.postponed_offsets,
-            n_diffused_offset,
-            n_reflected_offset,
-            n_transmitted_offset,
+            n_source_offsets.named.n_diffused_front,
+            n_source_offsets.named.n_diffused_rear,
+            n_source_offsets.named.n_reflected,
+            n_source_offsets.named.n_transmitted,
             system->host_context.ray_interaction_idx);
 
-    // @todo Now we know ray index and rays count for every interaction type. Just run interaction kernels on known ranges.
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    make_ray_decisions << <system->n_mtgp_blocks, 256 >> > (system->device_context
-      , n_rays
-      , ray_caster_task->hit_face_idx
-      , (float3*)ray_caster_task->hit_point
-      , (ray_t*)ray_caster_task->ray);
+    // Now we know values of rays indices and rays count for each interaction type. So we can just run interaction kernels on known ranges.
     
-    // Absorption step
-    mesh_absorption << <32, system->n_tpb>> > (system->device_context
-      , n_rays
-      , ray_caster_task->hit_face_idx
-      , ray_caster_task->power);
+    int* ray_interaction_idx = system->host_context.ray_interaction_idx;
 
-    precalc_postpone_offsets << <system->n_postpone_blocks, system->n_tpb>> > (system->device_context, n_rays);
+    if (n_counts.named.n_absorbed)
+    {
+      const int n_ray_absorption_grid = (n_counts.named.n_absorbed + system->block_size.n_ray_absorption - 1) / system->block_size.n_ray_absorption;
+      ray_absorption << <n_ray_absorption_grid, system->block_size.n_ray_absorption >> > (
+        n_counts.named.n_absorbed,
+        ray_interaction_idx,
+        ray_caster_task->hit_face_idx,
+        scene->face_to_mesh,
+        ray_caster_task->power,
+        system->host_context.mesh_power
+        );
+    }
 
-    // Postpone step    
-    n_postponed = thrust::reduce(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb);
-    //printf("Postponed %d\n", n_postponed);
-    thrust::exclusive_scan(postponed_offsets, postponed_offsets + system->n_postpone_blocks * system->n_tpb, postponed_offsets);
-    postpone_rays << <system->n_postpone_blocks, system->n_tpb>> > (
-        system->device_context
-        , n_rays
-        , (ray_t*)ray_caster_task->ray // mutated rays
-        , (ray_t*)postponed_task->rays->ray
-        , ray_caster_task->power
-        , postponed_task->rays->power);
+    if (n_counts.named.n_diffused_front)
+    {
+      // Grid and block size is limited by random generator.
+      ray_diffusion<true> << <system->n_mtgp_blocks, 256 >> > (
+        system->device_context,
+        n_counts.named.n_diffused_front,
+        ray_interaction_idx + n_source_offsets.named.n_diffused_front,
+        ray_caster_task->hit_face_idx,
+        (const float3*)ray_caster_task->hit_point,
+        (const float3*)scene->face_normals,
+        (ray_t*)ray_caster_task->ray
+        );
+    }
+
+    if (n_counts.named.n_diffused_rear)
+    {
+      // Grid and block size is limited by random generator.
+      ray_diffusion<false> << <system->n_mtgp_blocks, 256 >> > (
+        system->device_context,
+        n_counts.named.n_diffused_rear,
+        ray_interaction_idx + n_source_offsets.named.n_diffused_rear,
+        ray_caster_task->hit_face_idx,
+        (const float3*)ray_caster_task->hit_point,
+        (const float3*)scene->face_normals,
+        (ray_t*)ray_caster_task->ray
+        );
+    }
+
+    if (n_counts.named.n_reflected)
+    {
+      const int n_ray_reflected_grid = (n_counts.named.n_reflected + system->block_size.n_ray_reflection - 1) / system->block_size.n_ray_reflection;
+      ray_reflection << <n_ray_reflected_grid, system->block_size.n_ray_reflection >> > (
+        n_counts.named.n_reflected,
+        ray_interaction_idx + n_source_offsets.named.n_reflected,
+        ray_caster_task->hit_face_idx,
+        (const float3*)ray_caster_task->hit_point,
+        (const float3*)scene->face_normals,
+        (ray_t*)ray_caster_task->ray
+        );
+    }
+
+    if (n_counts.named.n_transmitted)
+    {
+      const int n_ray_transmitted_grid = (n_counts.named.n_transmitted + system->block_size.n_ray_transmition - 1) / system->block_size.n_ray_transmition;
+      ray_transmition << <n_ray_transmitted_grid, system->block_size.n_ray_transmition >> > (
+        n_counts.named.n_transmitted,
+        ray_interaction_idx + n_source_offsets.named.n_transmitted,
+        (const float3*)ray_caster_task->hit_point,
+        (ray_t*)ray_caster_task->ray
+        );
+    }
+    
+    for (int i = 1; i != n_interaction_types_count; ++i)
+    {
+      // @note There are holes because of alignment.
+      // @todo Don't align and perform single kernel run?
+      int n_postponed = n_counts.n[i];
+      if (n_postponed)
+      {
+        int n_source_offset = n_source_offsets.n[i];
+        int n_target_offset = n_target_offsets.n[i - 1];
+        const int n_ray_postponed_grid = (n_postponed + system->block_size.n_ray_postponement - 1) / system->block_size.n_ray_postponement;
+        ray_postponement << <n_ray_postponed_grid, system->block_size.n_ray_postponement >> > (
+          n_postponed,
+          ray_interaction_idx + n_source_offset,
+          (const ray_t*)ray_caster_task->ray,
+          ray_caster_task->power,
+          (ray_t*)postponed_task->rays->ray + n_target_offset,
+          postponed_task->rays->power + n_target_offset
+          );
+      }
+    }
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -683,11 +768,11 @@ namespace radiance_equation_cuda
     if (system->params.stats)
     {
       auto& ray_stats = system->params.stats->quants.named;
-      ray_stats.n_postponed = task_get_n_tasks(system->postponed_task->rays);
-      ray_stats.n_absorbed = n_absorbed;
-      ray_stats.n_diffused = n_diffused;
-      ray_stats.n_reflected = n_reflected;
-      ray_stats.n_transmited = n_transmitted;
+      ray_stats.n_postponed = n_postponed;
+      ray_stats.n_absorbed = n_counts.named.n_absorbed;
+      ray_stats.n_diffused = n_counts.named.n_diffused_front + n_counts.named.n_diffused_rear;
+      ray_stats.n_reflected = n_counts.named.n_reflected;
+      ray_stats.n_transmited = n_counts.named.n_transmitted;
       ray_stats.n_missed = n_missed;
 
       auto emission_time = std::chrono::duration_cast<std::chrono::microseconds>(emission_ptime - start_ptime);
@@ -701,6 +786,7 @@ namespace radiance_equation_cuda
       ++system->params.stats->n_steps;
     }
 
+    // @todo Don't relocate back, every scene client must handle relocation itself.
     if ((r = scene_relocate(system->scene, -1)) < 0)
       return r;
 

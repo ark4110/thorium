@@ -28,11 +28,6 @@ namespace cuda_math
     float3 points[3];
   };
 
-  struct prep_face_t
-  {
-    float3 normalized_normal;
-  };
-
   struct ray_t
   {
     float3 origin;
@@ -175,9 +170,10 @@ namespace cuda_math
     return rotate_towards(make_float3(0, 0, 1), norm);
   }
 
-  inline __device__ mat33 pick_face_rotation(const prep_face_t& face)
+
+  inline __device__ mat33 pick_face_rotation(const float3& face_normalized_normal)
   {
-    return rotate_towards(make_float3(0, 0, 1), face.normalized_normal);
+    return rotate_towards(make_float3(0, 0, 1), face_normalized_normal);
   }
 
   inline __device__ float3 invert_z(float3 v)
@@ -206,11 +202,7 @@ namespace cuda_math
 
     return side < 0;
   }
-
-  inline __device__ bool ray_check_hit_front(const ray_t& ray, const prep_face_t& plane)
-  { 
-    return dot(plane.normalized_normal, ray.direction) < 0;
-  }
+  
   inline __device__ bool ray_check_hit_front(const ray_t& ray, float3 normalized_normal)
   {
     return dot(normalized_normal, ray.direction) < 0;
@@ -218,6 +210,8 @@ namespace cuda_math
 
   inline __device__ ray_t ray_reflect(const ray_t& ray, const float3& normalized_normal, const float3& hit_point)
   {
+    // @todo Provide rays with normalized direction?
+    // @note May be it is better to normalize here because there are less reflected than emitted rays. Yet it may have zero-cost.
     float3 v = normalize(ray.direction);
     float angle = dot(normalized_normal, v);
     float3 reflection = v - 2 * angle * normalized_normal;
@@ -228,11 +222,6 @@ namespace cuda_math
   {
     float3 normal = normalize(triangle_normal(triangle));
     return ray_reflect(ray, normal, hit_point);
-  }
-
-  inline __device__ ray_t ray_reflect(const ray_t& ray, const prep_face_t& triangle, const float3& hit_point)
-  {
-    return ray_reflect(ray, triangle.normalized_normal, hit_point);
   }
 
   inline __device__ ray_t ray_transmit(const ray_t& ray, const float3& point)
