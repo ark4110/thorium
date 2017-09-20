@@ -609,9 +609,6 @@ namespace radiance_equation_cuda
     cudaMemcpy(n_counts.n, system->host_context.interaction_counts, sizeof(int) * hit_decision_count, cudaMemcpyDeviceToHost);
     interaction_counts_to_offsets << <1, 1 >> > (system->host_context.interaction_counts);
 
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
     const int n_postponed = n_counts.postponed();
     const int n_missed = n_counts.named.n_missed;
 
