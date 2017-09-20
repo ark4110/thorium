@@ -91,7 +91,7 @@ namespace radiance_equation_cuda
     const int alignment = 1024;
     return n_rays + (alignment - n_rays % alignment) % alignment;
   }
-  
+
   const int n_interaction_alignment = 32;
   __host__ __device__ inline int align_interactions_count(int n)
   {
@@ -180,7 +180,7 @@ namespace radiance_equation_cuda
 
     context_t& host_context = system->host_context;
 
-    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * scene->n_meshes)); 
+    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * scene->n_meshes));
 
     sync_context_to_device(system);
 
@@ -188,12 +188,12 @@ namespace radiance_equation_cuda
   }
 
   enum hit_decision
-  {    
+  {
     hit_diffuse_front = 0,
     hit_diffuse_rear = 1,
     hit_reflect = 2,
     hit_transmit = 3,
-    hit_absorb = 4,
+    hit_absorb = 4, // must be last interaction
 
     hit_missed = 5,
     hit_decision_count = 6,
@@ -211,12 +211,12 @@ namespace radiance_equation_cuda
   }
 
   __global__ void make_ray_decisions(int n_rays, int* hit_face_idx, const ray_t* rays, curandStatePhilox4_32_10_t* ray_random,
-                                      const float3* face_normal,
-                                      const int* face_to_mesh,
-                                      const subject::material_t* materials,
-                                      const int* mesh_material,
-                                      char* hit_decision,
-                                      int* interaction_counts
+    const float3* face_normal,
+    const int* face_to_mesh,
+    const subject::material_t* materials,
+    const int* mesh_material,
+    char* hit_decision,
+    int* interaction_counts
   )
   {
     __shared__ int totals[hit_decision_count];
@@ -248,7 +248,7 @@ namespace radiance_equation_cuda
       float3 normal = face_normal[face_idx];
       const int mesh_idx = face_to_mesh[face_idx];
       bool hit_front = cuda_math::ray_check_hit_front(ray, normal);
-      
+
       const subject::material_t& material = materials[mesh_material[mesh_idx]];
       const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
@@ -262,7 +262,7 @@ namespace radiance_equation_cuda
       else if (hit_dice < optical.absorbance + optical.specular_reflectance)
         decision = hit_reflect;
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
-      { 
+      {
         if (hit_front)
           decision = hit_diffuse_front;
         else
@@ -312,8 +312,8 @@ namespace radiance_equation_cuda
   }
 
   __global__ void filter_interaction(int n_rays, const char* hit_decision, int* interactions_offsets,
-                                      const ray_t* s_ray, const float3* s_hit_point, const float* s_power, const int* s_hit_face_idx,
-                                      ray_t* t_ray, float3* t_hit_point, float* t_power, int* t_hit_face_idx
+    const ray_t* s_ray, const float3* s_hit_point, const float* s_power, const int* s_hit_face_idx,
+    ray_t* t_ray, float3* t_hit_point, float* t_power, int* t_hit_face_idx
   )
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -380,7 +380,7 @@ namespace radiance_equation_cuda
       float3 hit_point = hit_points[ray_idx];
       float3 face_normal = face_normals[face_idx];
       float3 malley_ray = malley_cuda::pick_uniform_ray(ctx);
-      
+
       if (!front)
         malley_ray = cuda_math::invert_z(malley_ray);
 
@@ -411,7 +411,7 @@ namespace radiance_equation_cuda
     {
       const ray_t& ray = rays[ray_idx];
       float3 hit_point = hit_points[ray_idx];
-      
+
       rays[ray_idx] = cuda_math::ray_transmit(ray, hit_point);
     }
   }
@@ -488,7 +488,7 @@ namespace radiance_equation_cuda
   union counts_layout_t
   {
     struct named_t
-    {      
+    {
       int n_diffused_front;
       int n_diffused_rear;
       int n_reflected;
@@ -554,7 +554,7 @@ namespace radiance_equation_cuda
     auto start_ptime = std::chrono::high_resolution_clock().now();
 
     for (int e = 0; e != system->params.n_emitters; ++e)
-    { 
+    {
       emission::system_t* emitter = system->params.emitters[e];
       // Right now emission expect host task
       if ((r = system_relocate_task(emitter, emission_task, 0)) < 0)
@@ -593,16 +593,16 @@ namespace radiance_equation_cuda
     cudaMemset(system->host_context.interaction_counts, 0, sizeof(int) * hit_decision_count);
 
     subject::scene_t* scene = system->scene;
-    make_ray_decisions<<<system->n_mtgp_blocks, system->block_size.n_make_ray_decisions >>>(n_rays,
-                        ray_caster_task->hit_face_idx,
-                        (ray_t*)ray_caster_task->ray,
-                        system->host_context.PhiloxGenDecision,
-                        (const float3*)scene->face_normals,
-                        scene->face_to_mesh,
-                        scene->materials,
-                        scene->mesh_material,
-                        system->host_context.hit_decision,
-                        system->host_context.interaction_counts);
+    make_ray_decisions << <system->n_mtgp_blocks, system->block_size.n_make_ray_decisions >> >(n_rays,
+      ray_caster_task->hit_face_idx,
+      (ray_t*)ray_caster_task->ray,
+      system->host_context.PhiloxGenDecision,
+      (const float3*)scene->face_normals,
+      scene->face_to_mesh,
+      scene->materials,
+      scene->mesh_material,
+      system->host_context.hit_decision,
+      system->host_context.interaction_counts);
 
     counts_layout_t n_counts;
     cudaMemcpy(n_counts.n, system->host_context.interaction_counts, sizeof(int) * hit_decision_count, cudaMemcpyDeviceToHost);
@@ -693,9 +693,9 @@ namespace radiance_equation_cuda
         );
     }
 
-    int n_fill_source = hit_interaction_count - 1;
+    int n_fill_source = hit_absorb - 1;
     int n_fill_source_size = n_counts.n[n_fill_source];
-    for (int i = 0; i != n_fill_source; ++i)
+    for (int i = 0; i < n_fill_source; ++i)
     {
       int n_hole_size = n_filtered_offsets.n[i] - n_compact_offsets.n[i];
       while (n_counts.n[i] && n_hole_size && i != n_fill_source)
@@ -704,6 +704,7 @@ namespace radiance_equation_cuda
         if (!n_can_fill)
         {
           --n_fill_source;
+          n_fill_source_size = n_counts.n[n_fill_source];
           continue;
         }
 
@@ -714,7 +715,7 @@ namespace radiance_equation_cuda
 
         n_fill_source_size -= n_can_fill;
         n_hole_size -= n_can_fill;
-      }    
+      }
     }
 
     postponed_task->rays->n_tasks = n_postponed;
@@ -722,7 +723,7 @@ namespace radiance_equation_cuda
     float* h_mesh_power = (float*)malloc(n_meshes * sizeof(float));
     checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));
     for (int i = 0; i != n_meshes; ++i)
-      task->absorption[i] += h_mesh_power[i];    
+      task->absorption[i] += h_mesh_power[i];
     free(h_mesh_power);
 
     auto processing_ptime = std::chrono::high_resolution_clock().now();
