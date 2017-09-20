@@ -35,12 +35,8 @@ namespace radiance_equation_cuda
 
     // Per step vars
     int n_rays_alloc;
-    float* ray_random;
     char* hit_decision;
-    int* postponed_offsets;
-
-    int n_interaction_rays;
-    int* ray_interaction_idx;
+    int* interaction_counts;
   };
   
   __global__ void process_rays(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_point, ray_t* rays, char* hit_status);

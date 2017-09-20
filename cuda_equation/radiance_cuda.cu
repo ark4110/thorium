@@ -39,104 +39,6 @@ namespace {
 #include <curand_mtgp32dc_p_11213.h>
 }
 
-namespace {
-  class cached_allocator
-  {
-  public:
-    // just allocate bytes
-    typedef char value_type;
-
-    cached_allocator() {}
-
-    ~cached_allocator()
-    {
-      // free all allocations when cached_allocator goes out of scope
-      free_all();
-    }
-
-    char *allocate(std::ptrdiff_t num_bytes)
-    {
-      char *result = 0;
-
-      // search the cache for a free block
-      free_blocks_type::iterator free_block = free_blocks.find(num_bytes);
-
-      if (free_block != free_blocks.end())
-      {
-        // get the pointer
-        result = free_block->second;
-
-        // erase from the free_blocks map
-        free_blocks.erase(free_block);
-      }
-      else
-      {
-        // no allocation of the right size exists
-        // create a new one with cuda::malloc
-        // throw if cuda::malloc can't satisfy the request
-        try
-        {
-          // allocate memory and convert cuda::pointer to raw pointer
-          result = thrust::cuda::malloc<char>(num_bytes).get();
-        }
-        catch (std::runtime_error &e)
-        {
-          throw;
-        }
-      }
-
-      // insert the allocated pointer into the allocated_blocks map
-      allocated_blocks.insert(std::make_pair(result, num_bytes));
-
-      return result;
-    }
-
-    void deallocate(char *ptr, size_t n)
-    {
-      // erase the allocated block from the allocated blocks map
-      allocated_blocks_type::iterator iter = allocated_blocks.find(ptr);
-      std::ptrdiff_t num_bytes = iter->second;
-      allocated_blocks.erase(iter);
-
-      // insert the block into the free blocks map
-      free_blocks.insert(std::make_pair(num_bytes, ptr));
-    }
-
-  private:
-    typedef std::multimap<std::ptrdiff_t, char*> free_blocks_type;
-    typedef std::map<char *, std::ptrdiff_t>     allocated_blocks_type;
-
-    free_blocks_type      free_blocks;
-    allocated_blocks_type allocated_blocks;
-
-    void free_all()
-    {
-      // deallocate all outstanding blocks in both lists
-      for (free_blocks_type::iterator i = free_blocks.begin();
-        i != free_blocks.end();
-        ++i)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->second));
-      }
-
-      for (allocated_blocks_type::iterator i = allocated_blocks.begin();
-        i != allocated_blocks.end();
-        ++i)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->first));
-      }
-    }
-
-  };
-}
-
-#include <thrust/device_ptr.h>
-#include <thrust/scan.h>
-#include <thrust/reduce.h>
-#include <thrust/execution_policy.h>
-
 #define CURAND_CALL(x) do { if((x) != CURAND_STATUS_SUCCESS) { \
   printf("Error at %s:%d\n",__FILE__,__LINE__); \
   return EXIT_FAILURE;}} while(0)
@@ -147,15 +49,12 @@ namespace radiance_equation_cuda
   {
     params_t params;
 
-    int n_tpb;
-    int n_warp_size;
     int n_mtgp_blocks;
-    int n_postpone_blocks;
-    int n_postpone_block_size;
 
     struct auto_block_size_t
     {
-      int n_make_ray_random;
+      int n_make_ray_decisions;
+      int n_filter_interaction;
       int n_ray_absorption;
       int n_ray_diffusion;
       int n_ray_reflection;
@@ -164,8 +63,6 @@ namespace radiance_equation_cuda
     };
 
     auto_block_size_t block_size;
-
-    cached_allocator* thrust_allocator;
 
     context_t host_context;
     context_t* device_context;
@@ -194,12 +91,11 @@ namespace radiance_equation_cuda
     const int alignment = 1024;
     return n_rays + (alignment - n_rays % alignment) % alignment;
   }
-
+  
   const int n_interaction_alignment = 32;
-  const int n_interaction_types_count = 5;
-
-  int align_interactions_count(int n)
+  __host__ __device__ inline int align_interactions_count(int n)
   {
+    const int n_interaction_alignment = 32;
     return n + (n_interaction_alignment - n % n_interaction_alignment) % n_interaction_alignment;
   }
 
@@ -211,15 +107,9 @@ namespace radiance_equation_cuda
     if (host_context.n_rays_alloc < n_rays)
     {
       host_context.n_rays_alloc = align_rays_count(n_rays);
-      if (host_context.ray_random)
-        cudaFree(host_context.ray_random);
       if (host_context.hit_decision)
         cudaFree(host_context.hit_decision);
-      if (host_context.ray_interaction_idx)
-        cudaFree(host_context.ray_interaction_idx);
-      checkCudaErrors(cudaMalloc(&host_context.ray_random, sizeof(float) * host_context.n_rays_alloc));
       checkCudaErrors(cudaMalloc(&host_context.hit_decision, sizeof(char) * host_context.n_rays_alloc));
-      checkCudaErrors(cudaMalloc(&host_context.ray_interaction_idx, sizeof(int) * (host_context.n_rays_alloc + 4 * n_interaction_alignment)));
       sync = true;
     }
 
@@ -231,17 +121,6 @@ namespace radiance_equation_cuda
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     curand_init(1, id, 0, &state[id]);
-  }
-
-  __global__ void make_ray_random(context_t* ctx, int n_rays)
-  {
-    int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    curandStatePhilox4_32_10_t local_state = ctx->PhiloxGenDecision[ray_idx];
-    float* ray_random = ctx->ray_random;
-    for (; ray_idx < n_rays; ray_idx += stride)
-      ray_random[ray_idx] = curand_uniform(&local_state);
-    ctx->PhiloxGenDecision[blockIdx.x * blockDim.x + threadIdx.x] = local_state;
   }
 
   void contex_free_scene(context_t* ctx)
@@ -260,12 +139,7 @@ namespace radiance_equation_cuda
     cudaFree(system->host_context.HSGenR);
     cudaFree(system->host_context.HSGenTheta);
     cudaFree(system->host_context.PhiloxGenDecision);
-    cudaFree(system->host_context.ray_random);
     cudaFree(system->host_context.hit_decision);
-    cudaFree(system->host_context.postponed_offsets);
-    cudaFree(system->host_context.ray_interaction_idx);
-
-    delete system->thrust_allocator;
 
     system->host_context = {};
 
@@ -274,7 +148,6 @@ namespace radiance_equation_cuda
 
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
-
 
     free(system->face_to_mesh_index);
     system->face_to_mesh_index = 0;
@@ -315,41 +188,58 @@ namespace radiance_equation_cuda
   }
 
   enum hit_decision
-  {
-    hit_absorb = 0,
-    hit_reflect = 1,
-    hit_diffuse_front = 2,
-    hit_diffuse_rear = 3,
-    hit_transmit = 4,
-    hit_drop = 5,
-    hit_missed = 6,
+  {    
+    hit_diffuse_front = 0,
+    hit_diffuse_rear = 1,
+    hit_reflect = 2,
+    hit_transmit = 3,
+    hit_absorb = 4,
+
+    hit_missed = 5,
+    hit_decision_count = 6,
+    hit_interaction_count = hit_decision_count - 1
   };
 
-  __global__ void make_ray_decisions(int n_rays, int* hit_face_idx, const ray_t* rays, const float* ray_random,
+  __device__ inline int lane_id(void)
+  {
+    return threadIdx.x % warpSize;
+  }
+
+  __device__ inline int warp_broadcast(int value, int leader)
+  {
+    return __shfl(value, leader);
+  }
+
+  __global__ void make_ray_decisions(int n_rays, int* hit_face_idx, const ray_t* rays, curandStatePhilox4_32_10_t* ray_random,
                                       const float3* face_normal,
                                       const int* face_to_mesh,
                                       const subject::material_t* materials,
                                       const int* mesh_material,
                                       char* hit_decision,
-                                      int* reducer_count
+                                      int* interaction_counts
   )
   {
+    __shared__ int totals[hit_decision_count];
+    if (threadIdx.x == 0)
+    {
+      for (int i = 0; i != hit_decision_count; ++i)
+        totals[i] = 0;
+    }
+    __syncthreads();
+
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    int absorbed = 0;
-    int diffused_front = 0;
-    int diffused_rear = 0;
-    int reflected = 0;
-    int transmitted = 0;
-    int missed = 0;
+    curandStatePhilox4_32_10_t local_state = ray_random[ray_idx];
+
+    int counts[hit_decision_count] = {};
 
     for (; ray_idx < n_rays; ray_idx += stride)
     {
       const int face_idx = hit_face_idx[ray_idx];
       if (face_idx < 0)
       {
-        ++missed;
+        ++counts[hit_missed];
         hit_decision[ray_idx] = hit_missed;
         continue;
       }
@@ -362,159 +252,106 @@ namespace radiance_equation_cuda
       const subject::material_t& material = materials[mesh_material[mesh_idx]];
       const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
-      float hit_dice = ray_random[ray_idx];
+      float hit_dice = curand_uniform(&local_state);
       char decision;
       if (hit_dice < optical.absorbance)
-      {
-        ++absorbed;
         decision = hit_absorb;
-      }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance)
-      {
-        ++reflected;
         decision = hit_reflect;
-      }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
       {
         if (hit_front)
-        {
-          ++diffused_front;
           decision = hit_diffuse_front;
-        }
         else
-        {
-          ++diffused_rear;
           decision = hit_diffuse_rear;
-        }
       }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance + optical.transmittance)
-      {
-        ++transmitted;
         decision = hit_transmit;
-      }
       else
-        decision = hit_drop;
+        decision = hit_missed;
+
+      ++counts[decision];
       hit_decision[ray_idx] = decision;
     }
 
-    int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-    reducer_count[thread_id + 0 * stride] = absorbed;
-    reducer_count[thread_id + 1 * stride] = diffused_front;
-    reducer_count[thread_id + 2 * stride] = diffused_rear;
-    reducer_count[thread_id + 3 * stride] = reflected;
-    reducer_count[thread_id + 4 * stride] = transmitted;
+    ray_random[blockIdx.x * blockDim.x + threadIdx.x] = local_state;
+
+    __syncthreads();
+    for (int d = 0; d != hit_decision_count; ++d)
+    {
+      int value = counts[d];
+      for (int i = 1; i <= 16; i *= 2)
+      {
+        int n = __shfl_up(value, i);
+        if (lane_id() >= i)
+          value += n;
+      }
+
+      if (lane_id() == warpSize - 1)
+        atomicAdd(&totals[d], value);
+    }
+
+    __syncthreads();
+    if (threadIdx.x == 0)
+      for (int d = 0; d != hit_decision_count; ++d)
+        atomicAdd(&interaction_counts[d], totals[d]);
   }
 
-  __device__ void inplace_warp_scan(int* in)
+  __global__ void interaction_counts_to_offsets(int* data)
   {
-    int n = 32;
-
-    __shared__ int temp[32];
-    int tid = threadIdx.x;
-    int offset = 1;
-
-    // A
-    temp[2*thid] = in[2*thid]; // load input into shared memory
-    temp[2*thid+1] = in[2*thid+1];
-
-    for (int d = 16; d > 0; d >>= 1)                    // build sum in place up the tree
+    int prev = 0;
+    for (int i = 0; i != hit_interaction_count; ++i)
     {
-      __syncthreads();
-      if (thid < d)
-      {
-        //B
-        int ai = offset * (2 * thid + 1) - 1;
-        int bi = offset * (2 * thid + 2) - 1;
-        temp[bi] += temp[ai];
-      }
-      offset *= 2;
-
-      // C
-      if (thid == 0) { temp[n - 1] = 0; } // clear the last element
-      for (int d = 1; d < n; d *= 2) // traverse down tree & build scan
-      {
-        offset >>= 1;
-        __syncthreads();
-        if (thid < d)
-        {
-
-          // D
-          int ai = offset * (2 * thid + 1) - 1;
-          int bi = offset * (2 * thid + 2) - 1;
-          int t = temp[ai];
-          temp[ai] = temp[bi];
-          temp[bi] += t;
-        }
-      }
-      __syncthreads();
+      int next = align_interactions_count(data[i]);
+      data[i] = prev;
+      prev += next;
     }
   }
 
-
-  __global__ void sort_by_interaction(int n_rays, const char* hit_decision, const int* thread_offset, int n_diffused_front_offset, int n_diffused_rear_offset, int n_reflected_offset, int n_transmitted_offset,
+  __global__ void filter_interaction(int n_rays, const char* hit_decision, int* interactions_offsets,
                                       const ray_t* s_ray, const float3* s_hit_point, const float* s_power, const int* s_hit_face_idx,
                                       ray_t* t_ray, float3* t_hit_point, float* t_power, int* t_hit_face_idx
   )
   {
-    const int n_interactions = 5;
-
-    int skips[n_interactions];
-    ray_t ray_buffer;
-    float3 hit_point_buffer;
-    float power_buffer;
-    int hit_face_buffer;
-
-    __shared__ int warp_progress[32];
-
     int id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (; id < n_rays; id += stride)
     {
       const char decision = hit_decision[id];
-      const bool skip = decision == hit_missed || decision == hit_drop;
+      if (decision == hit_missed)
+        continue;
 
-      ray_buffer = s_ray[id];
-      hit_point_buffer = s_hit_point[id];
-      power_buffer = s_power[id];
-      hit_face_buffer = s_hit_face_idx[id];
+      ray_t ray_buffer = s_ray[id];
+      float3 hit_point_buffer = s_hit_point[id];
+      float power_buffer = s_power[id];
+      int hit_face_buffer = s_hit_face_idx[id];
 
-      for (int i = 0; i != n_interactions; ++i)
+      int active;
+      int leader;
+      int warp_progress;
+
+      for (int i = 0; i != hit_interaction_count; ++i)
       {
-        int ballot = __ballot(i == decision);
-        int warp_thread_idx = threadIdx.x % warpSize;
-        int mask = ~int(0) >> (warpSize - warp_thread_idx - 1);
-        int warp_offset = __popc(ballot & mask);
-
-        int warp_idx = threadIdx.x / warpSize; // @todo Add if?
-        warp_progress[warp_idx] = __popc(ballot);
-      }
-
-
-      if (flush_thread_idx[decision] == threadIdx.x)
-      {
-        int expected = next_buffered[decision] - buffered[decision];
-        int write_offset = atomicAdd(&global_offsets[decision], buffered[decision]);
-        for (int i = 0; i != buffered[decision]; ++i)
+        if (i == decision)
         {
-          t_ray[write_offset + i] = ray_buffer[i];
-          t_hit_point[write_offset + i] = hit_point_buffer[i];
-          t_power[write_offset + i] = power_buffer[i];
-          t_hit_face_idx[write_offset + i] = hit_face_buffer[i];
+          active = __ballot(1);
+          leader = __ffs(active) - 1;
+          warp_progress = __popc(active);
         }
-        buffered[decision] = expected;
-        next_buffered[decision] = expected;
       }
-      __syncthreads();
 
-      if (!skip)
-      {
-        int buf_idx = atomicAdd(&buffered[decision], 1);
-        ray_buffer[buf_idx] = s_ray[id];
-        hit_point_buffer[buf_idx] = s_hit_point[id];
-        power_buffer[buf_idx] = s_power[id];
-        hit_face_buffer[buf_idx] = s_hit_face_idx[id];
-      }
+      int warp_offset;
+      if (lane_id() == leader)
+        warp_offset = atomicAdd(&interactions_offsets[decision], warp_progress);
+      warp_offset = warp_broadcast(warp_offset, leader);
+
+      int thread_offset = warp_offset + __popc(active & ((1 << lane_id()) - 1));
+
+      t_ray[thread_offset] = ray_buffer;
+      t_hit_point[thread_offset] = hit_point_buffer;
+      t_power[thread_offset] = power_buffer;
+      t_hit_face_idx[thread_offset] = hit_face_buffer;
     }
   }
 
@@ -613,20 +450,12 @@ namespace radiance_equation_cuda
 
     system->face_to_mesh_index = 0;
 
-    const char* argv[] = { "" };
-    int device_id = findCudaDevice(1, (const char **)argv);
-    cudaDeviceProp deviceProp;
-    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
-    system->n_tpb = deviceProp.maxThreadsPerBlock;
-    system->n_warp_size = deviceProp.warpSize;
-
     int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
-    system->thrust_allocator = new cached_allocator();
-
     int _not_used;
-    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_random, make_ray_random, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_decisions, make_ray_decisions, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_filter_interaction, filter_interaction, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_diffusion, ray_diffusion<true>, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_reflection, ray_reflection, 0, 0);
@@ -642,13 +471,10 @@ namespace radiance_equation_cuda
     CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenR, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 3));
     CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenTheta, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 4));
 
-    checkCudaErrors(cudaMalloc((void **)&host_context.PhiloxGenDecision, n_mtgp_blocks * system->block_size.n_make_ray_random * sizeof(curandStatePhilox4_32_10_t)));
-    setup_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random >> >(host_context.PhiloxGenDecision);
+    checkCudaErrors(cudaMalloc((void **)&host_context.PhiloxGenDecision, system->n_mtgp_blocks * system->block_size.n_make_ray_decisions * sizeof(curandStatePhilox4_32_10_t)));
+    setup_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_decisions >> >(host_context.PhiloxGenDecision);
 
-    system->n_postpone_blocks = 64;
-    system->n_postpone_block_size = 128;
-    
-    checkCudaErrors(cudaMalloc((void **)&host_context.postponed_offsets, sizeof(int) * n_interaction_types_count * system->n_postpone_blocks * system->n_postpone_block_size));
+    checkCudaErrors(cudaMalloc((void **)&host_context.interaction_counts, sizeof(int) * hit_decision_count));
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -656,63 +482,51 @@ namespace radiance_equation_cuda
     return THERMAL_EQUATION_OK;
   }
 
-  union interaction_counts_t
+  union counts_layout_t
   {
     struct named_t
-    {
-      int n_absorbed;
+    {      
       int n_diffused_front;
       int n_diffused_rear;
       int n_reflected;
       int n_transmitted;
+      int n_absorbed;
+      int n_missed;
     } named;
+
+    static counts_layout_t interactions()
+    {
+      return counts_layout_t();
+    }
+
+    static counts_layout_t filtered_offsets(const counts_layout_t& c)
+    {
+      counts_layout_t l;
+      l.n[0] = 0;
+      for (int i = 1; i != hit_interaction_count; ++i)
+        l.n[i] = l.n[i - 1] + align_interactions_count(c.n[i - 1]);
+      return l;
+    }
+
+    static counts_layout_t compact_offsets(const counts_layout_t& c)
+    {
+      counts_layout_t l;
+      int prev = 0;
+      for (int i = 0; i != hit_decision_count; ++i)
+      {
+        int next = c.n[i];
+        l.n[i] = prev;
+        prev += next;
+      }
+      return l;
+    }
 
     int postponed() const
     {
       return named.n_diffused_front + named.n_diffused_rear + named.n_reflected + named.n_transmitted;
     }
 
-    int n[n_interaction_types_count];
-  };
-
-  union source_interaction_offsets_t
-  {
-    source_interaction_offsets_t(const interaction_counts_t& c)
-    {
-      n[0] = 0;
-      for (int i = 1; i != n_interaction_types_count; ++i)
-        n[i] = n[i - 1] + align_interactions_count(c.n[i - 1]);
-    }
-
-    struct named_t
-    {
-      int n_absorbed;
-      int n_diffused_front;
-      int n_diffused_rear;
-      int n_reflected;
-      int n_transmitted;
-    } named;
-    int n[n_interaction_types_count];
-  };
-
-  union target_interaction_offsets_t
-  {
-    target_interaction_offsets_t(const interaction_counts_t& c)
-    {
-      n[0] = 0;
-      for (int i = 1; i != n_interaction_types_count; ++i)
-        n[i] = n[i - 1] + c.n[i];
-    }
-
-    struct named_t
-    {
-      int n_absorbed;
-      int n_diffused_front;
-      int n_diffused_rear;
-      int n_reflected;
-      int n_transmitted;
-    } named;
-    int n[n_interaction_types_count];
+    int n[hit_decision_count];
   };
 
   int calculate(system_t* system, thermal_equation::task_t* task)
@@ -764,7 +578,7 @@ namespace radiance_equation_cuda
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
 
-    task_grow(system->postponed_task, n_rays);
+    task_grow(system->postponed_task, n_rays + hit_interaction_count * n_interaction_alignment);
     if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
       return r;
 
@@ -773,57 +587,52 @@ namespace radiance_equation_cuda
 
     prepare_context(system, n_rays);
     cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
+    cudaMemset(system->host_context.interaction_counts, 0, sizeof(int) * hit_decision_count);
 
-    make_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random>> > (system->device_context, n_rays);
+    //make_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random>> > (system->device_context, n_rays);
 
+    //const int n_make_ray_decisions_grid = (n_rays + system->block_size.n_make_ray_decisions - 1) / system->block_size.n_make_ray_decisions;
+    
     subject::scene_t* scene = system->scene;
-    make_ray_decisions<<<system->n_postpone_blocks, system->n_postpone_block_size>>>(n_rays,
+    make_ray_decisions<<<system->n_mtgp_blocks, system->block_size.n_make_ray_decisions >>>(n_rays,
                         ray_caster_task->hit_face_idx,
                         (ray_t*)ray_caster_task->ray,
-                        system->host_context.ray_random,
+                        system->host_context.PhiloxGenDecision,
                         (const float3*)scene->face_normals,
                         scene->face_to_mesh,
                         scene->materials,
                         scene->mesh_material,
                         system->host_context.hit_decision,
-                        system->host_context.postponed_offsets);
-    const int n_reducer_stride = system->n_postpone_blocks * system->n_postpone_block_size;
-    thrust::device_ptr<int> postponed_offsets(system->host_context.postponed_offsets);
+                        system->host_context.interaction_counts);
 
-    interaction_counts_t n_counts;
-    for (int i = 0; i != n_interaction_types_count; ++i)
-    {
-      n_counts.n[i] = thrust::reduce(thrust::cuda::par(*system->thrust_allocator),
-                                     postponed_offsets + i * n_reducer_stride,
-                                     postponed_offsets + (i + 1) * n_reducer_stride);
-      thrust::exclusive_scan(thrust::cuda::par(*system->thrust_allocator), postponed_offsets + i * n_reducer_stride,
-                             postponed_offsets + (i + 1) * n_reducer_stride, postponed_offsets + i * n_reducer_stride);
-    }
+    counts_layout_t n_counts;
+    cudaMemcpy(n_counts.n, system->host_context.interaction_counts, sizeof(int) * hit_decision_count, cudaMemcpyDeviceToHost);
+    interaction_counts_to_offsets << <1, 1 >> > (system->host_context.interaction_counts);
 
-    source_interaction_offsets_t n_source_offsets(n_counts);
-    target_interaction_offsets_t n_target_offsets(n_counts);
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
 
+    const int n_postponed = n_counts.postponed();
+    const int n_missed = n_counts.named.n_missed;
+
+    counts_layout_t n_filtered_offsets = counts_layout_t::filtered_offsets(n_counts);
+    counts_layout_t n_compact_offsets = counts_layout_t::compact_offsets(n_counts);
+
+    const int n_filter_interaction_grid = (n_rays + system->block_size.n_filter_interaction - 1) / system->block_size.n_filter_interaction;
     const ray_caster::task_t* source = ray_caster_task;
-    ray_caster::task_t* target = postponed_task->rays;
-    sort_by_interaction<<<system->n_postpone_blocks, system->n_postpone_block_size>>>(n_rays,
-            system->host_context.hit_decision,
-            system->host_context.postponed_offsets,
-            n_source_offsets.named.n_diffused_front,
-            n_source_offsets.named.n_diffused_rear,
-            n_source_offsets.named.n_reflected,
-            n_source_offsets.named.n_transmitted,
-            (ray_t*)source->ray,
-            (const float3*)source->hit_point,
-            source->power,
-            source->hit_face_idx,
-            (ray_t*)target->ray,
-            (float3*)target->hit_point,
-            target->power,
-            target->hit_face_idx
-    );
-
-    int n_postponed = n_counts.postponed();
-    const int n_missed = n_rays - n_counts.named.n_absorbed - n_postponed;
+    ray_caster::task_t* filtered = postponed_task->rays;
+    filter_interaction << <n_filter_interaction_grid, system->block_size.n_filter_interaction >> > (n_rays,
+      system->host_context.hit_decision,
+      system->host_context.interaction_counts, // interaction offsets now
+      (ray_t*)source->ray,
+      (const float3*)source->hit_point,
+      source->power,
+      source->hit_face_idx,
+      (ray_t*)filtered->ray,
+      (float3*)filtered->hit_point,
+      filtered->power,
+      filtered->hit_face_idx
+      );
 
     // @detail Yet alignment it is not crucial for ray index resolving.
     // @todo Does align of interaction groups on cache-line boundary speedup further interaction kernel application?
@@ -834,9 +643,9 @@ namespace radiance_equation_cuda
       const int n_ray_absorption_grid = (n_counts.named.n_absorbed + system->block_size.n_ray_absorption - 1) / system->block_size.n_ray_absorption;
       ray_absorption << <n_ray_absorption_grid, system->block_size.n_ray_absorption >> > (
         n_counts.named.n_absorbed,
-        ray_caster_task->hit_face_idx,
+        filtered->hit_face_idx + n_filtered_offsets.named.n_absorbed,
         scene->face_to_mesh,
-        ray_caster_task->power,
+        filtered->power + n_filtered_offsets.named.n_absorbed,
         system->host_context.mesh_power
         );
     }
@@ -847,10 +656,10 @@ namespace radiance_equation_cuda
       ray_diffusion<true> << <system->n_mtgp_blocks, 256 >> > (
         system->device_context,
         n_counts.named.n_diffused_front,
-        ray_caster_task->hit_face_idx,
-        (const float3*)ray_caster_task->hit_point,
+        filtered->hit_face_idx + n_filtered_offsets.named.n_diffused_front,
+        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_diffused_front,
         (const float3*)scene->face_normals,
-        (ray_t*)ray_caster_task->ray
+        (ray_t*)filtered->ray + n_filtered_offsets.named.n_diffused_front
         );
     }
 
@@ -860,10 +669,10 @@ namespace radiance_equation_cuda
       ray_diffusion<false> << <system->n_mtgp_blocks, 256 >> > (
         system->device_context,
         n_counts.named.n_diffused_rear,
-        ray_caster_task->hit_face_idx,
-        (const float3*)ray_caster_task->hit_point,
+        filtered->hit_face_idx + n_filtered_offsets.named.n_diffused_rear,
+        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_diffused_rear,
         (const float3*)scene->face_normals,
-        (ray_t*)ray_caster_task->ray
+        (ray_t*)filtered->ray + n_filtered_offsets.named.n_diffused_rear
         );
     }
 
@@ -872,10 +681,10 @@ namespace radiance_equation_cuda
       const int n_ray_reflected_grid = (n_counts.named.n_reflected + system->block_size.n_ray_reflection - 1) / system->block_size.n_ray_reflection;
       ray_reflection << <n_ray_reflected_grid, system->block_size.n_ray_reflection >> > (
         n_counts.named.n_reflected,
-        ray_caster_task->hit_face_idx,
-        (const float3*)ray_caster_task->hit_point,
+        filtered->hit_face_idx + n_filtered_offsets.named.n_reflected,
+        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_reflected,
         (const float3*)scene->face_normals,
-        (ray_t*)ray_caster_task->ray
+        (ray_t*)filtered->ray + n_filtered_offsets.named.n_reflected
         );
     }
 
@@ -884,36 +693,34 @@ namespace radiance_equation_cuda
       const int n_ray_transmitted_grid = (n_counts.named.n_transmitted + system->block_size.n_ray_transmition - 1) / system->block_size.n_ray_transmition;
       ray_transmition << <n_ray_transmitted_grid, system->block_size.n_ray_transmition >> > (
         n_counts.named.n_transmitted,
-        (const float3*)ray_caster_task->hit_point,
-        (ray_t*)ray_caster_task->ray
+        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_transmitted,
+        (ray_t*)filtered->ray + n_filtered_offsets.named.n_transmitted
         );
     }
 
-    cudaMemcpy(source->ray, target->ray, sizeof(ray_t) * n_postponed, cudaMemcpyDeviceToDevice);
-    cudaMemcpy(source->power, target->power, sizeof(float) * n_postponed, cudaMemcpyDeviceToDevice);
-
-    for (int i = 1; i != n_interaction_types_count; ++i)
+    int n_fill_source = hit_interaction_count - 1;
+    int n_fill_source_size = n_counts.n[n_fill_source];
+    for (int i = 0; i != n_fill_source; ++i)
     {
-      // @note There are holes because of alignment.
-      // @todo Don't align and perform single kernel run?
-      int n_postponed = n_counts.n[i];
-      if (n_postponed)
+      int n_hole_size = n_filtered_offsets.n[i] - n_compact_offsets.n[i];
+      while (n_counts.n[i] && n_hole_size && i != n_fill_source)
       {
-        int n_source_offset = n_source_offsets.n[i];
-        int n_target_offset = n_target_offsets.n[i - 1];
-        const int n_ray_postponed_grid = (n_postponed + system->block_size.n_ray_postponement - 1) / system->block_size.n_ray_postponement;
-        ray_postponement << <n_ray_postponed_grid, system->block_size.n_ray_postponement >> > (
-          n_postponed,
-          (const ray_t*)ray_caster_task->ray + n_source_offset,
-          ray_caster_task->power + n_source_offset,
-          (ray_t*)postponed_task->rays->ray + n_target_offset,
-          postponed_task->rays->power + n_target_offset
-          );
-      }
-    }
+        int n_can_fill = std::min(n_fill_source_size, n_hole_size);
+        if (!n_can_fill)
+        {
+          --n_fill_source;
+          continue;
+        }
 
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+        int n_source_offset = n_compact_offsets.n[n_fill_source] + n_fill_source_size - n_can_fill;
+
+        cudaMemcpy(filtered->ray + n_compact_offsets.n[i], filtered->ray + n_source_offset, sizeof(ray_t) * n_can_fill, cudaMemcpyDeviceToDevice);
+        cudaMemcpy(filtered->power + n_compact_offsets.n[i], filtered->power + n_source_offset, sizeof(float) * n_can_fill, cudaMemcpyDeviceToDevice);
+
+        n_fill_source_size -= n_can_fill;
+        n_hole_size -= n_can_fill;
+      }    
+    }
 
     postponed_task->rays->n_tasks = n_postponed;
 
