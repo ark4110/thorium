@@ -246,20 +246,23 @@ namespace radiance_equation_cuda
 
       ray_t ray = rays[ray_idx];
       float3 normal = face_normal[face_idx];
-      bool hit_front = cuda_math::ray_check_hit_front(ray, normal);
-
       const int mesh_idx = face_to_mesh[face_idx];
+      bool hit_front = cuda_math::ray_check_hit_front(ray, normal);
+      
       const subject::material_t& material = materials[mesh_material[mesh_idx]];
       const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
 
       float hit_dice = curand_uniform(&local_state);
       char decision;
       if (hit_dice < optical.absorbance)
+      {
+        hit_face_idx[ray_idx] = mesh_idx;
         decision = hit_absorb;
+      }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance)
         decision = hit_reflect;
       else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
-      {
+      { 
         if (hit_front)
           decision = hit_diffuse_front;
         else
@@ -355,14 +358,13 @@ namespace radiance_equation_cuda
     }
   }
 
-  __global__ void ray_absorption(int n_rays, const int* hit_face_idx, const int* face_to_mesh, const float* ray_power, float* mesh_power)
+  __global__ void ray_absorption(int n_rays, const int* hit_mesh_idx, const float* ray_power, float* mesh_power)
   {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
     {
-      int face_idx = hit_face_idx[ray_idx];
-      int mesh_idx = face_to_mesh[face_idx];
+      int mesh_idx = hit_mesh_idx[ray_idx];
       atomicAdd(&mesh_power[mesh_idx], ray_power[ray_idx]);
     }
   }
@@ -456,6 +458,7 @@ namespace radiance_equation_cuda
     int _not_used;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_decisions, make_ray_decisions, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_filter_interaction, filter_interaction, 0, 0);
+    system->block_size.n_filter_interaction = 128;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_diffusion, ray_diffusion<true>, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_reflection, ray_reflection, 0, 0);
@@ -589,10 +592,6 @@ namespace radiance_equation_cuda
     cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
     cudaMemset(system->host_context.interaction_counts, 0, sizeof(int) * hit_decision_count);
 
-    //make_ray_random << <system->n_mtgp_blocks, system->block_size.n_make_ray_random>> > (system->device_context, n_rays);
-
-    //const int n_make_ray_decisions_grid = (n_rays + system->block_size.n_make_ray_decisions - 1) / system->block_size.n_make_ray_decisions;
-    
     subject::scene_t* scene = system->scene;
     make_ray_decisions<<<system->n_mtgp_blocks, system->block_size.n_make_ray_decisions >>>(n_rays,
                         ray_caster_task->hit_face_idx,
@@ -640,8 +639,7 @@ namespace radiance_equation_cuda
       const int n_ray_absorption_grid = (n_counts.named.n_absorbed + system->block_size.n_ray_absorption - 1) / system->block_size.n_ray_absorption;
       ray_absorption << <n_ray_absorption_grid, system->block_size.n_ray_absorption >> > (
         n_counts.named.n_absorbed,
-        filtered->hit_face_idx + n_filtered_offsets.named.n_absorbed,
-        scene->face_to_mesh,
+        filtered->hit_face_idx + n_filtered_offsets.named.n_absorbed, // hit to mesh idx for absorption rays now
         filtered->power + n_filtered_offsets.named.n_absorbed,
         system->host_context.mesh_power
         );
