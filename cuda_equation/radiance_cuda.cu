@@ -331,22 +331,17 @@ namespace radiance_equation_cuda
       int hit_face_buffer = s_hit_face_idx[id];
 
       int active;
-      int leader;
-      int warp_progress;
-
       for (int i = 0; i != hit_interaction_count; ++i)
-      {
         if (i == decision)
-        {
           active = __ballot(1);
-          leader = __ffs(active) - 1;
-          warp_progress = __popc(active);
-        }
-      }
 
+      int leader = __ffs(active) - 1;
       int warp_offset;
       if (lane_id() == leader)
+      {
+        int warp_progress = __popc(active);
         warp_offset = atomicAdd(&interactions_offsets[decision], warp_progress);
+      }
       warp_offset = warp_broadcast(warp_offset, leader);
 
       int thread_offset = warp_offset + __popc(active & ((1 << lane_id()) - 1));
@@ -458,7 +453,7 @@ namespace radiance_equation_cuda
     int _not_used;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_decisions, make_ray_decisions, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_filter_interaction, filter_interaction, 0, 0);
-    system->block_size.n_filter_interaction = 128;
+    system->block_size.n_filter_interaction = 256;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_diffusion, ray_diffusion<true>, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_reflection, ray_reflection, 0, 0);
