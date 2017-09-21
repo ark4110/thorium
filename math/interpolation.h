@@ -29,5 +29,5 @@ namespace math
   };
 
   lip_5_t make_lip_5(int n, const float* x, const float* y);
-  float lip_5_apply(const lip_5_t& i, float x);
+  float lip_5_apply(const lip_5_t& lip, float x);
 }
