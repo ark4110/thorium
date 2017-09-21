@@ -4,6 +4,8 @@ project(math)
 set(SOURCE_FILES
   grid.cpp
   grid.h
+  interpolation.h
+  interpolation.cpp
   mat.cpp
   mat.h
   operations.cpp

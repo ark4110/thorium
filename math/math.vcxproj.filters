@@ -8,6 +8,7 @@
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="ray.cpp" />
     <ClCompile Include="quaternion.cpp" />
+    <ClCompile Include="interpolation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="operations.h" />
@@ -18,5 +19,6 @@
     <ClInclude Include="grid.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="quaternion.h" />
+    <ClInclude Include="interpolation.h" />
   </ItemGroup>
 </Project>
