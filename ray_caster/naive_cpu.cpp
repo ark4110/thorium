@@ -55,6 +55,49 @@ namespace raycaster_naive_cpu
     return RAY_CASTER_OK;
   }
 
+  void task_drop_missed(ray_caster::task_t* task)
+  {
+    if (!task->n_tasks)
+      return;
+
+    int n_missed = 0;
+    int end_idx = task->n_tasks - 1;
+    while (end_idx >= 0 && task->hit_distance[end_idx] < 0)
+    {
+      ++n_missed;
+      --end_idx;
+    }
+
+    if (end_idx < 0)
+    {
+      task->n_missed = n_missed;
+      task->n_tasks = 0;
+      return;
+    }
+    
+    int i = 0;
+    for (; i < end_idx; ++i)
+    {
+      if (task->hit_distance[i] < 0)
+      {
+        ++n_missed;
+        task->ray[i] = task->ray[end_idx];
+        task->hit_face_idx[i] = task->hit_face_idx[end_idx];
+        task->hit_distance[i] = task->hit_distance[end_idx];
+        task->power[i] = task->power[end_idx];
+        --end_idx;
+        while (end_idx != i && task->hit_distance[end_idx] < 0)
+        {
+          ++n_missed;
+          --end_idx;
+        }
+      }
+    }
+
+    task->n_tasks = i + 1;
+    task->n_missed = n_missed;
+  }
+
   int cast(cpu_system_t* system, ray_caster::task_t* task)
   {
     using namespace ray_caster;
@@ -77,6 +120,8 @@ namespace raycaster_naive_cpu
         }
       }
     }
+
+    task_drop_missed(task);
 
     return RAY_CASTER_OK;
   }

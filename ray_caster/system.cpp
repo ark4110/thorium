@@ -49,6 +49,7 @@ namespace ray_caster
       , 0 // int(*relocate)(task_t*, int device);
       , n_rays // n_tasks
       , n_rays // n_reserved
+      , 0 // n_missed
     };
 
     task->ray = (math::ray_t*) calloc(n_rays, sizeof(math::ray_t));
@@ -140,6 +141,7 @@ namespace ray_caster
     
     int prev = task->n_tasks;
     task->n_tasks = 0;
+    task->n_missed = 0;
     return prev;
   }
 

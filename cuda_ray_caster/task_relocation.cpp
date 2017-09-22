@@ -106,6 +106,7 @@ namespace cuda_task_relocation
 
       rtask.n_tasks = task->n_tasks;
       rtask.n_reserved = n_alloc;
+      rtask.n_missed = task->n_missed;
 
       checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
       checkCudaErrors(cudaMalloc((void**)&rtask.hit_distance, sizeof(float) * n_alloc));

@@ -45,6 +45,8 @@ namespace ray_caster
 
     int n_tasks;
     int n_reserved;
+    int n_missed;
+
     math::ray_t* ray;
     int* hit_face_idx;
     float* hit_distance; /// Distance from ray origin to hit point.
