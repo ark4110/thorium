@@ -47,7 +47,7 @@ namespace ray_caster
     int n_reserved;
     math::ray_t* ray;
     int* hit_face_idx;
-    math::vec3* hit_point;
+    float* hit_distance; /// Distance from ray origin to hit point.
     float* power;
   };
 
@@ -148,4 +148,6 @@ namespace ray_caster
   int system_update(system_t* system);
   int system_cast(system_t* system, task_t* task);
   int system_relocate_task(system_t* system, task_t* task, int device);
+
+  math::vec3 task_hit_point(const task_t* task, int n_ray);
 }

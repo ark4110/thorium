@@ -229,4 +229,9 @@ namespace cuda_math
     float3 v = ray.direction;
     return{ point + v * 0.0001f, v };
   }
+
+  inline __device__ float3 ray_point(const ray_t& ray, float distance)
+  {
+    return ray.origin + ray.direction * distance;
+  }
 }

@@ -134,4 +134,9 @@ namespace math
   {
     return dot(triangle_normal(triangle), ray.direction) >= 0.f;
   }
+
+  vec3 ray_point(const ray_t& ray, float distance)
+  {
+    return ray.origin + distance * ray.direction;
+  }
 }

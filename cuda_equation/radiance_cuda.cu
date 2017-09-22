@@ -312,8 +312,8 @@ namespace radiance_equation_cuda
   }
 
   __global__ void filter_interaction(int n_rays, const char* hit_decision, int* interactions_offsets,
-    const ray_t* s_ray, const float3* s_hit_point, const float* s_power, const int* s_hit_face_idx,
-    ray_t* t_ray, float3* t_hit_point, float* t_power, int* t_hit_face_idx
+    const ray_t* s_ray, const float* s_hit_distance, const float* s_power, const int* s_hit_face_idx,
+    ray_t* t_ray, float* t_hit_distance, float* t_power, int* t_hit_face_idx
   )
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -326,7 +326,7 @@ namespace radiance_equation_cuda
         continue;
 
       ray_t ray_buffer = s_ray[id];
-      float3 hit_point_buffer = s_hit_point[id];
+      float hit_distance_buffer = s_hit_distance[id];
       float power_buffer = s_power[id];
       int hit_face_buffer = s_hit_face_idx[id];
 
@@ -347,7 +347,7 @@ namespace radiance_equation_cuda
       int thread_offset = warp_offset + __popc(active & ((1 << lane_id()) - 1));
 
       t_ray[thread_offset] = ray_buffer;
-      t_hit_point[thread_offset] = hit_point_buffer;
+      t_hit_distance[thread_offset] = hit_distance_buffer;
       t_power[thread_offset] = power_buffer;
       t_hit_face_idx[thread_offset] = hit_face_buffer;
     }
@@ -365,14 +365,14 @@ namespace radiance_equation_cuda
   }
 
   template <bool front>
-  __global__ void ray_diffusion(context_t* ctx, int n_rays, const int* hit_face_idx, const float3* hit_points, const float3* face_normals, ray_t* rays)
+  __global__ void ray_diffusion(context_t* ctx, int n_rays, const int* hit_face_idx, const float* hit_distance, const float3* face_normals, ray_t* rays)
   {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
     {
       int face_idx = hit_face_idx[ray_idx];
-      float3 hit_point = hit_points[ray_idx];
+      float3 hit_point = ray_point(rays[ray_idx], hit_distance[ray_idx]);
       float3 face_normal = face_normals[face_idx];
       float3 malley_ray = malley_cuda::pick_uniform_ray(ctx);
 
@@ -383,29 +383,29 @@ namespace radiance_equation_cuda
     }
   }
 
-  __global__ void ray_reflection(int n_rays, const int* hit_face_idx, const float3* hit_points, const float3* face_normals, ray_t* rays)
+  __global__ void ray_reflection(int n_rays, const int* hit_face_idx, const float* hit_distance, const float3* face_normals, ray_t* rays)
   {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
     {
-      const ray_t& ray = rays[ray_idx];
+      ray_t ray = rays[ray_idx];
       int face_idx = hit_face_idx[ray_idx];
-      float3 hit_point = hit_points[ray_idx];
+      float3 hit_point = cuda_math::ray_point(ray, hit_distance[ray_idx]);
       float3 face_normal = face_normals[face_idx];
 
       rays[ray_idx] = cuda_math::ray_reflect(ray, face_normal, hit_point);
     }
   }
 
-  __global__ void ray_transmition(int n_rays, const float3* hit_points, ray_t* rays)
+  __global__ void ray_transmition(int n_rays, const float* hit_distance, ray_t* rays)
   {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
     {
-      const ray_t& ray = rays[ray_idx];
-      float3 hit_point = hit_points[ray_idx];
+      ray_t ray = rays[ray_idx];
+      float3 hit_point = cuda_math::ray_point(ray, hit_distance[ray_idx]);
 
       rays[ray_idx] = cuda_math::ray_transmit(ray, hit_point);
     }
@@ -616,11 +616,11 @@ namespace radiance_equation_cuda
       system->host_context.hit_decision,
       system->host_context.interaction_counts, // interaction offsets now
       (ray_t*)source->ray,
-      (const float3*)source->hit_point,
+      source->hit_distance,
       source->power,
       source->hit_face_idx,
       (ray_t*)filtered->ray,
-      (float3*)filtered->hit_point,
+      filtered->hit_distance,
       filtered->power,
       filtered->hit_face_idx
       );
@@ -647,7 +647,7 @@ namespace radiance_equation_cuda
         system->device_context,
         n_counts.named.n_diffused_front,
         filtered->hit_face_idx + n_filtered_offsets.named.n_diffused_front,
-        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_diffused_front,
+        filtered->hit_distance + n_filtered_offsets.named.n_diffused_front,
         (const float3*)scene->face_normals,
         (ray_t*)filtered->ray + n_filtered_offsets.named.n_diffused_front
         );
@@ -660,7 +660,7 @@ namespace radiance_equation_cuda
         system->device_context,
         n_counts.named.n_diffused_rear,
         filtered->hit_face_idx + n_filtered_offsets.named.n_diffused_rear,
-        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_diffused_rear,
+        filtered->hit_distance + n_filtered_offsets.named.n_diffused_rear,
         (const float3*)scene->face_normals,
         (ray_t*)filtered->ray + n_filtered_offsets.named.n_diffused_rear
         );
@@ -672,7 +672,7 @@ namespace radiance_equation_cuda
       ray_reflection << <n_ray_reflected_grid, system->block_size.n_ray_reflection >> > (
         n_counts.named.n_reflected,
         filtered->hit_face_idx + n_filtered_offsets.named.n_reflected,
-        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_reflected,
+        filtered->hit_distance + n_filtered_offsets.named.n_reflected,
         (const float3*)scene->face_normals,
         (ray_t*)filtered->ray + n_filtered_offsets.named.n_reflected
         );
@@ -683,7 +683,7 @@ namespace radiance_equation_cuda
       const int n_ray_transmitted_grid = (n_counts.named.n_transmitted + system->block_size.n_ray_transmition - 1) / system->block_size.n_ray_transmition;
       ray_transmition << <n_ray_transmitted_grid, system->block_size.n_ray_transmition >> > (
         n_counts.named.n_transmitted,
-        (const float3*)filtered->hit_point + n_filtered_offsets.named.n_transmitted,
+        filtered->hit_distance + n_filtered_offsets.named.n_transmitted,
         (ray_t*)filtered->ray + n_filtered_offsets.named.n_transmitted
         );
     }

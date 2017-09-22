@@ -29,8 +29,6 @@ namespace optix_hit_converter
   {
     float distance;
     int triangle_id;
-    float u;
-    float v;
   };
 
   struct state_t

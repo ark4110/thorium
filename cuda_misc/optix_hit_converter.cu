@@ -29,18 +29,19 @@ namespace optix_hit_converter
     return u * face.points[0] + v * face.points[1] + (1.f - u - v) * face.points[2];
   }
 
-  __global__ void convert_hits(const optix_hit_t* __restrict__ hits, const face_t* __restrict__ faces, int n_rays, float3* hit_point, int* hit_face_idx)
+  __global__ void convert_hits(const optix_hit_t* __restrict__ hits, const face_t* __restrict__ faces, int n_rays, float* hit_distance, int* hit_face_idx)
   {
     int ray_idx = blockDim.x * blockIdx.x + threadIdx.x;
-    for (; ray_idx < n_rays; ray_idx += gridDim.x * blockDim.x)
+    int stride = gridDim.x * blockDim.x;
+    for (; ray_idx < n_rays; ray_idx += stride)
     {
-      const optix_hit_t& hit = hits[ray_idx];
+      optix_hit_t hit = hits[ray_idx];
       if (hit.distance < 0)
         hit_face_idx[ray_idx] = -1;
       else
       {
         hit_face_idx[ray_idx] = hit.triangle_id;
-        hit_point[ray_idx] = triangle_uv_to_point(faces[hit.triangle_id], hit.u, hit.v);
+        hit_distance[ray_idx] = hit.distance;
       }
     }
   }
@@ -136,7 +137,7 @@ namespace optix_hit_converter
     convert_hits << <n_grid_size, state->convert_block_size >> > (state->hits
       , (const face_t*)state->scene->faces
       , task->n_tasks
-      , (float3*)task->hit_point
+      , task->hit_distance
       , task->hit_face_idx);
 
     checkCudaErrors(cudaPeekAtLastError());
@@ -155,17 +156,11 @@ namespace optix_hit_converter
     if (int r = scene_relocate(state->scene, -1))
       return r;
 
-    const subject::scene_t* scene = state->scene;
     for (int r = 0; r != task->n_tasks; ++r)
     {
       const optix_hit_t& hit = state->hits[r];
-      if (hit.distance < 0)
-        task->hit_face_idx[r] = -1;
-      else
-      {
-        task->hit_face_idx[r] = hit.triangle_id;
-        task->hit_point[r] = math::triangle_uv_to_point(scene->faces[hit.triangle_id], hit.u, hit.v);
-      }
+      task->hit_face_idx[r] = hit.triangle_id;
+      task->hit_distance[r] = hit.distance;
     }
 
     return RAY_CASTER_OK;

@@ -187,7 +187,7 @@ namespace optix_ray_caster
 
     RTPbufferdesc hits;
     if (rtpBufferDescCreate(system->context,
-      RTP_BUFFER_FORMAT_HIT_T_TRIID_U_V,
+      RTP_BUFFER_FORMAT_HIT_T_TRIID,
       RTPbuffertype(converter->optix_buffer_type),
       converter->hits, &hits) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;

@@ -61,7 +61,7 @@ namespace naive_cuda_ray_caster
    * @param[out] indices Array of intersection results with each face (-1 if no intersection or face index in faces array if intersected).
    * @param[out] points Array of intersection points for each face in faces array.
    */
-  __global__ void cast_scene_faces_with_reduction(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, vec3* points);
+  __global__ void cast_scene_faces_with_reduction(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, float* distances);
 }
 
 namespace cuda_math
@@ -78,7 +78,7 @@ namespace cuda_math
   * @brief Check ray and triangle intersection (device-oriented duplication of math's library function).
   * @param[in] ray Ray to intersect.
   * @param[in] triangle Face to intersect.
-  * @param[out] Vector to ray and triangle intersection (0 if no intersection).
+  * @param[out] distance to intersection point (<0 if miss)
   */
-  __device__ int triangle_intersect(vec3 origin, vec3 direction, const vec3* triangle, vec3* point);
+  __device__ float triangle_intersect(vec3 origin, vec3 direction, const vec3* triangle);
 }

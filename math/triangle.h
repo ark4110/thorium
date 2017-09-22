@@ -24,18 +24,10 @@
 
 namespace math
 {
-  #define TRIANGLE_INTERSECTION_UNIQUE 0
-  #define TRIANGLE_INTERSECTION_DISJOINT 1
-  #define TRIANGLE_INTERSECTION_DEGENERATE 2
-  #define TRIANGLE_INTERSECTION_SAME_PLAIN 3
-
   /// @brief Find the 3D intersection of a ray with a triangle if any.
-  /// @return  -1 = triangle is degenerate (a segment or point)
-  ///           0 = disjoint (no intersect)
-  ///           1 = intersect in unique point
-  ///           2 = ray and triangle are in the same plane
+  /// @return disntance to hit point (< 0 if missed)
   /// @note Copy-paste from "http://geomalgorithms.com/a06-_intersect-2.html#intersect3D_RayTriangle()"
-  int triangle_intersect(ray_t ray, triangle_t triangle, vec3* point);
+  float triangle_intersect(ray_t ray, const triangle_t& triangle);
 
   /// @brief Calculates triangle center.
   vec3 triangle_center(triangle_t triangle);
@@ -144,7 +136,4 @@ namespace math
 
   /// @brief Creates rotation matrix of z vector towards face's normal.
   mat33 pick_face_rotation(const face_t& face, math::vec3 z);
-
-  /// @brief Convert triangle barycentric to global space point.
-  vec3 triangle_uv_to_point(const triangle_t& t, float u, float v);
 }

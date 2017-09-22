@@ -131,8 +131,8 @@ TYPED_TEST(RayCaster, ProcessAllRays)
   ASSERT_EQ(RAY_CASTER_OK, system_cast(this->System, task));
   system_relocate_task(this->System, task, -1);
 
-  ASSERT_TRUE(near_enough(task->hit_point[0], center0));
-  ASSERT_TRUE(near_enough(task->hit_point[1], center1));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center0));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 1), center1));
 
   scene_free(floorScene);
   task_free(task);
@@ -156,7 +156,7 @@ TYPED_TEST(RayCaster, JustWorks)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   scene_free(floorScene);
   task_free(task);
@@ -181,7 +181,7 @@ TYPED_TEST(RayCaster, HandleRayIntersectingTriangle)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   scene_free(stackScene);
   task_free(task);
@@ -205,7 +205,7 @@ TYPED_TEST(RayCaster, FindNearestTriangle)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   scene_free(stackScene);
   task_free(task);
@@ -230,7 +230,7 @@ TYPED_TEST(RayCaster, SkipTriangleNearButInOppositeDirection)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   scene_free(stackScene);
   task_free(task);
@@ -255,7 +255,7 @@ TYPED_TEST(RayCaster, IntersectTriganglesNotPlanes)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   scene_free(stackScene);
   task_free(task);
@@ -296,7 +296,7 @@ TYPED_TEST(RayCaster, ProcessLargeScene)
   system_relocate_task(this->System, task, -1);
 
   // @todo Provide gtest comparison overloads for vec3
-  ASSERT_TRUE(near_enough(task->hit_point[0], center));
+  ASSERT_TRUE(near_enough(task_hit_point(task, 0), center));
 
   task_free(task);
   scene_free(scene);

@@ -26,7 +26,7 @@
 
 namespace math
 {
-  int triangle_intersect(ray_t ray, triangle_t triangle, vec3* point)
+  float triangle_intersect(ray_t ray, const triangle_t& triangle)
   {
     vec3 u, v, n; // triangle vec3s
     vec3 dir, w0, w; // ray vec3s
@@ -37,32 +37,30 @@ namespace math
     v = triangle.points[2] - triangle.points[0];
     n = cross(u, v);              // cross product
     if (dot(n, n) < _FLT_EPSILON)      // triangle is degenerate
-      return -TRIANGLE_INTERSECTION_DEGENERATE; // do not deal with this case
+      return -1; // do not deal with this case
 
     dir = ray.direction; // ray direction vec3
     w0 = ray.origin - triangle.points[0];
     a = -dot(n, w0);
     b = dot(n, dir);
     if (fabs(b) < _FLT_EPSILON) { // ray is  parallel to triangle plane
-      if (a == 0)            // ray lies in triangle plane
-        return -TRIANGLE_INTERSECTION_SAME_PLAIN;
-      else return -TRIANGLE_INTERSECTION_DISJOINT; // ray disjoint from plane
+      return -1; // if (a == 0) ray lies in triangle plane else ray disjoint from plane
     }
 
     // get intersect point of ray with triangle plane
     r = a / b;
     if (r < 0.0) // ray goes away from triangle
-      return -TRIANGLE_INTERSECTION_DISJOINT; // => no intersect
+      return -1; // => no intersect
     // for a segment, also test if (r > 1.0) => no intersect
 
-    *point = ray.origin + r * dir; // intersect point of ray and plane
+    vec3 point = ray.origin + r * dir; // intersect point of ray and plane
 
     // is point inside triangle?
     float    uu, uv, vv, wu, wv, D;
     uu = dot(u, u);
     uv = dot(u, v);
     vv = dot(v, v);
-    w = *point - triangle.points[0];
+    w = point - triangle.points[0];
     wu = dot(w, u);
     wv = dot(w, v);
     D = uv * uv - uu * vv;
@@ -71,12 +69,12 @@ namespace math
     float s, t;
     s = (uv * wv - vv * wu) / D;
     if (s < 0.0 || s > 1.0)         // point is outside T
-      return -TRIANGLE_INTERSECTION_DISJOINT;
+      return -1;
     t = (uv * wu - uu * wv) / D;
     if (t < 0.0 || (s + t) > 1.0)  // point is outside T
-      return -TRIANGLE_INTERSECTION_DISJOINT;
+      return -1;
 
-    return TRIANGLE_INTERSECTION_UNIQUE; // point is in T
+    return r;
   }
 
   vec3 triangle_center(triangle_t t)
@@ -497,10 +495,5 @@ namespace math
   {
     vec3 norm = triangle_normal(face);
     return rotate_towards(z, norm);
-  }
-
-  vec3 triangle_uv_to_point(const triangle_t& t, float u, float v)
-  {
-    return u * t.points[0] + v * t.points[1] + (1.f - u - v) * t.points[2];
   }
 }

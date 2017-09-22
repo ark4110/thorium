@@ -68,20 +68,12 @@ namespace raycaster_naive_cpu
       {
         // and any faces from scene
         math::triangle_t triangle = system->scene->faces[f];
-        math::vec3 point;
-        int check_result = triangle_intersect(ray, triangle, &point);
-        if (check_result == TRIANGLE_INTERSECTION_UNIQUE)
+        float distance = triangle_intersect(ray, triangle);
+        if (distance > 0 && distance < min_distance)
         {
-          math::vec3 space_distance = point - ray.origin;
-          math::point_t new_distance = dot(space_distance, space_distance);
-          if (new_distance < min_distance)
-          {
-            // if there is intersection and which distance lesser then previous
-            // set face and vector to intersection
-            min_distance = new_distance;
-            task->hit_face_idx[t] = (int)(&system->scene->faces[f] - system->scene->faces);
-            task->hit_point[t] = point;
-          }
+          min_distance = distance;
+          task->hit_face_idx[t] = (int)(&system->scene->faces[f] - system->scene->faces);
+          task->hit_distance[t] = distance;
         }
       }
     }

@@ -226,21 +226,24 @@ namespace radiance_equation
 
         case hit_reflect:
         {
-          math::ray_t reflected = ray_reflect(ray, face, ray_caster_task->hit_point[r]);
+          math::vec3 hit_point = ray_point(ray, ray_caster_task->hit_distance[r]);
+          math::ray_t reflected = ray_reflect(ray, face, hit_point);
           postpone(system, reflected, ray_power);
         }
         break;
 
         case hit_diffuse:
         {
-          math::ray_t reflected = ray_malley_emmit(system->malley_emission, face, ray_caster_task->hit_point[r], hit_front);
+          math::vec3 hit_point = ray_point(ray, ray_caster_task->hit_distance[r]);
+          math::ray_t reflected = ray_malley_emmit(system->malley_emission, face, hit_point, hit_front);
           postpone(system, reflected, ray_power);
         }
         break;
 
         case hit_transmit:
         {
-          math::ray_t transmitted = ray_transmit(ray, ray_caster_task->hit_point[r]);
+          math::vec3 hit_point = ray_point(ray, ray_caster_task->hit_distance[r]);
+          math::ray_t transmitted = ray_transmit(ray, hit_point);
           postpone(system, transmitted, ray_power);
         }
         break;

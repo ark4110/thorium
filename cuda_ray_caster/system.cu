@@ -146,9 +146,9 @@ namespace naive_cuda_ray_caster
 
     const int max_concurrent_rays = (int)pow(2, ceil(log2(16384.f * 1024 / (system->n_faces + 1023))));
 
-    thrust::device_vector<vec3> points(max_concurrent_rays);
+    thrust::device_vector<float> distances(max_concurrent_rays);
     thrust::device_vector<int> indices(max_concurrent_rays);
-    thrust::host_vector<vec3> h_points;
+    thrust::host_vector<float> h_distance;
     thrust::host_vector<int> h_indices;
 
     bb_ray_t* d_rays;
@@ -173,11 +173,11 @@ namespace naive_cuda_ray_caster
       int shared_size = n_tpb * sizeof(distance_reduce_step_t);
       dim3 threads(1, n_tpb);
       dim3 grid(n_rays, 1);
-      cast_scene_faces_with_reduction << <grid, threads, shared_size >> >(system->faces, system->n_faces, d_rays + t, thrust::raw_pointer_cast(indices.data()), thrust::raw_pointer_cast(points.data()));
+      cast_scene_faces_with_reduction << <grid, threads, shared_size >> >(system->faces, system->n_faces, d_rays + t, thrust::raw_pointer_cast(indices.data()), thrust::raw_pointer_cast(distances.data()));
       checkCudaErrors(cudaPeekAtLastError());
       checkCudaErrors(cudaDeviceSynchronize());
 
-      h_points = points;
+      h_distance = distances;
       h_indices = indices;
 
       for (int j = 0; j != n_rays; ++j)
@@ -185,7 +185,7 @@ namespace naive_cuda_ray_caster
         if (h_indices[j] != -1)
         {
           task->hit_face_idx[t + j] = h_indices[j];
-          task->hit_point[t + j] = loc2ext(h_points[j]);
+          task->hit_distance[t + j] = h_distance[j];
         }
         else
         {
@@ -253,7 +253,7 @@ namespace naive_cuda_ray_caster
   }
 
   /// @brief Finds intersection of given ray (blockIdx.x) with n_faces faces (y block dimension).
-  __device__ void cast_scene_intersection_step(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, vec3* points)
+  __device__ void cast_scene_intersection_step(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices)
   {
     extern __shared__ distance_reduce_step_t distances[];
 
@@ -272,19 +272,11 @@ namespace naive_cuda_ray_caster
       // If ray intersected with bounding box.
       if (face_bbox_intersect(ray, &faces[face_idx]))
       {
-        vec3 point;
-        int result_code = cuda_math::triangle_intersect(ray.origin, ray.direction, faces[face_idx].points, &point);
-        if (result_code == TRIANGLE_INTERSECTION_UNIQUE)
+        float distance = cuda_math::triangle_intersect(ray.origin, ray.direction, faces[face_idx].points);
+        if (distance > 0 && distance < step.distance)
         {
-          // Final intersection check.
-          point -= ray.origin;
-          float distance = dot(point, point);
-          // If less then other faces - write new distance.
-          if (distance < step.distance)
-          {
-            step.distance = distance;
-            step.face_idx = face_idx;
-          }
+          step.distance = distance;
+          step.face_idx = face_idx;
         }
       }
     }
@@ -294,7 +286,7 @@ namespace naive_cuda_ray_caster
   }
 
   /// @brief Reduces all distances for ray (blockIdx.x) and all faces.
-  __device__ void cast_scene_reduction_step(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, vec3* points)
+  __device__ void cast_scene_reduction_step(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices)
   { 
     extern __shared__ distance_reduce_step_t distances[];
 
@@ -318,29 +310,20 @@ namespace naive_cuda_ray_caster
     }
   }
 
-  __global__ void cast_scene_faces_with_reduction(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, vec3* points)
+  __global__ void cast_scene_faces_with_reduction(const bb_face_t* faces, int n_faces, const bb_ray_t* rays, int* indices, float* out_distances)
   {
     extern __shared__ distance_reduce_step_t distances[];
 
     int thread_idx = threadIdx.y;
     int ray_idx = blockIdx.x;
 
-    cast_scene_intersection_step(faces, n_faces, rays, indices, points);
-    cast_scene_reduction_step(faces, n_faces, rays, indices, points);
+    cast_scene_intersection_step(faces, n_faces, rays, indices);
+    cast_scene_reduction_step(faces, n_faces, rays, indices);
     // Finalization step
     if (thread_idx == 0)
     {
-      bb_ray_t ray = rays[ray_idx];
-      int face_idx = distances[0].face_idx;
-      if (face_idx != -1)
-      {
-        int result_code = cuda_math::triangle_intersect(ray.origin, ray.direction, faces[face_idx].points, &points[ray_idx]);
-        indices[ray_idx] = result_code == TRIANGLE_INTERSECTION_UNIQUE ? distances[0].face_idx : -1;
-      }
-      else
-      {
-        indices[ray_idx] = -1;
-      }      
+      indices[ray_idx] = distances[0].face_idx;
+      out_distances[ray_idx] = distances[0].distance;
     }
   }
 
@@ -376,7 +359,7 @@ namespace naive_cuda_ray_caster
 
 namespace cuda_math
 {
-  __device__ int triangle_intersect(vec3 origin, vec3 direction, const vec3* triangle, vec3* point)
+  __device__ float triangle_intersect(vec3 origin, vec3 direction, const vec3* triangle)
   {
     vec3 u, v, n; // triangle vec3s
     vec3 dir, w0, w; // ray vec3s
@@ -387,32 +370,30 @@ namespace cuda_math
     v = triangle[2] - triangle[0];
     n = cross(u, v);              // cross product
     if (dot(n, n) < EPSILON)      // triangle is degenerate
-      return -TRIANGLE_INTERSECTION_DEGENERATE; // do not deal with this case
+      return -1; // do not deal with this case
 
     dir = direction; // ray direction vec3
     w0 = origin - triangle[0];
     a = -dot(n, w0);
     b = dot(n, dir);
     if (fabs(b) < EPSILON) { // ray is  parallel to triangle plane
-      if (a == 0)            // ray lies in triangle plane
-        return -TRIANGLE_INTERSECTION_SAME_PLAIN;
-      else return -TRIANGLE_INTERSECTION_DISJOINT; // ray disjoint from plane
+      return -1;// if (a == 0) ray lies in triangle plane else ray disjoint from plane
     }
 
     // get intersect point of ray with triangle plane
     r = a / b;
     if (r < 0.0) // ray goes away from triangle
-      return -TRIANGLE_INTERSECTION_DISJOINT; // => no intersect
+      return -1; // => no intersect
     // for a segment, also test if (r > 1.0) => no intersect
 
-    *point = origin + r * dir; // intersect point of ray and plane
+    float3 point = origin + r * dir; // intersect point of ray and plane
 
     // is point inside triangle?
     float    uu, uv, vv, wu, wv, D;
     uu = dot(u, u);
     uv = dot(u, v);
     vv = dot(v, v);
-    w = *point - triangle[0];
+    w = point - triangle[0];
     wu = dot(w, u);
     wv = dot(w, v);
     D = uv * uv - uu * vv;
@@ -421,11 +402,11 @@ namespace cuda_math
     float s, t;
     s = (uv * wv - vv * wu) / D;
     if (s < 0.0 || s > 1.0)         // point is outside T
-      return -TRIANGLE_INTERSECTION_DISJOINT;
+      return -1;
     t = (uv * wu - uu * wv) / D;
     if (t < 0.0 || (s + t) > 1.0)  // point is outside T
-      return -TRIANGLE_INTERSECTION_DISJOINT;
+      return -1;
 
-    return TRIANGLE_INTERSECTION_UNIQUE; // point is in T
+    return r; // point is in T
   }
 }

@@ -23,6 +23,7 @@
 #include "naive_cpu.h"
 #include "../cuda_ray_caster/cuda_system.h"
 #include "../optix_ray_caster/optix_system.h"
+#include "../math/ray.h"
 #include <stdlib.h>
 #include <cstdlib>
 #include <stdexcept>
@@ -35,7 +36,7 @@ namespace ray_caster
   {
     free(task->ray);
     free(task->hit_face_idx);
-    free(task->hit_point);
+    free(task->hit_distance);
     free(task->power);
   }
 
@@ -52,7 +53,7 @@ namespace ray_caster
 
     task->ray = (math::ray_t*) calloc(n_rays, sizeof(math::ray_t));
     task->hit_face_idx = (int*)calloc(n_rays, sizeof(int));
-    task->hit_point = (math::vec3*)calloc(n_rays, sizeof(math::vec3));
+    task->hit_distance = (float*)calloc(n_rays, sizeof(float));
     task->power = (float*)calloc(n_rays, sizeof(float));
     
     return task;
@@ -89,7 +90,7 @@ namespace ray_caster
       
       valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
       valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
-      valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
+      valid_task->hit_distance = (float*)realloc(valid_task->hit_distance, valid_task->n_reserved * sizeof(float));
       valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
     }
 
@@ -117,7 +118,7 @@ namespace ray_caster
     valid_task->n_reserved = valid_task->n_tasks + n_rays;
     valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
     valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
-    valid_task->hit_point = (math::vec3*)realloc(valid_task->hit_point, valid_task->n_reserved * sizeof(math::vec3));
+    valid_task->hit_distance = (float*)realloc(valid_task->hit_distance, valid_task->n_reserved * sizeof(float));
     valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
     return n_rays;
   }
@@ -298,5 +299,10 @@ namespace ray_caster
       return system->methods->relocate_task(system, task, device);
     else
       return RAY_CASTER_OK;
+  }
+
+  math::vec3 task_hit_point(const task_t* task, int n_ray)
+  {
+    return math::ray_point(task->ray[n_ray], task->hit_distance[n_ray]);
   }
 }
