@@ -48,11 +48,12 @@ namespace ray_caster
       , 0 // int(*relocate)(task_t*, int device);
       , n_rays // n_tasks
       , n_rays // n_reserved
-      , (math::ray_t*) calloc(n_rays, sizeof(math::ray_t))
-      , (int*) calloc(n_rays, sizeof(int))
-      , (math::vec3*)calloc(n_rays, sizeof(math::vec3))
-      , (float*)calloc(n_rays, sizeof(float))
     };
+
+    task->ray = (math::ray_t*) calloc(n_rays, sizeof(math::ray_t));
+    task->hit_face_idx = (int*)calloc(n_rays, sizeof(int));
+    task->hit_point = (math::vec3*)calloc(n_rays, sizeof(math::vec3));
+    task->power = (float*)calloc(n_rays, sizeof(float));
     
     return task;
   }
