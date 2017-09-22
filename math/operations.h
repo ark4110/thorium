@@ -32,6 +32,8 @@
 
 namespace math
 {
+  bool near_enough(float a, float b);
+
   /// @brief Swap two points.
   inline void swap(vec3& l, vec3& r)
   {

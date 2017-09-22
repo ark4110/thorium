@@ -30,6 +30,7 @@
     <ClCompile Include="grid.cpp" />
     <ClCompile Include="heat_source.cpp" />
     <ClCompile Include="import.cpp" />
+    <ClCompile Include="interpolation.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="math_matrix.cpp" />
     <ClCompile Include="math_quaternion.cpp" />

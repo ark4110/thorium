@@ -20,14 +20,20 @@ namespace math
 {
 
   /**
-    @brief Lagrange interpolation polynomial for five or less points
+    @brief Lagrange interpolation polynomial for 8 or less points
   */
-  struct lip_5_t
+  struct lip_8_t
   {
-    float x[5];
-    float yl[5];
+    float c[8];
   };
+  
+  lip_8_t make_lip_5(int n, const float* x, const float* y);
+  float eval_lip_5(const lip_8_t& lip, float x);
+  float eval_lip_6(const lip_8_t& lip, float x);
+  float eval_lip_n(int n, const lip_8_t& lip, float x);
 
-  lip_5_t make_lip_5(int n, const float* x, const float* y);
-  float lip_5_apply(const lip_5_t& lip, float x);
+  lip_8_t make_lip_8(int n, const float* x, const float* y);
+  
+  
+  float eval_polynomial(int n, const float* c, float x);
 }
