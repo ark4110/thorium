@@ -20,11 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_system.h" />
+    <ClInclude Include="optix_hit_converter.cuh" />
+    <ClInclude Include="optix_hit_converter.h" />
     <ClInclude Include="optix_system.h" />
     <ClInclude Include="system.cuh" />
     <ClInclude Include="task_relocation.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="optix_hit_converter.cu" />
     <CudaCompile Include="system.cu" />
   </ItemGroup>
   <ItemGroup>

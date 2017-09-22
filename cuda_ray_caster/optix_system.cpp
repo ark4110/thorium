@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <memory>
 #include <optix_prime/optix_prime.h>
-#include "../cuda_misc/optix_hit_converter.h"
-#include "../cuda_ray_caster/task_relocation.h"
+#include "optix_hit_converter.h"
+#include "task_relocation.h"
 
 namespace optix_ray_caster
 {

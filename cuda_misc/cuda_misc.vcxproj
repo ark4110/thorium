@@ -173,13 +173,10 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="cuda_scene_engine.cu" />
-    <CudaCompile Include="optix_hit_converter.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cuda_math.cuh" />
     <ClInclude Include="cuda_scene_engine.cuh" />
-    <ClInclude Include="optix_hit_converter.cuh" />
-    <ClInclude Include="optix_hit_converter.h" />
     <ClInclude Include="cuda_scene_engine.h" />
   </ItemGroup>
   <ItemGroup>
