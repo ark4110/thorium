@@ -185,9 +185,6 @@
     <ProjectReference Include="..\math\math.vcxproj">
       <Project>{4de00af7-2632-4a7b-981a-9411663d4048}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\optix_ray_caster\optix_ray_caster.vcxproj">
-      <Project>{61e56691-939b-434f-bca1-57aa150b00ac}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\ray_caster\ray_caster.vcxproj">
       <Project>{0730886b-2df9-40dc-914c-07e6a22aa7b4}</Project>
     </ProjectReference>

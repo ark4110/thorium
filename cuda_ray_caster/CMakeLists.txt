@@ -8,6 +8,8 @@ set(SOURCE_FILES
     system.cu
     task_relocation.h
     task_relocation.cpp
+    optix_system.h
+    optix_system.cpp
     )
 
 cuda_add_library(cuda_ray_caster STATIC ${SOURCE_FILES})

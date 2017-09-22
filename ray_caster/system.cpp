@@ -22,7 +22,7 @@
 #include "system.h"
 #include "naive_cpu.h"
 #include "../cuda_ray_caster/cuda_system.h"
-#include "../optix_ray_caster/optix_system.h"
+#include "../cuda_ray_caster/optix_system.h"
 #include "../math/ray.h"
 #include <stdlib.h>
 #include <cstdlib>
