@@ -21,6 +21,7 @@
     <ClCompile Include="math_quaternion.cpp" />
     <ClCompile Include="animation.cpp" />
     <ClCompile Include="bounding_volume.cpp" />
+    <ClCompile Include="interpolation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test_scene.h" />
