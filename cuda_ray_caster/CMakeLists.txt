@@ -15,5 +15,9 @@ set(SOURCE_FILES
     optix_hit_converter.cu
     )
 
+include_directories(
+  "${OptiX_INCLUDE}"
+  )
+
 cuda_add_library(cuda_ray_caster STATIC ${SOURCE_FILES})
 

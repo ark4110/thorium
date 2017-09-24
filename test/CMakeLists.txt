@@ -43,7 +43,7 @@ configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.task ${CMAKE_RUNTIME_OU
 add_executable(tests ${SOURCE_FILES})
 
 target_link_libraries(tests ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(tests ballistics ray_caster cuda_ray_caster optix_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission cuda_misc cuda_equation)
+target_link_libraries(tests ballistics ray_caster cuda_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission cuda_misc cuda_equation)
 target_link_libraries(tests predict_static)
 target_link_libraries(tests ${CUDA_LIBRARIES})
 target_link_libraries(tests ${optix_prime_LIBRARY})
