@@ -194,9 +194,8 @@ namespace radiance_equation_cuda
     hit_transmit = 3,
     hit_absorb = 4, // must be last interaction
 
-    hit_missed = 5,
-    hit_decision_count = 6,
-    hit_interaction_count = hit_decision_count - 1
+    hit_decision_count = 5,
+    hit_interaction_count = 5
   };
 
   __device__ inline int lane_id(void)
@@ -236,13 +235,6 @@ namespace radiance_equation_cuda
     for (; ray_idx < n_rays; ray_idx += stride)
     {
       const int face_idx = hit_face_idx[ray_idx];
-      if (face_idx < 0)
-      {
-        ++counts[hit_missed];
-        hit_decision[ray_idx] = hit_missed;
-        continue;
-      }
-
       ray_t ray = rays[ray_idx];
       float3 normal = face_normal[face_idx];
       const int mesh_idx = face_to_mesh[face_idx];
@@ -267,10 +259,8 @@ namespace radiance_equation_cuda
         else
           decision = hit_diffuse_rear;
       }
-      else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance + optical.transmittance)
-        decision = hit_transmit;
       else
-        decision = hit_missed;
+        decision = hit_transmit;
 
       ++counts[decision];
       hit_decision[ray_idx] = decision;
@@ -321,9 +311,6 @@ namespace radiance_equation_cuda
     for (; id < n_rays; id += stride)
     {
       const char decision = hit_decision[id];
-      if (decision == hit_missed)
-        continue;
-
       ray_t ray_buffer = s_ray[id];
       float hit_distance_buffer = s_hit_distance[id];
       float power_buffer = s_power[id];
@@ -570,6 +557,7 @@ namespace radiance_equation_cuda
 
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
+    const int n_missed = ray_caster_task->n_missed;
 
     if ((r = scene_relocate(system->scene, 1)) < 0)
       return r;
@@ -595,7 +583,6 @@ namespace radiance_equation_cuda
     interaction_counts_to_offsets << <1, 1 >> > (system->host_context.interaction_counts);
 
     const int n_postponed = n_counts.postponed();
-    const int n_missed = n_counts.named.n_missed;
 
     counts_layout_t n_filtered_offsets = counts_layout_t::filtered_offsets(n_counts);
     counts_layout_t n_compact_offsets = counts_layout_t::compact_offsets(n_counts);

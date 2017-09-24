@@ -41,6 +41,7 @@ namespace optix_hit_converter
 
     int n_hits;
     optix_hit_t* hits;
+    int* n_offset;
   };
 
   state_t* state_init(subject::scene_t* scene, bool force_cpu);

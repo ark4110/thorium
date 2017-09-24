@@ -21,6 +21,7 @@
 #include <cuda_runtime_api.h>
 #include "../math/operations.h"
 #include "../math/triangle.h"
+#include "../cuda_misc/cuda_math.cuh"
 
 namespace optix_hit_converter
 {
@@ -29,19 +30,46 @@ namespace optix_hit_converter
     return u * face.points[0] + v * face.points[1] + (1.f - u - v) * face.points[2];
   }
 
-  __global__ void convert_hits(const optix_hit_t* __restrict__ hits, const face_t* __restrict__ faces, int n_rays, float* hit_distance, int* hit_face_idx)
+  __device__ inline int lane_id(void)
+  {
+    return threadIdx.x % warpSize;
+  }
+
+  __device__ inline int warp_broadcast(int value, int leader)
+  {
+    return __shfl(value, leader);
+  }
+
+  __global__ void convert_hits(const optix_hit_t* hits, int n_rays, int* offset,
+    const cuda_math::ray_t* s_ray, const float* s_power,
+    cuda_math::ray_t* t_ray, int* t_hit_face_idx, float* t_hit_distance, float* t_power
+    )
   {
     int ray_idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
-    {
-      optix_hit_t hit = hits[ray_idx];
-      if (hit.distance < 0)
-        hit_face_idx[ray_idx] = -1;
-      else
+    {  
+      const optix_hit_t hit = hits[ray_idx];
+
+      if (hit.distance > 0)
       {
-        hit_face_idx[ray_idx] = hit.triangle_id;
-        hit_distance[ray_idx] = hit.distance;
+        
+        int active = __ballot(1);
+        int leader = __ffs(active) - 1;
+        int warp_offset;
+        if (lane_id() == leader)
+        {
+          int warp_progress = __popc(active);
+          warp_offset = atomicAdd(offset, warp_progress);
+        }
+        warp_offset = warp_broadcast(warp_offset, leader);
+
+        int thread_offset = warp_offset + __popc(active & ((1 << lane_id()) - 1));
+
+        t_ray[thread_offset] = s_ray[ray_idx];
+        t_power[thread_offset] = s_power[ray_idx];
+        t_hit_face_idx[thread_offset] = hit.triangle_id;
+        t_hit_distance[thread_offset] = hit.distance;
       }
     }
   }
@@ -76,6 +104,8 @@ namespace optix_hit_converter
     {
       int minGridSize;
       cudaOccupancyMaxPotentialBlockSize(&minGridSize, &state->convert_block_size, convert_hits, 0, 0);
+
+      cudaMalloc(&state->n_offset, sizeof(int));
     }
 
     return state;
@@ -87,7 +117,10 @@ namespace optix_hit_converter
       return;
     
     if (is_supported(state))
+    {
       cudaFree(state->hits);
+      cudaFree(state->n_offset);
+    }
     else
       free(state->hits);
 
@@ -130,21 +163,26 @@ namespace optix_hit_converter
         fprintf(stderr, "Optix ray caster requires CUDA enabled scene!\n");
       return r;
     }
-    cudaThreadSetCacheConfig(cudaFuncCachePreferL1);
 
+    cudaMemset(state->n_offset, 0, sizeof(int));
+
+    ray_caster::rays_data_t* source = task;
+    ray_caster::rays_data_t* target = &task->next_gen;
     int n_grid_size = (task->n_tasks + state->convert_block_size - 1) / state->convert_block_size;
+    convert_hits << <n_grid_size, state->convert_block_size >> > (state->hits,
+      task->n_tasks , state->n_offset,
+      (const cuda_math::ray_t*)source->ray, source->power,
+      (cuda_math::ray_t*)target->ray, target->hit_face_idx, target->hit_distance, target->power);
 
-    convert_hits << <n_grid_size, state->convert_block_size >> > (state->hits
-      , (const face_t*)state->scene->faces
-      , task->n_tasks
-      , task->hit_distance
-      , task->hit_face_idx);
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-    cudaThreadSetCacheConfig(cudaFuncCachePreferNone);
+    int n_filtered;
+    int n_tasks_before = task->n_tasks;
+    cudaMemcpy(&n_filtered, state->n_offset, sizeof(int), cudaMemcpyDeviceToHost);
+    task_next_gen(task);
+    task->n_missed = n_tasks_before - n_filtered;
+    task->n_tasks = n_filtered;
 
     // @todo Remove it
+    // @note This is scene, not task!
     if (int r = scene_relocate(state->scene, -1))
       return r;
 
@@ -156,12 +194,25 @@ namespace optix_hit_converter
     if (int r = scene_relocate(state->scene, -1))
       return r;
 
+    int n_tasks_before = task->n_tasks;
+    ray_caster::rays_data_t* source = task;
+    ray_caster::rays_data_t* target = &task->next_gen;
     for (int r = 0; r != task->n_tasks; ++r)
     {
       const optix_hit_t& hit = state->hits[r];
-      task->hit_face_idx[r] = hit.triangle_id;
-      task->hit_distance[r] = hit.distance;
+      if (hit.distance > 0)
+      {
+        int& n_offset = target->n_tasks;
+        target->ray[n_offset] = source->ray[r];
+        target->hit_face_idx[n_offset] = hit.triangle_id;
+        target->hit_distance[n_offset] = hit.distance;
+        target->power[n_offset] = source->power[r];
+        ++n_offset;
+      }
     }
+
+    task_next_gen(task);
+    task->n_missed = n_tasks_before - task->n_tasks;
 
     return RAY_CASTER_OK;
   }  
