@@ -53,7 +53,6 @@ namespace optix_hit_converter
 
       if (hit.distance > 0)
       {
-        
         int active = __ballot(1);
         int leader = __ffs(active) - 1;
         int warp_offset;
