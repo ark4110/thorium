@@ -108,43 +108,6 @@ TYPED_TEST(MalleyEmission, ReallocateRaycasterTask)
   ASSERT_EQ(8, task->rays->n_tasks);
 }
 
-TYPED_TEST(MalleyEmission, DISABLED_LargeObject)
-{
-  const int size = 119;
-  subject::scene_t* scene = subject::scene_create();
-  scene->faces = subject::plane_grid_faces(100, 100, size, size);
-  scene->n_faces = size * size * 2;
-
-  scene->meshes = subject::plane_grid_meshes(size, size);
-  scene->n_meshes = size * size;
-
-  AddMaterial(scene, subject::black_body());
-  
-  auto task = emission::task_create();
-  float* temperatures = (float*)malloc(sizeof(float) * scene->n_meshes);
-  task->mesh_temperatures = temperatures;
-  task->mesh_emission = (float*)malloc(sizeof(float) * scene->n_meshes);
-
-  for (int i = 0; i != size * size; ++i)
-  {
-    scene->meshes[i].material_idx = 0;
-    temperatures[i] = 300.f * i /size / size;
-  }
-  
-  system_set_scene(this->Emitter, scene);
-  for (int i = 0; i != 3; ++i)
-  {
-    system_calculate(this->Emitter, task);
-    task_reset(task->rays);
-  }
-
-  free(task->mesh_emission);
-  free(temperatures);
-
-  scene_free(scene);
-}
-
-
 template <typename EnginesConfig>
 class ParallelEmission : public Test
 {

@@ -29,12 +29,21 @@ namespace ray_caster
   typedef math::triangle_t face_t;
   typedef math::ray_t ray_t;
 
+  struct rays_data_t
+  {
+    int n_tasks;
+    math::ray_t* ray;
+    int* hit_face_idx;
+    float* hit_distance; /// Distance from ray origin to hit point.
+    float* power;
+  };
+
   /**
    * @brief Ray caster task representation.
    * @detail Each task consists of n_tasks rays (input), indices of hit scene faces and hit points (output variables).
    * If ray has no intersection with scene face it index will be -1.
    */
-  struct task_t
+  struct task_t : rays_data_t
   { 
     int allocation_device;
 
@@ -42,15 +51,11 @@ namespace ray_caster
     void(*free_data)(task_t*);
     int(*grow)(task_t*, int addition);    
     int(*relocate)(task_t*, int device); /// @detail Looks useless but it is not. It allows to preserve knowledge about specific allocation.
-
-    int n_tasks;
+    
     int n_reserved;
     int n_missed;
 
-    math::ray_t* ray;
-    int* hit_face_idx;
-    float* hit_distance; /// Distance from ray origin to hit point.
-    float* power;
+    rays_data_t next_gen;
   };
 
   /// @brief Allocates memory for task with n_rays rays.
@@ -64,8 +69,7 @@ namespace ray_caster
   int task_get_reserve(task_t* task);
   int task_get_n_tasks(task_t* task);
 
-  /// @brief Reset task rays to zero.
-  int task_reset(task_t* task);
+  void task_next_gen(task_t* task);
 
   void task_free_data(task_t* task);
 

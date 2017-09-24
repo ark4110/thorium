@@ -32,30 +32,46 @@
 
 namespace ray_caster
 {
+  void host_rays_data_free(rays_data_t* data)
+  {
+    free(data->ray);
+    free(data->hit_face_idx);
+    free(data->hit_distance);
+    free(data->power);
+  }
+
   void host_task_free_data(task_t* task)
   {
-    free(task->ray);
-    free(task->hit_face_idx);
-    free(task->hit_distance);
-    free(task->power);
+    host_rays_data_free(task);
+    host_rays_data_free(&task->next_gen);
+  }
+
+  void host_rays_data_alloc(rays_data_t* data, int n_rays)
+  {
+    data->ray = (math::ray_t*) calloc(n_rays, sizeof(math::ray_t));
+    data->hit_face_idx = (int*)calloc(n_rays, sizeof(int));
+    data->hit_distance = (float*)calloc(n_rays, sizeof(float));
+    data->power = (float*)calloc(n_rays, sizeof(float));
+  }
+
+  void host_rays_data_grow(rays_data_t* data, int n_reserved)
+  {
+    data->ray = (math::ray_t*)realloc(data->ray, n_reserved * sizeof(math::ray_t));
+    data->hit_face_idx = (int*)realloc(data->hit_face_idx, n_reserved * sizeof(int));
+    data->hit_distance = (float*)realloc(data->hit_distance, n_reserved * sizeof(float));
+    data->power = (float*)realloc(data->power, n_reserved * sizeof(float));
   }
 
   task_t* task_create(int n_rays)
   {
     task_t* task = (task_t*) calloc(1, sizeof(task_t));
-    *task = { -1 // allocation_device
-      , &host_task_free_data // void(*free_data)(task_t*);
-      , 0 // int(*grow)(task_t*, int addition);
-      , 0 // int(*relocate)(task_t*, int device);
-      , n_rays // n_tasks
-      , n_rays // n_reserved
-      , 0 // n_missed
-    };
+    task->n_tasks = n_rays;
+    task->n_reserved = n_rays;
+    task->allocation_device = -1;
+    task->free_data = &host_task_free_data;
 
-    task->ray = (math::ray_t*) calloc(n_rays, sizeof(math::ray_t));
-    task->hit_face_idx = (int*)calloc(n_rays, sizeof(int));
-    task->hit_distance = (float*)calloc(n_rays, sizeof(float));
-    task->power = (float*)calloc(n_rays, sizeof(float));
+    host_rays_data_alloc(task, n_rays);
+    host_rays_data_alloc(&task->next_gen, n_rays);
     
     return task;
   }
@@ -85,14 +101,12 @@ namespace ray_caster
     if (valid_task->n_reserved < valid_task->n_tasks)
     {
       int n_from = valid_task->n_reserved;
-      valid_task->n_reserved = std::min<int>(valid_task->n_tasks * 2, valid_task->n_tasks + 100000);
+      valid_task->n_reserved = std::min<int>(valid_task->n_tasks * 2, valid_task->n_tasks + 100*1024);
       if (valid_task->n_reserved > 100000)
         fprintf(stderr, "Task grow from %d to %d rays\n", n_from, valid_task->n_reserved);
       
-      valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
-      valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
-      valid_task->hit_distance = (float*)realloc(valid_task->hit_distance, valid_task->n_reserved * sizeof(float));
-      valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
+      host_rays_data_grow(valid_task, valid_task->n_reserved);
+      host_rays_data_grow(&valid_task->next_gen, valid_task->n_reserved);
     }
 
     return n_prev;
@@ -100,28 +114,10 @@ namespace ray_caster
 
   int task_reserve(task_t** task, int n_rays)
   {
-    if (!*task)
-    {
-      *task = task_create(n_rays);
-      (*task)->n_tasks = 0;
-      return n_rays;
-    }
-
-    task_t* valid_task = *task;
-
-    if (valid_task->n_reserved < 0)
-      throw std::invalid_argument("Can't grow static task.");
-
-    int n_prev = valid_task->n_reserved - valid_task->n_tasks;
-    if (n_prev >= n_rays)
-      return n_prev;
-
-    valid_task->n_reserved = valid_task->n_tasks + n_rays;
-    valid_task->ray = (math::ray_t*)realloc(valid_task->ray, valid_task->n_reserved * sizeof(math::ray_t));
-    valid_task->hit_face_idx = (int*)realloc(valid_task->hit_face_idx, valid_task->n_reserved * sizeof(int));
-    valid_task->hit_distance = (float*)realloc(valid_task->hit_distance, valid_task->n_reserved * sizeof(float));
-    valid_task->power = (float*)realloc(valid_task->power, valid_task->n_reserved * sizeof(float));
-    return n_rays;
+    int n_prev = task_grow(task, n_rays);
+    (*task)->n_tasks = n_prev;
+    
+    return (*task)->n_reserved - (*task)->n_tasks;
   }
 
   int task_get_reserve(task_t* task)
@@ -134,15 +130,10 @@ namespace ray_caster
     return task ? task->n_tasks : 0;
   }
 
-  int task_reset(task_t* task)
+  void task_next_gen(task_t* task)
   {
-    if (task == 0)
-      return 0;
-    
-    int prev = task->n_tasks;
-    task->n_tasks = 0;
-    task->n_missed = 0;
-    return prev;
+    std::swap(task->next_gen, *(rays_data_t*)task);
+    task->next_gen.n_tasks = 0;
   }
 
   void task_free_data(task_t* task)

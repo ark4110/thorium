@@ -72,7 +72,6 @@ namespace radiance_equation_cuda
     subject::scene_t* scene;
 
     emission::task_t* emission_task;
-    emission::task_t* postponed_task;
 
     int* face_to_mesh_index;
   };
@@ -120,7 +119,7 @@ namespace radiance_equation_cuda
   __global__ void setup_ray_random(curandStatePhilox4_32_10_t *state)
   {
     int id = blockIdx.x * blockDim.x + threadIdx.x;
-    curand_init(1, id, 0, &state[id]);
+    curand_init(1234, id, 0, &state[id]);
   }
 
   void contex_free_scene(context_t* ctx)
@@ -247,12 +246,12 @@ namespace radiance_equation_cuda
       ray_t ray = rays[ray_idx];
       float3 normal = face_normal[face_idx];
       const int mesh_idx = face_to_mesh[face_idx];
+      float hit_dice = curand_uniform(&local_state);
       bool hit_front = cuda_math::ray_check_hit_front(ray, normal);
 
       const subject::material_t& material = materials[mesh_material[mesh_idx]];
       const subject::optical_properties_t& optical = hit_front ? material.front.optical : material.rear.optical;
-
-      float hit_dice = curand_uniform(&local_state);
+      
       char decision;
       if (hit_dice < optical.absorbance)
       {
@@ -434,15 +433,12 @@ namespace radiance_equation_cuda
     system->kernel_params = 0;
 
     system->emission_task = emission::task_create();
-    system->postponed_task = emission::task_create();
 
     // Level-up emission tasks
     system_relocate_task(system->params.ray_caster, system->emission_task->rays, 0);
-    system_relocate_task(system->params.ray_caster, system->postponed_task->rays, 0);
     for (int i = 0; i != params->n_emitters; ++i)
     {
       system_relocate_task(params->emitters[i], system->emission_task, 0);
-      system_relocate_task(params->emitters[i], system->postponed_task, 0);
     }
 
     system->face_to_mesh_index = 0;
@@ -534,11 +530,8 @@ namespace radiance_equation_cuda
     int r = 0;
 
     // Prepare emission tasks
-    std::swap(system->emission_task, system->postponed_task);
     emission::task_t* emission_task = system->emission_task;
-    emission::task_t* postponed_task = system->postponed_task;
-    emission_task->mesh_emission = task->emission;
-    task_reset(postponed_task);
+    task_next_gen(emission_task->rays);
 
     if (system->params.stats)
       *system->params.stats = stats_t();
@@ -573,12 +566,10 @@ namespace radiance_equation_cuda
       return r;
     auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
 
+    task_reserve(&emission_task->rays, n_interaction_alignment * hit_interaction_count);
+
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
-
-    task_grow(system->postponed_task, n_rays + hit_interaction_count * n_interaction_alignment);
-    if ((r = system_relocate_task(system->params.ray_caster, postponed_task->rays, 1)) < 0)
-      return r;
 
     if ((r = scene_relocate(system->scene, 1)) < 0)
       return r;
@@ -610,8 +601,8 @@ namespace radiance_equation_cuda
     counts_layout_t n_compact_offsets = counts_layout_t::compact_offsets(n_counts);
 
     const int n_filter_interaction_grid = (n_rays + system->block_size.n_filter_interaction - 1) / system->block_size.n_filter_interaction;
-    const ray_caster::task_t* source = ray_caster_task;
-    ray_caster::task_t* filtered = postponed_task->rays;
+    const ray_caster::rays_data_t* source = ray_caster_task;
+    ray_caster::rays_data_t* filtered = &ray_caster_task->next_gen;
     filter_interaction << <n_filter_interaction_grid, system->block_size.n_filter_interaction >> > (n_rays,
       system->host_context.hit_decision,
       system->host_context.interaction_counts, // interaction offsets now
@@ -713,7 +704,7 @@ namespace radiance_equation_cuda
       }
     }
 
-    postponed_task->rays->n_tasks = n_postponed;
+    filtered->n_tasks = n_postponed;
 
     float* h_mesh_power = (float*)malloc(n_meshes * sizeof(float));
     checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float), cudaMemcpyDeviceToHost));

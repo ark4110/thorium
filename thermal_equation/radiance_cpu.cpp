@@ -37,10 +37,7 @@ namespace radiance_equation
     subject::scene_t* scene;
 
     emission::task_t* emission_task;
-    emission::task_t* postponed_task;
     
-    int* face_to_mesh_index;
-
     std::mt19937 HitGen;        
     std::uniform_real_distribution<float> Distr_0_1;
 
@@ -54,8 +51,6 @@ namespace radiance_equation
 
     system->scene = 0;
     system->emission_task = 0;
-    system->postponed_task = 0;
-    system->face_to_mesh_index = 0;
 
     system->HitGen = std::mt19937(1);    
     system->Distr_0_1 = std::uniform_real_distribution<float>(0, 1);
@@ -70,12 +65,6 @@ namespace radiance_equation
 
     emission::task_free(system->emission_task);
     system->emission_task = 0;
-
-    emission::task_free(system->postponed_task);
-    system->postponed_task = 0;
-
-    free(system->face_to_mesh_index);
-    system->face_to_mesh_index = 0;
 
     ray_malley_emission_free(system->malley_emission);
     system->malley_emission = 0;
@@ -100,13 +89,7 @@ namespace radiance_equation
 
     emission::task_free(system->emission_task);
     system->emission_task = emission::task_create();
-
-    emission::task_free(system->postponed_task);
-    system->postponed_task = emission::task_create();
-
-    // @todo Move face->mesh index to scene?
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
-
+    
     return THERMAL_EQUATION_OK;
   }
 
@@ -138,7 +121,7 @@ namespace radiance_equation
 
   void postpone(cpu_system_t* system, math::ray_t ray, float power)
   {
-    task_add(system->postponed_task, ray, power);    
+    task_next_add(system->emission_task, ray, power);
   }
 
   /**
@@ -147,9 +130,8 @@ namespace radiance_equation
   int calculate(cpu_system_t* system, thermal_equation::task_t* task)
   {
     // Prepare emission task
-    std::swap(system->emission_task, system->postponed_task);
-    task_reset(system->postponed_task);
     emission::task_t* emission_task = system->emission_task;
+    task_next_gen(emission_task->rays);
 
     if (system->params.stats)
       *system->params.stats = stats_t();
@@ -196,7 +178,7 @@ namespace radiance_equation
       else
       {
         const int hit_face_idx = ray_caster_task->hit_face_idx[r];
-        const int hit_mesh_idx = system->face_to_mesh_index[hit_face_idx];
+        const int hit_mesh_idx = system->scene->face_to_mesh[hit_face_idx];
 
         const math::ray_t& ray = ray_caster_task->ray[r];
         const math::triangle_t& face = system->scene->faces[hit_face_idx];
@@ -258,7 +240,7 @@ namespace radiance_equation
 
     if (system->params.stats)
     {
-      system->params.stats->quants.named.n_postponed = task_get_n_tasks(system->postponed_task->rays);
+      system->params.stats->quants.named.n_postponed = emission_task->rays->next_gen.n_tasks;
 
       auto emission_time = std::chrono::duration_cast<std::chrono::microseconds>(emission_ptime - start_ptime);
       auto ray_caster_time = std::chrono::duration_cast<std::chrono::microseconds>(ray_caster_ptime - emission_ptime);

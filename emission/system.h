@@ -48,7 +48,7 @@ namespace emission
       @brief Ray caster task contains calculation output.
       @detail Result may be allocated in case of failure.
       @detail Owned by emission system.
-      @note Will reallocate and add additional rays to input task. I.e. ray_caster::task_reset() before to generate new rays.
+      @note Will reallocate and add additional rays to input task.
       @note Actual rays count can differ from requested n_rays count.
       */
     ray_caster::task_t* rays;
@@ -70,8 +70,7 @@ namespace emission
   /// @return Previous rays count.
   int task_grow(task_t* task, int n_rays);
   int task_reserve(task_t* task, int n_rays);
-  void task_reset(task_t* task);
-  void task_add(task_t* task, const ray_caster::ray_t& ray, float power);
+  void task_next_add(task_t* task, const ray_caster::ray_t& ray, float power);
 
   /**
    * @brief Emission system.   

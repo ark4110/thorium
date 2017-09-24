@@ -18,6 +18,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/../..</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommandArguments>--gtest_break_on_failure</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"--gtest_filter=*"</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

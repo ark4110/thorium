@@ -20,11 +20,34 @@
 
 namespace cuda_task_relocation
 {
+  void cuda_rays_data_free(ray_caster::rays_data_t* data)
+  {
+    cudaFree(data->ray);
+    cudaFree(data->hit_distance);
+    cudaFree(data->hit_face_idx);
+    cudaFree(data->power);
+  }
+
+  void cuda_rays_data_alloc(int n_alloc, ray_caster::rays_data_t* data)
+  {
+    checkCudaErrors(cudaMalloc((void**)&data->ray, sizeof(math::ray_t) * n_alloc));
+    checkCudaErrors(cudaMalloc((void**)&data->hit_distance, sizeof(float) * n_alloc));
+    checkCudaErrors(cudaMalloc((void**)&data->hit_face_idx, sizeof(int) * n_alloc));
+    checkCudaErrors(cudaMalloc((void**)&data->power, sizeof(float) * n_alloc));
+  }
+
+  void cuda_rays_data_copy_all(int n_tasks, ray_caster::rays_data_t* destination, ray_caster::rays_data_t* source, cudaMemcpyKind direction)
+  {
+    checkCudaErrors(cudaMemcpy(destination->ray, source->ray, n_tasks * sizeof(math::ray_t), direction));
+    checkCudaErrors(cudaMemcpy(destination->hit_distance, source->hit_distance, n_tasks * sizeof(float), direction));
+    checkCudaErrors(cudaMemcpy(destination->hit_face_idx, source->hit_face_idx, n_tasks * sizeof(int), direction));
+    checkCudaErrors(cudaMemcpy(destination->power, source->power, n_tasks * sizeof(float), direction));
+  }
+
   void cuda_task_free_data(ray_caster::task_t* task)
   {
-    cudaFree(task->ray);
-    cudaFree(task->hit_distance);
-    cudaFree(task->hit_face_idx);
+    cuda_rays_data_free(task);
+    cuda_rays_data_free(&task->next_gen);
   }
 
   int grow_task(ray_caster::task_t* task, int n_rays)
@@ -36,34 +59,36 @@ namespace cuda_task_relocation
       return n_prev;
     }
 
-    // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.
-
     ray_caster::task_t* buffer_task = ray_caster::task_create(task->n_tasks);
-    checkCudaErrors(cudaMemcpy(buffer_task->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(buffer_task->power, task->power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
 
-    cudaFree(task->ray);
-    cudaFree(task->hit_distance);
-    cudaFree(task->hit_face_idx);
-    cudaFree(task->power);
+    cuda_rays_data_copy_all(task->n_tasks, buffer_task, task, cudaMemcpyDeviceToHost);
+    // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.    
+    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.ray, task->next_gen.ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.power, task->next_gen.power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
 
-    ray_caster::task_t rtask = { task->allocation_device, &cuda_task_free_data, &grow_task, &relocate_task };
+    cuda_rays_data_free(task);
+    cuda_rays_data_free(&task->next_gen);
+
+    ray_caster::task_t rtask = {};
+    rtask.allocation_device = task->allocation_device;
+    rtask.free_data = &cuda_task_free_data;
+    rtask.grow = &grow_task;
+    rtask.relocate = &relocate_task;
     
     rtask.n_tasks = task->n_tasks + n_rays;
     const int align_factor = 1024 * 128;
     int n_alloc = rtask.n_tasks + (align_factor - rtask.n_tasks % align_factor) % align_factor;
     rtask.n_reserved = n_alloc;
 
-    checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
-    checkCudaErrors(cudaMalloc((void**)&rtask.hit_distance, sizeof(float) * n_alloc));
-    checkCudaErrors(cudaMalloc((void**)&rtask.hit_face_idx, sizeof(int) * n_alloc));
-    checkCudaErrors(cudaMalloc((void**)&rtask.power, sizeof(float) * n_alloc));
-
-    checkCudaErrors(cudaMemcpy(rtask.ray, buffer_task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(rtask.power, buffer_task->power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
+    cuda_rays_data_alloc(n_alloc, &rtask);
+    cuda_rays_data_alloc(n_alloc, &rtask.next_gen);
+    
+    cuda_rays_data_copy_all(task->n_tasks, &rtask, buffer_task, cudaMemcpyHostToDevice);
+    checkCudaErrors(cudaMemcpy(rtask.next_gen.ray, buffer_task->next_gen.ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(rtask.next_gen.power, buffer_task->next_gen.power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
     task_free(buffer_task);
 
-    if (rtask.n_reserved > 100000)
+    if (rtask.n_reserved > 128*1024)
       fprintf(stderr, "Task grow from %d to %d rays\n", n_prev, rtask.n_reserved);
 
     *task = rtask;
@@ -89,10 +114,9 @@ namespace cuda_task_relocation
       // Preserve knowledge about CUDA.
       rtask->relocate = &relocate_task;
 
-      checkCudaErrors(cudaMemcpy(rtask->ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(rtask->hit_distance, task->hit_distance, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(rtask->hit_face_idx, task->hit_face_idx, task->n_tasks * sizeof(int), cudaMemcpyDeviceToHost));
-      checkCudaErrors(cudaMemcpy(rtask->power, task->power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
+      cuda_rays_data_copy_all(task->n_tasks, rtask, task, cudaMemcpyDeviceToHost);
+      cuda_rays_data_copy_all(task->n_tasks, &rtask->next_gen, &task->next_gen, cudaMemcpyDeviceToHost);
+
       task_free_data(task);
 
       *task = *rtask;
@@ -101,22 +125,24 @@ namespace cuda_task_relocation
     else if (task->allocation_device == -1)
     {
       // @todo Support multi-GPU.
-      ray_caster::task_t rtask = { device, &cuda_task_free_data, &grow_task, &relocate_task };
+      ray_caster::task_t rtask = {};
+      rtask.allocation_device = device;
+      rtask.free_data = &cuda_task_free_data;
+      rtask.grow = &grow_task;
+      rtask.relocate = &relocate_task;
+
       int n_alloc = task->n_tasks + (1024 - task->n_tasks % 1024) % 1024;
 
       rtask.n_tasks = task->n_tasks;
+      rtask.next_gen.n_tasks = task->next_gen.n_tasks;
       rtask.n_reserved = n_alloc;
       rtask.n_missed = task->n_missed;
 
-      checkCudaErrors(cudaMalloc((void**)&rtask.ray, sizeof(math::ray_t) * n_alloc));
-      checkCudaErrors(cudaMalloc((void**)&rtask.hit_distance, sizeof(float) * n_alloc));
-      checkCudaErrors(cudaMalloc((void**)&rtask.hit_face_idx, sizeof(int) * n_alloc));
-      checkCudaErrors(cudaMalloc((void**)&rtask.power, sizeof(float) * n_alloc));
+      cuda_rays_data_alloc(n_alloc, &rtask);
+      cuda_rays_data_alloc(n_alloc, &rtask.next_gen);
 
-      checkCudaErrors(cudaMemcpy(rtask.ray, task->ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(rtask.hit_distance, task->hit_distance, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(rtask.hit_face_idx, task->hit_face_idx, task->n_tasks * sizeof(int), cudaMemcpyHostToDevice));
-      checkCudaErrors(cudaMemcpy(rtask.power, task->power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
+      cuda_rays_data_copy_all(task->n_tasks, &rtask, task, cudaMemcpyHostToDevice);
+      cuda_rays_data_copy_all(task->n_tasks, &rtask.next_gen, &task->next_gen, cudaMemcpyHostToDevice);
 
       task_free_data(task);
       *task = rtask;

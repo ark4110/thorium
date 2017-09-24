@@ -58,19 +58,14 @@ namespace emission
     return n_current_reserve;
   }
 
-  void task_reset(task_t* task)
-  {
-    task_reset(task->rays);
-  }
-
-  void task_add(task_t* task, const ray_caster::ray_t& ray, float power)
+  void task_next_add(task_t* task, const ray_caster::ray_t& ray, float power)
   {
     if (task_get_reserve(task->rays) == 0)
       task_reserve(task, 1024*128);
 
-    int& n_rays = task->rays->n_tasks;
-    task->rays->ray[n_rays] = ray;
-    task->rays->power[n_rays] = power;
+    int& n_rays = task->rays->next_gen.n_tasks;
+    task->rays->next_gen.ray[n_rays] = ray;
+    task->rays->next_gen.power[n_rays] = power;
     ++n_rays;
   }
 
