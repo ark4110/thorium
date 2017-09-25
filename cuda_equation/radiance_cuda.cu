@@ -21,6 +21,7 @@
 #include "../math/operations.h"
 #include "../math/ray.h"
 #include "../thermal_equation/radiance_cpu.h"
+#include "../../../../../../usr/local/cuda/include/driver_types.h"
 #include <float.h>
 #include <cmath>
 #include <random>
@@ -455,6 +456,10 @@ namespace radiance_equation_cuda
     int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
+    int cuda_device = 0;
+    cudaDeviceProp device_prop;
+    cudaGetDeviceProperties(&device_prop, cuda_device);
+
     int _not_used;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_make_ray_decisions, make_ray_decisions, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_filter_interaction, filter_interaction, 0, 0);
@@ -470,13 +475,15 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
 
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-    system->support_double_atomic = true;
-    fprintf(stderr, "Using double-precision for mesh absorption.\n");
-#else
-    system->support_double_atomic = false;
-    fprintf(stderr, "Using single-precision for mesh absorption.\n");
-#endif
+    if (device_prop.major >= 6)
+    {
+      system->support_double_atomic = true;
+      fprintf(stderr, "Using double-precision for mesh absorption.\n");
+    } else
+    {
+      system->support_double_atomic = false;
+      fprintf(stderr, "Using single-precision for mesh absorption.\n");
+    }
 
     checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
     CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
