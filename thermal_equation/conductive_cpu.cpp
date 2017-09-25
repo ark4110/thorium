@@ -99,7 +99,6 @@ namespace conductive_equation
 
     subject::scene_t* scene;
     subject::face_graph_index_t* graph;
-    int* face_to_mesh_index;
     math::vec3* mesh_centers;
   };
 
@@ -109,7 +108,6 @@ namespace conductive_equation
     
     system->scene = 0;
     system->graph = 0;
-    system->face_to_mesh_index = 0;
     system->mesh_centers = 0;
     
     return THERMAL_EQUATION_OK;
@@ -120,9 +118,6 @@ namespace conductive_equation
     system->scene = 0;
 
     subject::face_graph_index_free(system->graph);
-
-    free(system->face_to_mesh_index);
-    system->face_to_mesh_index = 0;
 
     free(system->mesh_centers);
     system->mesh_centers = 0;
@@ -144,10 +139,8 @@ namespace conductive_equation
   {
     system->scene = scene;
 
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh_index);
-
     subject::face_graph_index_t* raw_graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
-    system->graph = face_graph_mesh_edges_cache(system->face_to_mesh_index, raw_graph);
+    system->graph = face_graph_mesh_edges_cache(scene->face_to_mesh, raw_graph);
     face_graph_index_free(raw_graph);
 
     system->mesh_centers = (math::vec3*) calloc(scene->n_meshes, sizeof(math::vec3));
@@ -168,8 +161,8 @@ namespace conductive_equation
     if (r == -1)
       return 0;
 
-    int l_mesh_idx = param->system->face_to_mesh_index[l];
-    int r_mesh_idx = param->system->face_to_mesh_index[r];
+    int l_mesh_idx = param->system->scene->face_to_mesh[l];
+    int r_mesh_idx = param->system->scene->face_to_mesh[r];
 
     if (l_mesh_idx == r_mesh_idx)
       return 0;
