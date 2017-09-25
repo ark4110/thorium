@@ -4,6 +4,7 @@ project(math)
 set(SOURCE_FILES
   mat.cpp
   mat.h
+  Miniball.hpp
   operations.cpp
   operations.h
   ray.cpp

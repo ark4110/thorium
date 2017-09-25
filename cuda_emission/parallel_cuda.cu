@@ -139,7 +139,7 @@ namespace cuda_parallel_rays_emission
 
   void update_host_context(system_t* system, subject::scene_t* scene)
   {
-    math::sphere_t bsphere = math::triangles_bsphere(scene->faces, scene->n_faces);
+    math::sphere_t bsphere = math::triangles_gartner_bsphere(scene->faces, scene->n_faces);
     float radius = bsphere.radius * parallel_rays_emission_cpu::scene_bsphere_emission_scale;
 
     struct local_context_t

@@ -76,7 +76,7 @@ namespace parallel_rays_emission_cpu
       return -EMISSION_ERROR;
 
     system->scene = scene;
-    system->bsphere = math::triangles_bsphere(scene->faces, scene->n_faces);
+    system->bsphere = math::triangles_gartner_bsphere(scene->faces, scene->n_faces);
 
     return EMISSION_OK;
   }

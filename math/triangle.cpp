@@ -23,6 +23,7 @@
 #include "mat.h"
 #include <cmath>
 #include <float.h>
+#include "Miniball.hpp"
 
 namespace math
 {
@@ -423,6 +424,28 @@ namespace math
     }
 
     return{ geom_center, r };
+  }
+
+  struct CoordAccessor
+  {
+    static const int D = 3;
+    typedef const vec3*                                 Pit;
+    typedef const float*                                Cit;
+    inline  Cit operator() (Pit it) const { return &it->x; }
+  };
+
+  sphere_t point_gartner_bsphere(const vec3* points, int n_points)
+  {
+    typedef Miniball::Miniball <CoordAccessor>  MB;
+    MB mb (points, points + n_points);
+    const float* center = mb.center();
+    float radius = sqrtf(mb.squared_radius());
+    return {make_vec3(center[0], center[1], center[2]), radius};
+  }
+
+  sphere_t triangles_gartner_bsphere(const triangle_t* triangles, int n_triangles)
+  {
+    return point_gartner_bsphere(&triangles->points[0], n_triangles * 3);
   }
 
   bool triangle_2d_contains_point(const triangle_t& t, const vec3& p)

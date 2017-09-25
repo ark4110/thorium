@@ -54,16 +54,16 @@ namespace {
 // We know that center is at (0,0,0)
   float calculate_near_real_radius(const math::triangle_t *triangles, int n_triangles)
   {
-    math::vec3 m = {};
+    float m = 0;
     for (int i = 0; i != n_triangles; ++i)
     {
       const math::triangle_t &t = triangles[i];
-      m = math::max(m, t.points[0]);
-      m = math::max(m, t.points[1]);
-      m = math::max(m, t.points[2]);
+      m = std::max(m, math::dot(t.points[0], t.points[0]));
+      m = std::max(m, math::dot(t.points[1], t.points[1]));
+      m = std::max(m, math::dot(t.points[2], t.points[2]));
     }
 
-    return std::max(m.x, std::max(m.y, m.z));
+    return sqrtf(m);
   }
 
   float sqrf(float v)
@@ -72,19 +72,19 @@ namespace {
   }
 }
 
-TEST(BoundingSphere, RitterEfficiency)
+TEST(BoundingSphere, AlgorithmEfficiency)
 {
   subject::generator_t* generator = subject::generator_create_spherical();
   int n_triangles = 100;
-  float radius = 10;
   math::triangle_t* triangles = make_confetti(n_triangles, 10, generator);
   float near_real = calculate_near_real_radius(triangles, n_triangles);
   math::sphere_t linear = math::triangles_bsphere(triangles, n_triangles);
   math::sphere_t ritter = math::triangles_ritter_bsphere(triangles, n_triangles);
+  math::sphere_t gartner = math::triangles_gartner_bsphere(triangles, n_triangles);
 
-  fprintf(stderr, "Radius near_real %f, linear %f, ritter %f\n", near_real, linear.radius, ritter.radius);
-  fprintf(stderr, "Radius ratio linear %f, ritter %f\n", linear.radius / near_real, ritter.radius / near_real);
-  fprintf(stderr, "Radius square ratio linear %f, ritter %f\n", sqrf(linear.radius / near_real), sqrf(ritter.radius / near_real));
+  fprintf(stderr, "Radius near_real %f, linear %f, ritter %f, gartner %f\n", near_real, linear.radius, ritter.radius, gartner.radius);
+  fprintf(stderr, "Radius ratio linear %f, ritter %f, gartner %f\n", linear.radius / near_real, ritter.radius / near_real, gartner.radius / near_real);
+  fprintf(stderr, "Radius square ratio linear %f, ritter %f, gartner %f\n", sqrf(linear.radius / near_real), sqrf(ritter.radius / near_real), sqrf(gartner.radius / near_real));
   free(triangles);
   subject::generator_free(generator);
 }

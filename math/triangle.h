@@ -115,7 +115,10 @@ namespace math
   sphere_t triangles_bsphere(const triangle_t* triangles, int n_triangles);
 
   sphere_t point_ritter_bsphere(const vec3* points, int n_points);
-  sphere_t triangles_ritter_bsphere(const triangle_t* triangles, int n_triangles);  
+  sphere_t triangles_ritter_bsphere(const triangle_t* triangles, int n_triangles);
+
+  sphere_t point_gartner_bsphere(const vec3* points, int n_points);
+  sphere_t triangles_gartner_bsphere(const triangle_t* triangles, int n_triangles);
 
   struct triangles_analysis_t
   {
