@@ -37,6 +37,7 @@ namespace radiance_equation
     subject::scene_t* scene;
 
     emission::task_t* emission_task;
+    double* mesh_absorption;
     
     std::mt19937 HitGen;        
     std::uniform_real_distribution<float> Distr_0_1;
@@ -51,6 +52,7 @@ namespace radiance_equation
 
     system->scene = 0;
     system->emission_task = 0;
+    system->mesh_absorption = 0;
 
     system->HitGen = std::mt19937(1);    
     system->Distr_0_1 = std::uniform_real_distribution<float>(0, 1);
@@ -68,6 +70,9 @@ namespace radiance_equation
 
     ray_malley_emission_free(system->malley_emission);
     system->malley_emission = 0;
+
+    free(system->mesh_absorption);
+    system->mesh_absorption = 0;
 
     return THERMAL_EQUATION_OK;
   }
@@ -89,6 +94,7 @@ namespace radiance_equation
 
     emission::task_free(system->emission_task);
     system->emission_task = emission::task_create();
+    system->mesh_absorption = (double*)realloc(system->mesh_absorption, sizeof(double) * scene->n_meshes);
     
     return THERMAL_EQUATION_OK;
   }
@@ -161,6 +167,9 @@ namespace radiance_equation
     if ((r = system_relocate_task(system->params.ray_caster, emission_task->rays, -1)) < 0)
       return r;
     auto ray_caster_ptime = std::chrono::high_resolution_clock().now();
+
+    for (int i = 0; i != system->scene->n_meshes; ++i)
+      system->mesh_absorption[i] = task->absorption[i];
     
     const ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
@@ -202,7 +211,7 @@ namespace radiance_equation
         {
         case hit_absorb:
         {
-          task->absorption[hit_mesh_idx] += ray_power;
+          system->mesh_absorption[hit_mesh_idx] += ray_power;
         }
         break;
 
@@ -235,6 +244,9 @@ namespace radiance_equation
         }
       }
     }
+
+    for (int i = 0; i != system->scene->n_meshes; ++i)
+      task->absorption[i] = (float)system->mesh_absorption[i];
 
     auto processing_ptime = std::chrono::high_resolution_clock().now();
 

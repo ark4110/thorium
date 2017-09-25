@@ -73,6 +73,7 @@ namespace subject
     s->free_data = &host_scene_free_data;
     s->relocate = &host_scene_relocate;
     s->set_frame = &host_scene_set_frame;
+
     return s;
   }
 
@@ -392,12 +393,10 @@ namespace subject
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh)
   {
-    float area = 0;
+    double area = 0;
     for (int f = 0; f != mesh.n_faces; ++f)
-    {
-      area += math::triangle_area(scene->faces[mesh.first_idx + f]);
-    }
-    return area;
+      area += scene->face_areas[mesh.first_idx + f];
+    return (float)area;
   }
 
   float mesh_area(const scene_t* scene, int mesh_idx)

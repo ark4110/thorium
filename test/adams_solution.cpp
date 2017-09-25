@@ -162,6 +162,7 @@ TEST_F(AdamsSolution, ImplementFirstIntegrationStep)
 {
   using namespace thermal_solution;
   int r = 0;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);
@@ -175,6 +176,7 @@ TEST_F(AdamsSolution, ConsiderThickness)
   using namespace thermal_solution;
   int r = 0;
   Materials[0].shell.thickness = 2;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);
@@ -188,6 +190,7 @@ TEST_F(AdamsSolution, ConsiderDensity)
   using namespace thermal_solution;
   int r = 0;
   Materials[0].shell.density = 2;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);
@@ -201,6 +204,7 @@ TEST_F(AdamsSolution, ConsiderHeatCapacity)
   using namespace thermal_solution;
   int r = 0;
   Materials[0].shell.heat_capacity = 2;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);
@@ -213,6 +217,7 @@ TEST_F(AdamsSolution, ImplementFirstFiveIntegrationSteps)
 {
   using namespace thermal_solution;
   int r = 0;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 
@@ -229,6 +234,7 @@ TEST_F(AdamsSolution, ImplementRingbufferReuse)
 {
   using namespace thermal_solution;
   int r = 0;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 

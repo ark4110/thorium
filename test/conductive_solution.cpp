@@ -89,6 +89,7 @@ TEST_F(ConductiveSolution, BoxPreserveEnergy)
 
   const float initialEnergy = CalculateEnergy(Temperatures);
   int r = 0;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   for (int step = 1; step < 50; ++step)
@@ -110,6 +111,7 @@ TEST_F(ConductiveSolution, ReachBalance)
 
   const float initialEnergy = CalculateEnergy(Temperatures);
   int r = 0;
+  host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);

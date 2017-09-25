@@ -121,23 +121,23 @@ namespace cpu_adams
     const int n_meshes = system->scene->n_meshes;
     for (int m = 0; m != n_meshes; ++m)
     {
-      float power_balance = task->absorption[m] - task->emission[m];
+      double power_balance = task->absorption[m] - task->emission[m];
       const subject::shell_properties_t& shell = mesh_material(system->scene, m).shell;
       /// @todo Precalculate areas and store with mesh (required for form_factors, sb_ff_te and here).
       const float C = mesh_area(system->scene, m) * shell.thickness * shell.density * shell.heat_capacity;
-      energy[m] = power_balance / C;
+      energy[m] = (float)(power_balance / C);
     }
 
     thermal_equation::task_free(task);
     return THERMAL_SOLUTION_OK;
   }
 
-  const float u_matrix[5][5] = {
-    {1.f,        0,           0,       0,           0},
-    {3.f/2,      -1.f/2,      0,       0,           0},
-    {23.f/12,    -4.f/3,      5.f/12,   0,          0},
-    {55.f/24,    -59.f/24,    37.f/24,  -3.f/8,     0},
-    {1901.f/720, -1387.f/360, 109.f/30, -637.f/360, 251.f/720}
+  const double u_matrix[5][5] = {
+    {1.,        0,           0,       0,           0},
+    {3./2,      -1./2,      0,       0,           0},
+    {23./12,    -4./3,      5./12,   0,          0},
+    {55./24,    -59./24,    37./24,  -3./8,     0},
+    {1901./720, -1387./360, 109./30, -637./360, 251./720}
   };
 
   /**
@@ -149,7 +149,7 @@ namespace cpu_adams
     int k = 4;
     if (n < k)
       k = n;
-    const float* u = u_matrix[k];
+    const double* u = u_matrix[k];
 
     const int n_meshes = system->scene->n_meshes;
 
@@ -163,14 +163,14 @@ namespace cpu_adams
 
     for (int m = 0; m != n_meshes; ++m)
     {
-      float sum = 0;
+      double sum = 0;
       for (int l = 0; l <= k; ++l)
       {
         float* E = get_step_energy(system, n - l);
         sum += u[l] * E[m];
       }
 
-      Tresult[m] = Tn[m] + task->time_delta * sum;
+      Tresult[m] = (float)(Tn[m] + task->time_delta * sum);
       if (Tresult[m] < 0)
         Tresult[m] = 0;
     }
