@@ -13,7 +13,6 @@
     <ClCompile Include="radiance_solution.cpp" />
     <ClCompile Include="conductive_solution.cpp" />
     <ClCompile Include="heat_source.cpp" />
-    <ClCompile Include="grid.cpp" />
     <ClCompile Include="math_ray.cpp" />
     <ClCompile Include="emission.cpp" />
     <ClCompile Include="test_scene.cpp" />
@@ -21,7 +20,6 @@
     <ClCompile Include="math_quaternion.cpp" />
     <ClCompile Include="animation.cpp" />
     <ClCompile Include="bounding_volume.cpp" />
-    <ClCompile Include="interpolation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="test_scene.h" />

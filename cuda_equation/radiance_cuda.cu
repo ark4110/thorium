@@ -21,7 +21,6 @@
 #include "../math/operations.h"
 #include "../math/ray.h"
 #include "../thermal_equation/radiance_cpu.h"
-#include "../../../../../../usr/local/cuda/include/driver_types.h"
 #include <float.h>
 #include <cmath>
 #include <random>
