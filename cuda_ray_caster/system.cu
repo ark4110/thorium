@@ -22,7 +22,6 @@
 #include "system.cuh"
 #include "cuda_system.h"
 
-#include "../math/grid.h"
 #include "../math/triangle.h"
 
 #include <helper_cuda.h>

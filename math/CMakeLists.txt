@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.0.2)
 project(math)
 
 set(SOURCE_FILES
-  grid.cpp
-  grid.h
   mat.cpp
   mat.h
   operations.cpp

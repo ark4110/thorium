@@ -14,7 +14,6 @@ set(SOURCE_FILES
   emission.cpp
   export.cpp
   form_factors.cpp
-  grid.cpp
   heat_source.cpp
   import.cpp
   main.cpp
