@@ -50,12 +50,14 @@ namespace radiance_equation_cuda
     params_t params;
 
     int n_mtgp_blocks;
-    
+    int support_double_atomic;
+
     struct auto_block_size_t
     {
       int n_make_ray_decisions;
       int n_filter_interaction;
       int n_ray_absorption;
+      int n_ray_absorption_d;
       int n_ray_diffusion;
       int n_ray_reflection;
       int n_ray_transmition;
@@ -124,6 +126,9 @@ namespace radiance_equation_cuda
 
   void contex_free_scene(context_t* ctx)
   {
+    if (ctx->mesh_power)
+      cudaFree(ctx->mesh_power);
+    ctx->mesh_power = 0;
     if (ctx->mesh_power_d)
       cudaFree(ctx->mesh_power_d);
     ctx->mesh_power_d = 0;
@@ -179,6 +184,7 @@ namespace radiance_equation_cuda
 
     context_t& host_context = system->host_context;
 
+    checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power, sizeof(float) * scene->n_meshes));
     checkCudaErrors(cudaMalloc((void**)&host_context.mesh_power_d, sizeof(double) * scene->n_meshes));
 
     sync_context_to_device(system);
@@ -339,29 +345,30 @@ namespace radiance_equation_cuda
     }
   }
 
-  __device__ double atomicAddCAS(double* a, double val)
-  {
-    unsigned long long int* address_as_ull = (unsigned long long int*)a;
-    unsigned long long int old = *address_as_ull, assumed;
-    do {
-      assumed = old;
-      old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
-    } while (assumed != old);
-    return __longlong_as_double(old);
-  }
-
-  __global__ void ray_absorption(int n_rays, const int* hit_mesh_idx, const float* ray_power, double* mesh_power)
+  __global__ void ray_absorption(int n_rays, const int* hit_mesh_idx, const float* ray_power, float* mesh_power)
   {
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
     for (; ray_idx < n_rays; ray_idx += stride)
     {
       int mesh_idx = hit_mesh_idx[ray_idx];
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 600
       atomicAdd(&mesh_power[mesh_idx], ray_power[ray_idx]);
+    }
+  }
+
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
 #else
-      atomicAddCAS(&mesh_power[mesh_idx], ray_power[ray_idx]);
+  __device__ double atomicAdd(double* a, double b) { return b; }
 #endif
+
+  __global__ void ray_absorption_d(int n_rays, const int* hit_mesh_idx, const float* ray_power, double* mesh_power)
+  {
+    int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (; ray_idx < n_rays; ray_idx += stride)
+    {
+      int mesh_idx = hit_mesh_idx[ray_idx];
+      atomicAdd(&mesh_power[mesh_idx], ray_power[ray_idx]);
     }
   }
 
@@ -457,6 +464,7 @@ namespace radiance_equation_cuda
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_filter_interaction, filter_interaction, 0, 0);
     system->block_size.n_filter_interaction = 256;
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption, ray_absorption, 0, 0);
+    cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_absorption_d, ray_absorption_d, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_diffusion, ray_diffusion<true>, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_reflection, ray_reflection, 0, 0);
     cudaOccupancyMaxPotentialBlockSize(&_not_used, &system->block_size.n_ray_transmition, ray_transmition, 0, 0);
@@ -466,8 +474,14 @@ namespace radiance_equation_cuda
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
     checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
 
-    if (device_prop.major < 6)    
-      fprintf(stderr, "WARNING: Using slow double-precision add for mesh absorption accumulation.\n");
+    if (device_prop.major >= 6)
+    {
+      system->support_double_atomic = true;
+    } else
+    {
+      system->support_double_atomic = false;
+      fprintf(stderr, "WARNING: Using single-precision for mesh absorption accumulation.\n");
+    }
 
     checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
     CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
@@ -630,7 +644,22 @@ namespace radiance_equation_cuda
 
     if (n_counts.named.n_absorbed)
     {
-      cudaMemset(system->host_context.mesh_power_d, 0, sizeof(double) * n_meshes);
+      if (system->support_double_atomic)
+      {
+        cudaMemset(system->host_context.mesh_power_d, 0, sizeof(double) * n_meshes);
+        const int n_ray_absorption_grid = (n_counts.named.n_absorbed + system->block_size.n_ray_absorption_d - 1) /
+                                          system->block_size.n_ray_absorption_d;
+        ray_absorption_d << < n_ray_absorption_grid, system->block_size.n_ray_absorption_d >> > (
+                n_counts.named.n_absorbed,
+                        filtered->hit_face_idx +
+                        n_filtered_offsets.named.n_absorbed, // hit to mesh idx for absorption rays now
+                        filtered->power + n_filtered_offsets.named.n_absorbed,
+                        system->host_context.mesh_power_d
+        );
+      }
+      else
+      {
+        cudaMemset(system->host_context.mesh_power, 0, sizeof(float) * n_meshes);
         const int n_ray_absorption_grid = (n_counts.named.n_absorbed + system->block_size.n_ray_absorption - 1) /
                                           system->block_size.n_ray_absorption;
         ray_absorption << < n_ray_absorption_grid, system->block_size.n_ray_absorption >> > (
@@ -638,8 +667,9 @@ namespace radiance_equation_cuda
                         filtered->hit_face_idx +
                         n_filtered_offsets.named.n_absorbed, // hit to mesh idx for absorption rays now
                         filtered->power + n_filtered_offsets.named.n_absorbed,
-                        system->host_context.mesh_power_d
+                        system->host_context.mesh_power
         );
+      }
     }
 
     if (n_counts.named.n_diffused_front)
@@ -717,14 +747,27 @@ namespace radiance_equation_cuda
 
     filtered->n_tasks = n_postponed;
 
-    double *h_mesh_power = (double *)malloc(n_meshes * sizeof(double));
-    checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power_d, n_meshes * sizeof(double),
-      cudaMemcpyDeviceToHost));
-    for (int i = 0; i != n_meshes; ++i)
-      task->absorption[i] = (float)(h_mesh_power[i] + task->absorption[i]);
-    free(h_mesh_power);
+    if (system->support_double_atomic)
+    {
+      double *h_mesh_power = (double *) malloc(n_meshes * sizeof(double));
+      checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power_d, n_meshes * sizeof(double),
+                                 cudaMemcpyDeviceToHost));
+      for (int i = 0; i != n_meshes; ++i)
+        task->absorption[i] += h_mesh_power[i];
+      free(h_mesh_power);
 
-      auto processing_ptime = std::chrono::high_resolution_clock().now();
+    }
+    else
+    {
+      float *h_mesh_power = (float *) malloc(n_meshes * sizeof(float));
+      checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power, n_meshes * sizeof(float),
+                                 cudaMemcpyDeviceToHost));
+      for (int i = 0; i != n_meshes; ++i)
+        task->absorption[i] += h_mesh_power[i];
+      free(h_mesh_power);
+    }
+
+    auto processing_ptime = std::chrono::high_resolution_clock().now();
 
     if (system->params.stats)
     {
