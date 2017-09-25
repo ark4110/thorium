@@ -284,7 +284,7 @@ namespace radiance_equation
       , stats.quants.named.n_missed
     );
 
-    fprintf(stderr, "RADIANCE\tRays power: postponed %.2Ef, absorbed %.2Ef, reflected %.2Ef, diffused %.2Ef, transmited %.2Ef, droped %.2Ef, missed %.2Ef\n"
+    /*fprintf(stderr, "RADIANCE\tRays power: postponed %.2Ef, absorbed %.2Ef, reflected %.2Ef, diffused %.2Ef, transmited %.2Ef, droped %.2Ef, missed %.2Ef\n"
       , stats.powers.named.e_postponed
       , stats.powers.named.e_absorbed
       , stats.powers.named.e_reflected
@@ -292,7 +292,7 @@ namespace radiance_equation
       , stats.powers.named.e_transmited
       , stats.powers.named.e_droped
       , stats.powers.named.e_missed
-    );
+    );*/
 
     {
       int emission = (stats.times.named.t_emission / stats.n_steps) / 1000;

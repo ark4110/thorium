@@ -30,6 +30,7 @@ namespace radiance_equation_cuda
   {
     int n_meshes;
     float* mesh_power;
+    double* mesh_power_d;
 
     curandStatePhilox4_32_10_t* PhiloxGenDecision;
 
