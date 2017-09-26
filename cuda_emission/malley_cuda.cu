@@ -22,6 +22,7 @@
 #include "../math/triangle.h"
 #include "../math/mat.h"
 #include "../math/ray.h"
+#include "../../../../../../usr/local/cuda/include/driver_types.h"
 #include <float.h>
 #include <random>
 #include <cmath>
@@ -33,6 +34,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
+#include <thrust/reduce.h>
 #include <thrust/execution_policy.h>
 
 namespace {
@@ -48,6 +50,29 @@ namespace cuda_malley_emission
 {
   using namespace cuda_math;
 
+  struct grid_calculator_t
+  {
+    template <typename  T>
+    grid_calculator_t(T func)
+    {
+      cudaOccupancyMaxPotentialBlockSize(&n_min_blocks, &n_block_size, func, 0, 0);
+    }
+
+    int block(int n)
+    {
+      return std::min(std::max(n / n_min_blocks, 32), n_block_size);
+    }
+
+    int grid(int n)
+    {
+      int block_size = block(n);
+      return (n + block_size - 1) / block_size;
+    }
+
+    int n_min_blocks;
+    int n_block_size;
+  };
+
   /// @brief Extended base system_t (C-style polymorphism)
   struct system_t : emission::system_t
   {
@@ -56,6 +81,16 @@ namespace cuda_malley_emission
     subject::scene_t* scene;
     context_t host_context;
     context_t* device_context;
+
+    float* mesh_temperature;
+    float* face_front_weight;
+    float* face_rear_weight;
+    float* face_front_emission;
+    float* face_rear_emission;
+    int* face_front_rays_count;
+    int* face_rear_rays_count;
+
+    grid_calculator_t calculate_weights_grid;
 
     int n_tpb;
     int n_warp_size;
@@ -69,43 +104,6 @@ namespace cuda_malley_emission
     if (system->device_context == 0)
       checkCudaErrors(cudaMalloc((void**)&system->device_context, sizeof(context_t)));
     checkCudaErrors(cudaMemcpy(system->device_context, &system->host_context, sizeof(context_t), cudaMemcpyHostToDevice));
-  }
-
-  /// @brief Initializes system with given ray caster after creation.
-  int init(system_t* system, const malley_cpu::params_t* params)
-  {
-    system->params = *params;
-
-    system->scene = 0;
-    system->host_context = {};
-    system->device_context = 0;
-    system->kernel_params = 0;
-
-    const char* argv[] = { "" };
-    int device_id = findCudaDevice(1, (const char **)argv);
-    cudaDeviceProp deviceProp;
-    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
-    system->n_tpb = deviceProp.maxThreadsPerBlock;
-    system->n_warp_size = deviceProp.warpSize;
-    //system->n_tpb = 128;
-
-    int n_mtgp_blocks = 128;
-    system->n_mtgp_blocks = n_mtgp_blocks;
-
-    context_t& host_context = system->host_context;
-    checkCudaErrors(cudaMalloc((void **)&host_context.TPGenA, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **)&host_context.TPGenB, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **)&host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-
-    checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
-    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.TPGenA, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 1));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.TPGenB, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 2));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenR, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 3));
-    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenTheta, mtgp32dc_params_fast_11213, system->kernel_params, n_mtgp_blocks, 4));
-
-    return EMISSION_OK;
   }
 
   void contex_free_scene(context_t* ctx)
@@ -157,6 +155,21 @@ namespace cuda_malley_emission
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
 
+    cudaFree(system->mesh_temperature);
+    cudaFree(system->face_front_weight);
+    cudaFree(system->face_rear_weight);
+    cudaFree(system->face_front_emission);
+    cudaFree(system->face_rear_emission);
+    cudaFree(system->face_front_rays_count);
+    cudaFree(system->face_rear_rays_count);
+    system->mesh_temperature = 0;
+    system->face_front_weight = 0;
+    system->face_rear_weight = 0;
+    system->face_front_emission = 0;
+    system->face_rear_emission = 0;
+    system->face_front_rays_count = 0;
+    system->face_rear_rays_count = 0;
+
     return EMISSION_OK;
   }
 
@@ -197,6 +210,14 @@ namespace cuda_malley_emission
 
     sync_context_to_device(system);
 
+    checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_weight, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_emission, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_emission, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_rays_count, scene->n_faces * sizeof(int)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
+
     // Temp copy of meshes to init context
     subject::mesh_t* device_meshes;
     checkCudaErrors(cudaMalloc((void**)&device_meshes, scene->n_meshes * sizeof(subject::mesh_t)));
@@ -211,6 +232,8 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
     cudaFree(device_meshes);
+
+
 
     return EMISSION_OK;
   }
@@ -240,6 +263,121 @@ namespace cuda_malley_emission
   }
 
 #define sigma 5.670400e-8f
+
+  struct scene_ctx_t
+  {
+    int n_faces;
+    const int* face_to_mesh;
+    const float* face_area;
+    const int* mesh_material;
+    const subject::material_t* materials;
+  };
+
+  scene_ctx_t make_scene_ctx(const subject::scene_t* scene)
+  {
+    scene_ctx_t r = {};
+    r.n_faces = scene->n_faces;
+    r.face_to_mesh = scene->face_to_mesh;
+    r.face_area = scene->face_areas;
+    r.mesh_material = scene->mesh_material;
+    r.materials = scene->materials;
+    return r;
+  }
+
+  __global__ void calculate_weights_2(scene_ctx_t s,
+                                      const float* temperatures,
+                                      float* front_weight, float* rear_weight,
+                                      float* front_emission, float* rear_emission
+  )
+  {
+    int face_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (; face_idx < s.n_faces; face_idx += stride)
+    {
+      int mesh_idx = s.face_to_mesh[face_idx];
+      float area = s.face_area[face_idx];
+      int mesh_material_idx = s.mesh_material[mesh_idx];
+      const subject::material_t material = s.materials[mesh_material_idx];
+      float front_potential = area * material.front.emission.emissivity;
+      float rear_potential = area * material.rear.emission.emissivity;
+
+      float T = temperatures[mesh_idx];
+      float weight_density = T; // some empirical distribution function of temperature
+      float power_density = sigma * (T * T * T * T);
+
+      front_weight[face_idx] = weight_density * front_potential;
+      rear_weight[face_idx] = weight_density * rear_potential;
+      front_emission[face_idx] = power_density * front_potential;
+      rear_emission[face_idx] = power_density * rear_potential;
+    }
+  }
+
+  __device__ inline int lane_id(void)
+  {
+    return threadIdx.x % warpSize;
+  }
+
+  __device__ inline int warp_id(void)
+  {
+    return threadIdx.x / warpSize;
+  }
+
+  __device__ inline int warp_broadcast(int value, int leader)
+  {
+    return __shfl(value, leader);
+  }
+  __global__ void emit_malley_rays_2(scene_ctx_t s,
+                                     int* rays_count,
+                                     int* n_rays_offset
+  )
+  {
+    __shared__ int steal_offset;
+    __shared__ volatile int block_faces_count;
+
+    if (threadIdx.x == 0)
+    {
+      steal_offset = 0;
+      int faces_per_block = blockDim.x / warpSize;
+      if (blockDim.x * (1 + blockIdx.x) < s.n_faces)
+        block_faces_count = faces_per_block;
+      else
+        block_faces_count = s.n_faces % faces_per_block;
+    }
+
+    __syncthreads();
+
+    const int block_face_idx = blockDim.x * blockIdx.x / warpSize;
+    int warp_face_idx = threadIdx.x / warpSize;
+
+    while (true)
+    {
+      int rays_to_gen = 0;
+      int subject_face_idx;
+      if (lane_id() == 0)
+      {
+        while (warp_face_idx < block_faces_count)
+        {
+          subject_face_idx = warp_face_idx + block_face_idx;
+          rays_to_gen = atomicSub(&rays_count[subject_face_idx], warpSize);
+          if (rays_to_gen > 0)
+            break;
+          warp_face_idx = atomicCAS(&steal_offset, warp_face_idx, warp_face_idx + 1);
+        }
+
+        if (rays_to_gen <= warpSize)
+          atomicSub((int*)&block_faces_count, 1);
+        else
+          rays_to_gen = warpSize;
+      }
+
+      rays_to_gen = warp_broadcast(rays_to_gen, 0);
+      subject_face_idx = warp_broadcast(subject_face_idx, 0);
+
+      if (rays_to_gen <= 0)
+        break;
+    }
+  }
 
   __global__ void calculate_weights(context_t* context, const float* temperatures)
   {
@@ -457,9 +595,8 @@ namespace cuda_malley_emission
     // @todo What is optimal block size?
     int n_threads = std::min<int>(system->n_warp_size, scene->n_meshes);
     int n_blocks = (system->scene->n_faces + n_threads - 1) / n_threads;
-    thrust::device_vector<float> device_temperatures(task->mesh_temperatures, task->mesh_temperatures + scene->n_meshes);
 
-    calculate_weights << <n_blocks, n_threads >> >(system->device_context, thrust::raw_pointer_cast(device_temperatures.data()));
+    calculate_weights << <n_blocks, n_threads >> >(system->device_context, system->mesh_temperature);
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -495,10 +632,89 @@ namespace cuda_malley_emission
     }
   }
 
+  int init(system_t* system, const malley_cpu::params_t* params)
+  {
+    system->params = *params;
+
+    system->scene = 0;
+    system->host_context = {};
+    system->device_context = 0;
+    system->kernel_params = 0;
+
+    const char *argv[] = {""};
+    int device_id = findCudaDevice(1, (const char **) argv);
+    cudaDeviceProp deviceProp;
+    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
+    system->n_tpb = deviceProp.maxThreadsPerBlock;
+    system->n_warp_size = deviceProp.warpSize;
+    //system->n_tpb = 128;
+
+    int n_mtgp_blocks = 128;
+    system->n_mtgp_blocks = n_mtgp_blocks;
+
+    context_t &host_context = system->host_context;
+    checkCudaErrors(cudaMalloc((void **) &host_context.TPGenA, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **) &host_context.TPGenB, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **) &host_context.HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **) &host_context.HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+
+    checkCudaErrors(cudaMalloc((void **) &system->kernel_params, sizeof(mtgp32_kernel_params)));
+    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.TPGenA, mtgp32dc_params_fast_11213, system->kernel_params,
+                                            n_mtgp_blocks, 1));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.TPGenB, mtgp32dc_params_fast_11213, system->kernel_params,
+                                            n_mtgp_blocks, 2));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenR, mtgp32dc_params_fast_11213, system->kernel_params,
+                                            n_mtgp_blocks, 3));
+    CURAND_CALL(curandMakeMTGP32KernelState(host_context.HSGenTheta, mtgp32dc_params_fast_11213, system->kernel_params,
+                                            n_mtgp_blocks, 4));
+
+    system->calculate_weights_grid = grid_calculator_t(calculate_weights_2);
+
+    return EMISSION_OK;
+  }
+
+
   int calculate(system_t* system, emission::task_t* task)
   {
     if (task->rays && task->rays->allocation_device <= 0)
       return -EMISSION_INVALID_TASK_ALLOCATION;
+
+    const int n_faces = system->scene->n_faces;
+    const int n_meshes = system->scene->n_meshes;
+
+    int r;
+    if (r = scene_relocate(system->scene, 1))
+      return r;
+
+    scene_ctx_t scene_ctx = make_scene_ctx(system->scene);
+
+    cudaMemcpy(system->mesh_temperature, task->mesh_temperatures, sizeof(float) * n_meshes, cudaMemcpyHostToDevice);
+
+    auto g = system->calculate_weights_grid;
+    calculate_weights_2<<<g.grid(n_faces), g.block(n_faces)>>>(scene_ctx,
+                             system->mesh_temperature,
+                             system->face_front_weight, system->face_rear_weight,
+                             system->face_front_emission, system->face_rear_emission);
+
+    float front_weight_sum = thrust::reduce(thrust::device, system->face_front_weight, system->face_front_weight + n_faces, 0.f);
+    float rear_weight_sum = thrust::reduce(thrust::device, system->face_rear_weight, system->face_rear_weight + n_faces, 0.f);
+    float factor = 1.f / (front_weight_sum + rear_weight_sum);
+    float f_rays = system->params.n_rays;
+    thrust::transform(thrust::device,
+                      system->face_front_weight,
+                      system->face_front_weight + n_faces,
+                      system->face_front_rays_count,
+                      [factor, f_rays]__host__ __device__(float w){ return (int)ceilf(f_rays * w * factor);});
+    thrust::transform(thrust::device,
+                      system->face_rear_weight,
+                      system->face_rear_weight + n_faces,
+                      system->face_rear_rays_count,
+                      [factor, f_rays]__host__ __device__(float w){ return (int)ceilf(f_rays * w * factor);});
+    int n_front_rays = thrust::reduce(thrust::device, system->face_front_rays_count, system->face_front_rays_count + n_faces, 0);
+    int n_rear_rays = thrust::reduce(thrust::device, system->face_rear_rays_count, system->face_rear_rays_count + n_faces, 0);
+
+    emit_malley_rays_2<<<(scene_ctx.n_faces +7 )/ 8, 256>>>(scene_ctx, system->face_front_rays_count, 0);
 
     calculate_weights(system, task);
     calculate_n_rays(system);
@@ -539,6 +755,10 @@ namespace cuda_malley_emission
     // Using raw memory copy because of incompatible data-types.
     cudaMemcpy(task->mesh_emission, host_context.mesh_emission, scene->n_meshes * sizeof(float), cudaMemcpyDeviceToHost);
 
+    /// @todo Don't relocate back
+    if (r = scene_relocate(system->scene, -1))
+      return r;
+
     return EMISSION_OK;
   }
 
@@ -554,7 +774,7 @@ namespace cuda_malley_emission
 
   emission::system_t* system_create()
   {
-    system_t* s = (system_t*)malloc(sizeof(system_t));
+    system_t* s = (system_t*)calloc(1, sizeof(system_t));
     s->methods = &methods;
     return s;
   }
