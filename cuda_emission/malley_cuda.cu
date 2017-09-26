@@ -22,7 +22,6 @@
 #include "../math/triangle.h"
 #include "../math/mat.h"
 #include "../math/ray.h"
-#include "../../../../../../usr/local/cuda/include/driver_types.h"
 #include <float.h>
 #include <random>
 #include <cmath>
@@ -85,9 +84,6 @@ namespace cuda_malley_emission
     curandStateMtgp32* GenTheta;
 
     float* mesh_temperature;
-    double* mesh_emission;
-    int* mesh_indices;
-
     float* face_front_weight;
     float* face_rear_weight;
     float* face_front_emission;
@@ -117,9 +113,6 @@ namespace cuda_malley_emission
     system->kernel_params = 0;
 
     cudaFree(system->mesh_temperature);
-    cudaFree(system->mesh_emission);
-    cudaFree(system->mesh_indices);
-
     cudaFree(system->face_front_weight);
     cudaFree(system->face_rear_weight);
     cudaFree(system->face_front_emission);
@@ -127,8 +120,6 @@ namespace cuda_malley_emission
     cudaFree(system->face_front_rays_count);
     cudaFree(system->face_rear_rays_count);
     system->mesh_temperature = 0;
-    system->mesh_emission = 0;
-    system->mesh_indices = 0;
     system->face_front_weight = 0;
     system->face_rear_weight = 0;
     system->face_front_emission = 0;
@@ -154,9 +145,6 @@ namespace cuda_malley_emission
     system->scene = scene;
 
     checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->mesh_emission, scene->n_meshes * sizeof(double)));
-    checkCudaErrors(cudaMalloc((void**)&system->mesh_indices, scene->n_meshes * sizeof(int)));
-
     checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_weight, scene->n_faces * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_front_emission, scene->n_faces * sizeof(float)));
@@ -284,11 +272,11 @@ namespace cuda_malley_emission
     int face_idx = -1;
     int next_face_idx = block_face_idx + warp_face_idx;
 
-    mat33 rotation;
+    cuda_math::mat33 rotation;
     face_t face;
     float emission;
 
-    while (face_idx < s.n_faces)
+    while (next_face_idx < s.n_faces)
     {
       int rays_to_gen = 0;
       int ray_offset;
@@ -442,16 +430,6 @@ namespace cuda_malley_emission
     float factor = 1.f / (front_weight_sum + rear_weight_sum);
     float f_rays = system->params.n_rays;
 
-    double* mesh_emission = (double*)malloc(n_meshes * sizeof(double));
-    thrust::reduce_by_key(thrust::device,
-                          scene_ctx.face_to_mesh,
-                          scene_ctx.face_to_mesh + n_faces,
-                          system->face_front_emission,
-                          system->mesh_indices,
-                          system->mesh_emission
-    );
-    cudaMemcpy(mesh_emission, system->mesh_emission, n_meshes * sizeof(double), cudaMemcpyDeviceToHost);
-
     // Calculate rays count
     thrust::transform(thrust::device,
                       system->face_front_weight,
@@ -490,9 +468,15 @@ namespace cuda_malley_emission
     random_ctx_t random_ctx = make_random_ctx(system);
     generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, n_real_rays, (ray_t*)task->rays->ray + n_input_rays);
 
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
     int* device_rays_offset;
     cudaMalloc((void**)&device_rays_offset, sizeof(int));
     cudaMemset(device_rays_offset, 0, sizeof(int));
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
 
     emit_malley_rays<<<256, system->n_tpb>>>(scene_ctx,
             system->face_front_rays_count,
@@ -501,6 +485,10 @@ namespace cuda_malley_emission
             (ray_t*)task->rays->ray + n_input_rays,
             task->rays->power + n_input_rays
     );
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
     emit_malley_rays<<<256, system->n_tpb>>>(scene_ctx,
             system->face_rear_rays_count,
             device_rays_offset,
@@ -508,6 +496,10 @@ namespace cuda_malley_emission
             (ray_t*)task->rays->ray + n_input_rays,
             task->rays->power + n_input_rays
     );
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
     /// @todo Don't relocate back
     if (r = scene_relocate(system->scene, -1))
       return r;
