@@ -62,6 +62,7 @@ public:
     Scene = ToSubjectScene(MakeFloorScene(SceneSystem));
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
+    system_finalize_scene(SceneSystem, Scene);
 
     system_set_scene(this->Emitter, Scene);
   }
