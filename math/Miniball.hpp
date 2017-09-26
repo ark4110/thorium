@@ -244,7 +244,7 @@ namespace Miniball {
   template<typename CoordAccessor>
   int Miniball<CoordAccessor>::nr_support_points() const
   {
-    assert (ssize < d + 2);
+    assert (ssize < D + 2);
     return ssize;
   }
 
