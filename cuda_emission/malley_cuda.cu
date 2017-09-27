@@ -220,7 +220,7 @@ namespace cuda_malley_emission
                                    float* power
   )
   {
-    __shared__ int steal_offset;
+    __shared__ volatile int steal_offset;
     __shared__ volatile int block_faces_count;
 
     int faces_per_block = s.n_faces  / gridDim.x;
@@ -259,7 +259,8 @@ namespace cuda_malley_emission
           rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
           if (rays_to_gen > 0)
             break;
-          atomicCAS(&steal_offset, warp_face_idx, warp_face_idx + 1);
+          while (warp_face_idx == steal_offset)
+            atomicCAS((int*)&steal_offset, warp_face_idx, warp_face_idx + 1);
           warp_face_idx = steal_offset;
         }
 
