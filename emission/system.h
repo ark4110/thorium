@@ -60,7 +60,8 @@ namespace emission
     */
     float* mesh_emission;
 
-    
+    /// @brief Rays count emitted by mesh.
+    int* mesh_rays_emitted;
   };
 
   task_t* task_create();

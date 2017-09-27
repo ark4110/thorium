@@ -38,10 +38,10 @@ namespace emission
 
   void task_free(task_t* task)
   {
-    if (task)
-    {
-      task_free(task->rays);
-    }
+    if (!task)
+      return;
+    
+    task_free(task->rays);
 
     free(task);
   }

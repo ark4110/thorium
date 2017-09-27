@@ -106,6 +106,9 @@ namespace cuda_scene_engine
     checkCudaErrors(cudaMalloc((void**)&target->mesh_material, sizeof(int) * source->n_meshes));
     checkCudaErrors(cudaMemcpy(target->mesh_material, source->mesh_material, sizeof(int) * source->n_meshes, cudaMemcpyHostToDevice));
 
+    checkCudaErrors(cudaMalloc((void**)&target->mesh_areas, sizeof(float) * source->n_meshes));
+    checkCudaErrors(cudaMemcpy(target->mesh_areas, source->mesh_areas, sizeof(float) * source->n_meshes, cudaMemcpyHostToDevice));
+
     *static_cast<subject::scene_t*>(scene) = *target;
     scene->n_current_device = device;
 
@@ -139,6 +142,7 @@ namespace cuda_scene_engine
       cudaFree(target->face_areas);
       cudaFree(target->face_normals);
       cudaFree(target->mesh_material);
+      cudaFree(target->mesh_areas);
       cudaFree(target->base_faces);
 
       free(target);

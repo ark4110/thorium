@@ -118,7 +118,6 @@ namespace math
 
   bool ray_origin_on_plane(ray_t ray, const triangle_t& triangle)
   {
-    ray.origin -= 0.0001f * ray.direction;
     vec3 r0 = ray.origin - triangle.points[0];
     vec3 r1 = ray.origin - triangle.points[1];
     vec3 r2 = ray.origin - triangle.points[2];
@@ -127,7 +126,7 @@ namespace math
       r = r1;
     if (norm(r2) > norm(r))
       r = r2;
-    return dot(triangle_normal(triangle), r) < 0.00001f;
+    return fabsf(dot(triangle_normal(triangle), r)) < 0.0001f;
   }
 
   bool ray_emitted_front(const ray_t& ray, const triangle_t& triangle)

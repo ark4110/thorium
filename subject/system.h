@@ -133,6 +133,7 @@ namespace subject
     math::vec3* face_normals;    
     int* face_to_mesh; ///< Face to its mesh index.
     int* face_animation_group; ///< Index of face animation group.
+    float* mesh_areas;
     int* mesh_material; ///< Mesh material index without indirection.
 
     face_t* base_faces; ///< Faces without transformation applied.

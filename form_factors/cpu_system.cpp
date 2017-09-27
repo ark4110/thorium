@@ -117,6 +117,31 @@ namespace cpu_form_factors
     return system->face_to_mesh[face_idx];
   }
 
+  int ray_source_face(const subject::scene_t* scene, const math::ray_t& ray)
+  {
+    for (int i = 0; i != scene->n_faces; ++i)
+      if (ray_origin_on_plane(ray, scene->faces[i]))
+        return i;
+    /*printf("miss\n");
+    
+    for (int i = 0; i != scene->n_faces; ++i)
+    {
+      auto triangle = scene->faces[i];
+
+      math::vec3 r0 = ray.origin - triangle.points[0];
+      math::vec3 r1 = ray.origin - triangle.points[1];
+      math::vec3 r2 = ray.origin - triangle.points[2];
+      math::vec3 r = r0;
+      if (norm(r1) > norm(r))
+        r = r1;
+      if (norm(r2) > norm(r))
+        r = r2;
+      printf("%f\n", fabsf(dot(triangle_normal(triangle), r)));
+    }*/
+
+    return -1;
+  }
+
   /**
    *  @brief Calculates form factors for given system.
    *
@@ -125,12 +150,14 @@ namespace cpu_form_factors
   int calculate(cpu_system_t* system, form_factors::task_t* task)
   {
     emission::system_t* emitter = system->emitter;
+    const int n_meshes = system->scene->n_meshes;
 
     int r = 0;    
 
     emission::task_t* emission_task = emission::task_create();
     emission_task->mesh_emission = system->mesh_emission;
     emission_task->mesh_temperatures = system->mesh_temperatures;
+    emission_task->mesh_rays_emitted = (int*)malloc(n_meshes * sizeof(int));
     
     system_relocate_task(system->emitter, emission_task, 0);
     if ((r = emission::system_calculate(emitter, emission_task)) < 0)
@@ -140,38 +167,9 @@ namespace cpu_form_factors
     }
     
     ray_caster::task_t* ray_caster_task = emission_task->rays;
-    const int n_meshes = system->scene->n_meshes;
-    int n_rays = ray_caster_task->n_tasks;
-    int mesh_idx = 0;
-    int face_idx = 0;
-    int mesh_outgoing_rays = 0;
-    int* mesh_outgoing_counts = (int*)calloc(n_meshes, sizeof(int));
     
-    if ((r = system_relocate_task(system->caster, emission_task->rays, -1)) < 0)
-      return r;
-    for (int ray_idx = 0; ray_idx != n_rays && mesh_idx != n_meshes; ++ray_idx)
-    {
-      const subject::mesh_t& mesh = system->scene->meshes[mesh_idx];
-      const ray_caster::face_t& face = system->scene->faces[mesh.first_idx + face_idx];
-      const math::ray_t ray = ray_caster_task->ray[ray_idx];
-      ray_caster_task->power[ray_idx] = (float)mesh_idx; // hack: store source mesh index in ray power
-
-      bool current_face = ray_origin_on_plane(ray, face);
-      if (current_face || ++face_idx != mesh.n_faces)
-      {
-        ++mesh_outgoing_rays;
-      }
-      else
-      {
-        assert(mesh_idx < n_meshes);
-        mesh_outgoing_counts[mesh_idx] = mesh_outgoing_rays;
-        ++mesh_idx;
-        face_idx = 0;
-        mesh_outgoing_rays = 1;
-      }
-    }
-    mesh_outgoing_counts[mesh_idx] = mesh_outgoing_rays;
-
+    int n_rays = ray_caster_task->n_tasks;
+    
     if ((r = system_relocate_task(system->caster, emission_task->rays, 0)) < 0)
       return r;
     if ((r = ray_caster::system_cast(system->caster, emission_task->rays)) < 0)
@@ -187,27 +185,30 @@ namespace cpu_form_factors
     
     memset(task->form_factors, 0, n_meshes * n_meshes * sizeof(float));
 
-    for (int ray_idx = 0; ray_idx != ray_caster_task->n_tasks && mesh_idx != n_meshes;)
+    const subject::scene_t* scene = system->scene;
+    for (int ray_idx = 0; ray_idx != ray_caster_task->n_tasks; ++ray_idx)
     {
       if (ray_caster_task->hit_face_idx[ray_idx] != -1)
       {
-        int source_mesh_idx = (int)ray_caster_task->power[ray_idx];
-        assert(source_mesh_idx < n_meshes);
-        int hit_face_idx = ray_caster_task->hit_face_idx[ray_idx];
-        int hit_mesh_idx = face2mesh(system, hit_face_idx);
-        task->form_factors[source_mesh_idx * n_meshes + hit_mesh_idx] += 1.f;
+        const math::ray_t& ray = ray_caster_task->ray[ray_idx];
+        int source_face_idx = ray_source_face(scene, ray);
+        if (source_face_idx >= 0)
+        {
+          int source_mesh_idx = scene->face_to_mesh[source_face_idx];
+          int hit_face_idx = ray_caster_task->hit_face_idx[ray_idx];
+          int hit_mesh_idx = face2mesh(system, hit_face_idx);
+          task->form_factors[source_mesh_idx * n_meshes + hit_mesh_idx] += 1.f;
+        }
       }
-      ++ray_idx;
     }
     
     for (int i = 0; i != n_meshes; ++i)
     {
-      float mesh_ratio = 1.f / (float)mesh_outgoing_counts[i];
+      float mesh_ratio = 1.f / (float)emission_task->mesh_rays_emitted[i];
       for (int j = 0; j != n_meshes; ++j)
         task->form_factors[i * n_meshes + j] *= mesh_ratio;
     }
 
-    free(mesh_outgoing_counts);
     task_free(emission_task);
     
     return FORM_FACTORS_OK;

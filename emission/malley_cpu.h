@@ -39,4 +39,6 @@ namespace malley_cpu
  *  Emit rays from both sides of face.
  *  */
   emission::system_t* system_create();
+
+  void update_mesh_emission(const subject::scene_t* scene, emission::task_t* task);
 }

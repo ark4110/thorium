@@ -16,7 +16,7 @@
 
 #include "cuda_emission.h"
 #include "malley_cuda.cuh"
-
+#include "../emission/malley_cpu.h"
 #include "../ray_caster/system.h"
 #include "../math/operations.h"
 #include "../math/triangle.h"
@@ -78,10 +78,14 @@ namespace cuda_malley_emission
     params_t params;
 
     subject::scene_t* scene;
+
     curandStateMtgp32* GenA;
     curandStateMtgp32* GenB;
     curandStateMtgp32* GenR;
     curandStateMtgp32* GenTheta;
+    mtgp32_kernel_params *kernel_params;
+
+    int* rays_offset;
 
     float* mesh_temperature;
     float* face_front_weight;
@@ -92,71 +96,15 @@ namespace cuda_malley_emission
     int* face_rear_rays_count;
 
     grid_calculator_t calculate_weights_grid;
+    grid_calculator_t emit_malley_rays_grid;
+    grid_calculator_t scale_emission_grid;
 
-    int n_tpb;
-    int n_warp_size;
+    cudaStream_t generate_random_stream;
+
     int n_mtgp_blocks;
-
-    mtgp32_kernel_params *kernel_params;
   };
 
-  int shutdown(system_t* system)
-  {
-    system->scene = 0;
-
-    cudaFree(system->GenA);
-    cudaFree(system->GenB);
-    cudaFree(system->GenR);
-    cudaFree(system->GenTheta);
-
-    cudaFree(system->kernel_params);
-    system->kernel_params = 0;
-
-    cudaFree(system->mesh_temperature);
-    cudaFree(system->face_front_weight);
-    cudaFree(system->face_rear_weight);
-    cudaFree(system->face_front_emission);
-    cudaFree(system->face_rear_emission);
-    cudaFree(system->face_front_rays_count);
-    cudaFree(system->face_rear_rays_count);
-    system->mesh_temperature = 0;
-    system->face_front_weight = 0;
-    system->face_rear_weight = 0;
-    system->face_front_emission = 0;
-    system->face_rear_emission = 0;
-    system->face_front_rays_count = 0;
-    system->face_rear_rays_count = 0;
-
-    return EMISSION_OK;
-  }
-
-  /// @brief Sets loaded scene (polygons in meshes) for calculator and associated ray caster.
-  int set_scene(system_t* system, subject::scene_t* scene)
-  {
-    if (scene == 0 || scene->n_faces == 0)
-      return -EMISSION_ERROR;
-
-    if (scene->n_meshes == 0)
-      return -EMISSION_ERROR;
-
-    if (scene->n_materials == 0)
-      return -EMISSION_ERROR;
-
-    system->scene = scene;
-
-    checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_rear_weight, scene->n_faces * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_front_emission, scene->n_faces * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_rear_emission, scene->n_faces * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_front_rays_count, scene->n_faces * sizeof(int)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    return EMISSION_OK;
-  }
+  
 
 #define sigma 5.670400e-8f
 
@@ -228,6 +176,21 @@ namespace cuda_malley_emission
       rear_weight[face_idx] = weight_density * rear_potential;
       front_emission[face_idx] = power_density * front_potential;
       rear_emission[face_idx] = power_density * rear_potential;
+
+      printf("set face %d rear emission to %f\n", face_idx, rear_emission[face_idx]);
+    }
+  }
+
+  __global__ void scale_emission(int n_faces, const int* rays_count, float* emission)
+  {
+    int face_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (; face_idx < n_faces; face_idx += stride)
+    {
+      float before = emission[face_idx];
+      emission[face_idx] /= (float)rays_count[face_idx];
+      printf("Update face %d emission from %f to %f\n", face_idx, before, emission[face_idx]);
     }
   }
 
@@ -241,6 +204,7 @@ namespace cuda_malley_emission
     return __shfl(value, leader);
   }
 
+  template <bool front_emission>
   __global__ void emit_malley_rays(scene_ctx_t s,
                                    int* rays_count,
                                    int* n_rays_offset,
@@ -258,7 +222,7 @@ namespace cuda_malley_emission
     if (threadIdx.x == 0)
     {
       steal_offset = 0;
-      if (blockDim.x * (1 + blockIdx.x) < s.n_faces)
+      if (faces_per_block * (1 + blockIdx.x) < s.n_faces)
         block_faces_count = faces_per_block;
       else
         block_faces_count = s.n_faces % faces_per_block;
@@ -288,8 +252,11 @@ namespace cuda_malley_emission
           rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
           if (rays_to_gen > 0)
             break;
-          warp_face_idx = atomicCAS(&steal_offset, warp_face_idx, warp_face_idx + 1);
+          atomicCAS(&steal_offset, warp_face_idx, warp_face_idx + 1);
+          warp_face_idx = steal_offset;
         }
+
+        printf("next_face_idx %d\n", next_face_idx);
 
         if (rays_to_gen > 0)
         {
@@ -309,8 +276,9 @@ namespace cuda_malley_emission
       {
         next_face_idx = warp_broadcast(next_face_idx, 0);
         if (next_face_idx != face_idx)
-        {
+        { 
           face_idx = next_face_idx;
+          printf("Update to face %d\n", face_idx);
           float3 face_normal = s.face_normal[face_idx];
           /// We prepared random uniform direction in ray itself.
           rotation = pick_face_rotation(face_normal);
@@ -320,12 +288,15 @@ namespace cuda_malley_emission
 
         ray_offset = lane_id() + warp_broadcast(ray_offset, 0);
 
+        printf("ray %d emission %f\n", ray_offset, emission);
         power[ray_offset] = emission;
         ray_t& ray = rays[ray_offset];
-        float3 direction = rotation * ray.direction; // we prepared random uniform direction in ray itself
+        float3 direction = rotation * (front_emission ? ray.direction : invert_z(ray.direction)); // we prepared random uniform direction in ray itself
         float a = ray.origin.x;
         float b = ray.origin.y;
-        float3 origin = face.points[0] + a * face.points[1] + b * face.points[2];
+        float3 u = face.points[1] - face.points[0];
+        float3 v = face.points[2] - face.points[0];
+        float3 origin = face.points[0] + a * u + b * v;
         ray = { origin + direction * 0.0001f, direction };
       }
     }
@@ -363,45 +334,40 @@ namespace cuda_malley_emission
     }
   }
 
-  int init(system_t* system, const malley_cpu::params_t* params)
+  void update_mesh_rays_emitted(system_t* system, emission::task_t* task)
   {
-    system->params = *params;
+    scene_ctx_t s = make_scene_ctx(system->scene);
+    const int n_faces = s.n_faces;
+    const int n_meshes = system->scene->n_meshes;
 
-    system->scene = 0;
-    system->kernel_params = 0;
-
-    const char *argv[] = {""};
-    int device_id = findCudaDevice(1, (const char **) argv);
-    cudaDeviceProp deviceProp;
-    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
-    system->n_tpb = deviceProp.maxThreadsPerBlock;
-    system->n_warp_size = deviceProp.warpSize;
-    //system->n_tpb = 128;
-
-    int n_mtgp_blocks = 128;
-    system->n_mtgp_blocks = n_mtgp_blocks;
-
-    checkCudaErrors(cudaMalloc((void **) &system->GenA, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **) &system->GenB, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **) &system->GenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-    checkCudaErrors(cudaMalloc((void **) &system->GenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
-
-    checkCudaErrors(cudaMalloc((void **) &system->kernel_params, sizeof(mtgp32_kernel_params)));
-    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
-    CURAND_CALL(curandMakeMTGP32KernelState(system->GenA, mtgp32dc_params_fast_11213, system->kernel_params,
-                                            n_mtgp_blocks, 1));
-    CURAND_CALL(curandMakeMTGP32KernelState(system->GenB, mtgp32dc_params_fast_11213, system->kernel_params,
-                                            n_mtgp_blocks, 2));
-    CURAND_CALL(curandMakeMTGP32KernelState(system->GenR, mtgp32dc_params_fast_11213, system->kernel_params,
-                                            n_mtgp_blocks, 3));
-    CURAND_CALL(curandMakeMTGP32KernelState(system->GenTheta, mtgp32dc_params_fast_11213, system->kernel_params,
-                                            n_mtgp_blocks, 4));
-
-    system->calculate_weights_grid = grid_calculator_t(calculate_weights);
-
-    return EMISSION_OK;
+    int* mesh_indices;
+    int* ray_counts;
+    cudaMalloc((void**)&mesh_indices, n_meshes * sizeof(int));
+    cudaMalloc((void**)&ray_counts, n_meshes * sizeof(int));
+    
+    thrust::reduce_by_key(thrust::device,
+      s.face_to_mesh,
+      s.face_to_mesh + n_faces,
+      system->face_front_rays_count,
+      mesh_indices,
+      ray_counts
+    );
+    cudaMemcpy(task->mesh_rays_emitted, ray_counts, n_meshes * sizeof(int), cudaMemcpyDeviceToHost);
+    thrust::reduce_by_key(thrust::device,
+      s.face_to_mesh,
+      s.face_to_mesh + n_faces,
+      system->face_rear_rays_count,
+      mesh_indices,
+      ray_counts
+    );
+    int* temp = (int*)malloc(n_meshes * sizeof(int));
+    cudaMemcpy(temp, ray_counts, n_meshes * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaFree(mesh_indices);
+    cudaFree(ray_counts);
+    for (int m = 0; m != n_meshes; ++m)
+      task->mesh_rays_emitted[m] += temp[m];
+    free(temp);
   }
-
 
   int calculate(system_t* system, emission::task_t* task)
   {
@@ -419,6 +385,7 @@ namespace cuda_malley_emission
 
     cudaMemcpy(system->mesh_temperature, task->mesh_temperatures, sizeof(float) * n_meshes, cudaMemcpyHostToDevice);
 
+    // Calculate face weights
     auto g = system->calculate_weights_grid;
     calculate_weights<<<g.grid(n_faces), g.block(n_faces)>>>(scene_ctx,
                              system->mesh_temperature,
@@ -444,8 +411,32 @@ namespace cuda_malley_emission
                       [factor, f_rays]__host__ __device__(float w){ return (int)ceilf(f_rays * w * factor);}
     );
 
+    if (task->mesh_rays_emitted)
+      update_mesh_rays_emitted(system, task);
+
+    // Calculate total rays count
+    int n_front_rays = thrust::reduce(thrust::device, system->face_front_rays_count, system->face_front_rays_count + n_faces, 0);
+    int n_rear_rays = thrust::reduce(thrust::device, system->face_rear_rays_count, system->face_rear_rays_count + n_faces, 0);
+
+    // Grow task
+    int n_real_rays = n_front_rays + n_rear_rays;
+    int n_input_rays = task_grow(task, n_real_rays);
+
+    // Generate random
+    random_ctx_t random_ctx = make_random_ctx(system);
+    generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, n_real_rays, (ray_t*)task->rays->ray + n_input_rays);
+
     // Scale face ray emission by rays count
-    thrust::transform(thrust::device,
+    g = system->scale_emission_grid;
+    scale_emission << <g.grid(n_faces), g.block(n_faces) >> > (n_faces,
+      system->face_front_rays_count,
+      system->face_front_emission
+      );
+    scale_emission << <g.grid(n_faces), g.block(n_faces) >> > (n_faces,
+      system->face_rear_rays_count,
+      system->face_rear_emission
+      );
+    /*thrust::transform(thrust::device,
                       system->face_front_rays_count,
                       system->face_front_rays_count + n_faces,
                       system->face_front_emission,
@@ -457,52 +448,135 @@ namespace cuda_malley_emission
                       system->face_rear_rays_count + n_faces,
                       system->face_rear_emission,
                       system->face_rear_emission,
-                      []__host__ __device__(int n_face_rays, float emission){ return emission / (float)n_face_rays;}
-    );
-    int n_front_rays = thrust::reduce(thrust::device, system->face_front_rays_count, system->face_front_rays_count + n_faces, 0);
-    int n_rear_rays = thrust::reduce(thrust::device, system->face_rear_rays_count, system->face_rear_rays_count + n_faces, 0);
+      []__host__ __device__(int n_face_rays, float emission) { printf("tr emission %f, n_face_rays %d\n", emission, n_face_rays);  return emission / (float)n_face_rays; }
+    );*/
 
-    int n_real_rays = n_front_rays + n_rear_rays;
-    int n_input_rays = task_grow(task, n_real_rays);
+    // Emit rays
+    g = system->emit_malley_rays_grid;
+    cudaMemset(system->rays_offset, 0, sizeof(int));
+    if (n_front_rays)
+    {
+      emit_malley_rays<true> << <256, g.block(n_faces) >> > (scene_ctx,
+        system->face_front_rays_count,
+        system->rays_offset,
+        system->face_front_emission,
+        (ray_t*)task->rays->ray + n_input_rays,
+        task->rays->power + n_input_rays
+        );
+    }
+    if (n_rear_rays)
+    {
+      emit_malley_rays<false> << <256, g.block(n_faces) >> > (scene_ctx,
+        system->face_rear_rays_count,
+        system->rays_offset,
+        system->face_rear_emission,
+        (ray_t*)task->rays->ray + n_input_rays,
+        task->rays->power + n_input_rays
+        );
+    }
 
-    random_ctx_t random_ctx = make_random_ctx(system);
-    generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, n_real_rays, (ray_t*)task->rays->ray + n_input_rays);
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    int* device_rays_offset;
-    cudaMalloc((void**)&device_rays_offset, sizeof(int));
-    cudaMemset(device_rays_offset, 0, sizeof(int));
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    emit_malley_rays<<<256, system->n_tpb>>>(scene_ctx,
-            system->face_front_rays_count,
-            device_rays_offset,
-            system->face_front_emission,
-            (ray_t*)task->rays->ray + n_input_rays,
-            task->rays->power + n_input_rays
-    );
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    emit_malley_rays<<<256, system->n_tpb>>>(scene_ctx,
-            system->face_rear_rays_count,
-            device_rays_offset,
-            system->face_rear_emission,
-            (ray_t*)task->rays->ray + n_input_rays,
-            task->rays->power + n_input_rays
-    );
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    /// @todo Don't relocate back
+    // Update mesh emission
     if (r = scene_relocate(system->scene, -1))
       return r;
+    malley_cpu::update_mesh_emission(system->scene, task);
+
+    return EMISSION_OK;
+  }
+
+  int init(system_t* system, const malley_cpu::params_t* params)
+  {
+    system->params = *params;
+
+    system->scene = 0;
+    system->kernel_params = 0;
+
+    int n_mtgp_blocks = 128;
+    system->n_mtgp_blocks = n_mtgp_blocks;
+
+    checkCudaErrors(cudaMalloc((void **)&system->GenA, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **)&system->GenB, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **)&system->GenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+    checkCudaErrors(cudaMalloc((void **)&system->GenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
+
+    checkCudaErrors(cudaMalloc((void **)&system->kernel_params, sizeof(mtgp32_kernel_params)));
+    CURAND_CALL(curandMakeMTGP32Constants(mtgp32dc_params_fast_11213, system->kernel_params));
+    CURAND_CALL(curandMakeMTGP32KernelState(system->GenA, mtgp32dc_params_fast_11213, system->kernel_params,
+      n_mtgp_blocks, 1));
+    CURAND_CALL(curandMakeMTGP32KernelState(system->GenB, mtgp32dc_params_fast_11213, system->kernel_params,
+      n_mtgp_blocks, 2));
+    CURAND_CALL(curandMakeMTGP32KernelState(system->GenR, mtgp32dc_params_fast_11213, system->kernel_params,
+      n_mtgp_blocks, 3));
+    CURAND_CALL(curandMakeMTGP32KernelState(system->GenTheta, mtgp32dc_params_fast_11213, system->kernel_params,
+      n_mtgp_blocks, 4));
+
+    checkCudaErrors(cudaMalloc((void **)&system->rays_offset, sizeof(int)));
+
+    system->calculate_weights_grid = grid_calculator_t(calculate_weights);
+    system->emit_malley_rays_grid = grid_calculator_t(emit_malley_rays<true>);
+    system->scale_emission_grid = grid_calculator_t(scale_emission);
+
+    checkCudaErrors(cudaStreamCreate(&system->generate_random_stream));
+
+    return EMISSION_OK;
+  }
+
+  int set_scene(system_t* system, subject::scene_t* scene)
+  {
+    if (scene == 0 || scene->n_faces == 0)
+      return -EMISSION_ERROR;
+
+    if (scene->n_meshes == 0)
+      return -EMISSION_ERROR;
+
+    if (scene->n_materials == 0)
+      return -EMISSION_ERROR;
+
+    system->scene = scene;
+
+    checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_weight, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_emission, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_emission, scene->n_faces * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_front_rays_count, scene->n_faces * sizeof(int)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
+
+    checkCudaErrors(cudaPeekAtLastError());
+    checkCudaErrors(cudaDeviceSynchronize());
+
+    return EMISSION_OK;
+  }
+
+  int shutdown(system_t* system)
+  {
+    system->scene = 0;
+
+    cudaFree(system->GenA);
+    cudaFree(system->GenB);
+    cudaFree(system->GenR);
+    cudaFree(system->GenTheta);
+
+    cudaFree(system->kernel_params);
+    system->kernel_params = 0;
+
+    cudaFree(system->rays_offset);
+
+    cudaFree(system->mesh_temperature);
+    cudaFree(system->face_front_weight);
+    cudaFree(system->face_rear_weight);
+    cudaFree(system->face_front_emission);
+    cudaFree(system->face_rear_emission);
+    cudaFree(system->face_front_rays_count);
+    cudaFree(system->face_rear_rays_count);
+    system->mesh_temperature = 0;
+    system->face_front_weight = 0;
+    system->face_rear_weight = 0;
+    system->face_front_emission = 0;
+    system->face_rear_emission = 0;
+    system->face_front_rays_count = 0;
+    system->face_rear_rays_count = 0;
+
+    cudaStreamDestroy(system->generate_random_stream);
 
     return EMISSION_OK;
   }

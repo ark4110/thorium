@@ -192,6 +192,19 @@ namespace malley_cpu
 
   const float sigma = 5.670400e-8f;
 
+  void update_mesh_emission(const subject::scene_t* scene, emission::task_t* task)
+  {
+    for (int m = 0; m != scene->n_meshes; ++m)
+    {
+      const subject::material_t& material = mesh_material(scene, m);
+      double mesh_area = scene->mesh_areas[m];
+      double T = task->mesh_temperatures[m];
+      double power_density = (T * T * T * T) * sigma;
+      double emission = power_density * mesh_area * (material.front.emission.emissivity + material.rear.emission.emissivity);
+      task->mesh_emission[m] = (float)(emission + task->mesh_emission[m]);
+    }
+  }
+
   int calculate(cpu_system_t* system, emission::task_t* task)
   {
     // Calculate total amount of rays to emmit.
@@ -228,10 +241,11 @@ namespace malley_cpu
         const float front_emission = front_density * system->face_areas[f];
         const float rear_emission = rear_density * system->face_areas[f];
 
-        task->mesh_emission[m] += front_emission + rear_emission;
-
         const int n_face_rays_front = emitted_front(system, f);
         const int n_face_rays_rear = emitted_rear(system, f);
+
+        if (task->mesh_rays_emitted)
+          task->mesh_rays_emitted[m] += (n_face_rays_front + n_face_rays_rear);
 
         const ray_caster::face_t& face = scene->faces[f];
 
@@ -271,6 +285,8 @@ namespace malley_cpu
         }
       }
     }
+
+    update_mesh_emission(system->scene, task);
 
     return EMISSION_OK;
   }

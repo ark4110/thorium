@@ -41,19 +41,14 @@ namespace subject
     free(scene->meshes);
     free(scene->materials);
 
-    if (scene->face_areas)
-      free(scene->face_areas);
-    if (scene->face_normals)
-      free(scene->face_normals);
-    if (scene->face_to_mesh)
-      free(scene->face_to_mesh);
-    if (scene->face_animation_group)
-      free(scene->face_animation_group);
-    if (scene->mesh_material)
-      free(scene->mesh_material);
+    free(scene->face_areas);
+    free(scene->face_normals);
+    free(scene->face_to_mesh);
+    free(scene->face_animation_group);
+    free(scene->mesh_material);
+    free(scene->mesh_areas);
 
-    if (scene->base_faces)
-      free(scene->base_faces);
+    free(scene->base_faces);
 
     animation_free(scene->animation);
   }
@@ -149,6 +144,7 @@ namespace subject
     build_face_to_mesh_index(scene, &scene->face_to_mesh);    
     build_face_animation_group_index(scene, &scene->face_animation_group);
     build_mesh_material_index(scene, &scene->mesh_material);
+    build_meshes_areas(scene, &scene->mesh_areas);
 
     if (scene->animation && scene->animation->groups)
     {
@@ -406,8 +402,7 @@ namespace subject
 
   float build_meshes_areas(const scene_t* scene, float** areas)
   {
-    free(*areas);
-    *areas = (float*)malloc(sizeof(float) * scene->n_meshes);
+    *areas = (float*)realloc(*areas, sizeof(float) * scene->n_meshes);
 
     float total_area = 0;
     const int n_meshes = scene->n_meshes;
@@ -423,8 +418,7 @@ namespace subject
 
   void build_faces_areas(const scene_t* scene, float** areas)
   {
-    free(*areas);
-    *areas = (float*)malloc(sizeof(float) * scene->n_faces);
+    *areas = (float*)realloc(*areas, sizeof(float) * scene->n_faces);
 
     const int n_faces = scene->n_faces;
     for (int f = 0; f != n_faces; ++f)
