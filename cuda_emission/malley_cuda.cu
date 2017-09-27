@@ -98,6 +98,7 @@ namespace cuda_malley_emission
     grid_calculator_t calculate_weights_grid;
     grid_calculator_t emit_malley_rays_grid;
     grid_calculator_t scale_emission_grid;
+    grid_calculator_t calculate_rays_count_grid;
 
     cudaStream_t generate_random_stream;
 
@@ -176,6 +177,18 @@ namespace cuda_malley_emission
       rear_weight[face_idx] = weight_density * rear_potential;
       front_emission[face_idx] = power_density * front_potential;
       rear_emission[face_idx] = power_density * rear_potential;
+    }
+  }
+
+  __global__ void calculate_rays_count(int n_faces, float count_factor, const float* front_weights, const float* rear_weights, int* front_counts, int* rear_counts)
+  {
+    int face_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (; face_idx < n_faces; face_idx += stride)
+    {
+      front_counts[face_idx] = (int)(ceilf(count_factor * front_weights[face_idx]));
+      rear_counts[face_idx] = (int)(ceilf(count_factor * rear_weights[face_idx]));
     }
   }
 
@@ -381,22 +394,13 @@ namespace cuda_malley_emission
 
     float front_weight_sum = thrust::reduce(thrust::device, system->face_front_weight, system->face_front_weight + n_faces, 0.f);
     float rear_weight_sum = thrust::reduce(thrust::device, system->face_rear_weight, system->face_rear_weight + n_faces, 0.f);
-    float factor = 1.f / (front_weight_sum + rear_weight_sum);
-    float f_rays = system->params.n_rays;
+    float count_factor = float(system->params.n_rays ) / (front_weight_sum + rear_weight_sum);
 
     // Calculate rays count
-    thrust::transform(thrust::device,
-                      system->face_front_weight,
-                      system->face_front_weight + n_faces,
-                      system->face_front_rays_count,
-                      [factor, f_rays]__host__ __device__(float w){ return (int)ceilf(f_rays * w * factor);}
-    );
-    thrust::transform(thrust::device,
-                      system->face_rear_weight,
-                      system->face_rear_weight + n_faces,
-                      system->face_rear_rays_count,
-                      [factor, f_rays]__host__ __device__(float w){ return (int)ceilf(f_rays * w * factor);}
-    );
+    g = system->calculate_rays_count_grid;
+    calculate_rays_count << <g.grid(n_faces), g.block(n_faces) >> > (n_faces, count_factor,
+      system->face_front_weight, system->face_rear_weight,
+      system->face_front_rays_count, system->face_rear_rays_count);
 
     if (task->mesh_rays_emitted)
       update_mesh_rays_emitted(system, task);
@@ -423,20 +427,6 @@ namespace cuda_malley_emission
       system->face_rear_rays_count,
       system->face_rear_emission
       );
-    /*thrust::transform(thrust::device,
-                      system->face_front_rays_count,
-                      system->face_front_rays_count + n_faces,
-                      system->face_front_emission,
-                      system->face_front_emission,
-                      []__host__ __device__(int n_face_rays, float emission){ return emission / (float)n_face_rays;}
-    );
-    thrust::transform(thrust::device,
-                      system->face_rear_rays_count,
-                      system->face_rear_rays_count + n_faces,
-                      system->face_rear_emission,
-                      system->face_rear_emission,
-      []__host__ __device__(int n_face_rays, float emission) { printf("tr emission %f, n_face_rays %d\n", emission, n_face_rays);  return emission / (float)n_face_rays; }
-    );*/
 
     // Emit rays
     g = system->emit_malley_rays_grid;
@@ -501,6 +491,7 @@ namespace cuda_malley_emission
     system->calculate_weights_grid = grid_calculator_t(calculate_weights);
     system->emit_malley_rays_grid = grid_calculator_t(emit_malley_rays<true>);
     system->scale_emission_grid = grid_calculator_t(scale_emission);
+    system->calculate_rays_count_grid = grid_calculator_t(calculate_rays_count);
 
     checkCudaErrors(cudaStreamCreate(&system->generate_random_stream));
 
