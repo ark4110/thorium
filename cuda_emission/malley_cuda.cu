@@ -185,10 +185,7 @@ namespace cuda_malley_emission
     int stride = gridDim.x * blockDim.x;
 
     for (; face_idx < n_faces; face_idx += stride)
-    {
-      float before = emission[face_idx];
       emission[face_idx] /= (float)rays_count[face_idx];
-    }
   }
 
   __device__ inline int lane_id(void)
@@ -255,10 +252,7 @@ namespace cuda_malley_emission
 
         if (rays_to_gen > 0)
         {
-          if (rays_to_gen <= warpSize)
-            atomicSub((int *) &block_faces_count, 1);
-          else
-            rays_to_gen = warpSize;
+          rays_to_gen = min(rays_to_gen, warpSize);
           ray_offset = atomicAdd(n_rays_offset, rays_to_gen);
         }
       }
