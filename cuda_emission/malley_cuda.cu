@@ -176,8 +176,6 @@ namespace cuda_malley_emission
       rear_weight[face_idx] = weight_density * rear_potential;
       front_emission[face_idx] = power_density * front_potential;
       rear_emission[face_idx] = power_density * rear_potential;
-
-      printf("set face %d rear emission to %f\n", face_idx, rear_emission[face_idx]);
     }
   }
 
@@ -190,7 +188,6 @@ namespace cuda_malley_emission
     {
       float before = emission[face_idx];
       emission[face_idx] /= (float)rays_count[face_idx];
-      printf("Update face %d emission from %f to %f\n", face_idx, before, emission[face_idx]);
     }
   }
 
@@ -256,8 +253,6 @@ namespace cuda_malley_emission
           warp_face_idx = steal_offset;
         }
 
-        printf("next_face_idx %d\n", next_face_idx);
-
         if (rays_to_gen > 0)
         {
           if (rays_to_gen <= warpSize)
@@ -278,7 +273,6 @@ namespace cuda_malley_emission
         if (next_face_idx != face_idx)
         { 
           face_idx = next_face_idx;
-          printf("Update to face %d\n", face_idx);
           float3 face_normal = s.face_normal[face_idx];
           /// We prepared random uniform direction in ray itself.
           rotation = pick_face_rotation(face_normal);
@@ -288,7 +282,6 @@ namespace cuda_malley_emission
 
         ray_offset = lane_id() + warp_broadcast(ray_offset, 0);
 
-        printf("ray %d emission %f\n", ray_offset, emission);
         power[ray_offset] = emission;
         ray_t& ray = rays[ray_offset];
         float3 direction = rotation * (front_emission ? ray.direction : invert_z(ray.direction)); // we prepared random uniform direction in ray itself
