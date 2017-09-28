@@ -30,107 +30,14 @@
 #include <cstring>
 
 #include <helper_cuda.h>
+
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 #include <thrust/reduce.h>
 #include <thrust/execution_policy.h>
 
-#include <map>
-#include <thrust/system/cuda/vector.h>
-
-namespace {
-  class cached_allocator
-  {
-  public:
-    // just allocate bytes
-    typedef char value_type;
-
-    cached_allocator() {}
-
-    ~cached_allocator()
-    {
-      // free all allocations when cached_allocator goes out of scope
-      free_all();
-    }
-
-    char *allocate(std::ptrdiff_t num_bytes)
-    {
-      char *result = 0;
-
-      // search the cache for a free block
-      free_blocks_type::iterator free_block = free_blocks.find(num_bytes);
-
-      if (free_block != free_blocks.end())
-      {
-        // get the pointer
-        result = free_block->second;
-
-        // erase from the free_blocks map
-        free_blocks.erase(free_block);
-      }
-      else
-      {
-        // no allocation of the right size exists
-        // create a new one with cuda::malloc
-        // throw if cuda::malloc can't satisfy the request
-        try
-        {
-          // allocate memory and convert cuda::pointer to raw pointer
-          result = thrust::cuda::malloc<char>(num_bytes).get();
-        }
-        catch (std::runtime_error &e)
-        {
-          throw;
-        }
-      }
-
-      // insert the allocated pointer into the allocated_blocks map
-      allocated_blocks.insert(std::make_pair(result, num_bytes));
-
-      return result;
-    }
-
-    void deallocate(char *ptr, size_t n)
-    {
-      // erase the allocated block from the allocated blocks map
-      allocated_blocks_type::iterator iter = allocated_blocks.find(ptr);
-      std::ptrdiff_t num_bytes = iter->second;
-      allocated_blocks.erase(iter);
-
-      // insert the block into the free blocks map
-      free_blocks.insert(std::make_pair(num_bytes, ptr));
-    }
-
-  private:
-    typedef std::multimap<std::ptrdiff_t, char*> free_blocks_type;
-    typedef std::map<char *, std::ptrdiff_t>     allocated_blocks_type;
-
-    free_blocks_type      free_blocks;
-    allocated_blocks_type allocated_blocks;
-
-    void free_all()
-    {
-      // deallocate all outstanding blocks in both lists
-      for (free_blocks_type::iterator i = free_blocks.begin();
-        i != free_blocks.end();
-        ++i)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->second));
-      }
-
-      for (allocated_blocks_type::iterator i = allocated_blocks.begin();
-        i != allocated_blocks.end();
-        ++i)
-      {
-        // transform the pointer to cuda::pointer before calling cuda::free
-        thrust::cuda::free(thrust::cuda::pointer<char>(i->first));
-      }
-    }
-
-  };
-}
+#include "../ext/cub/cub/cub.cuh"
 
 namespace {
 #include <curand_mtgp32_host.h>
@@ -181,8 +88,6 @@ namespace cuda_malley_emission
     curandStateMtgp32* GenTheta;
     mtgp32_kernel_params *kernel_params;
 
-    cached_allocator* thrust_allocator;
-
     float* mesh_temperature;
     float* face_front_weight;
     float* face_rear_weight;
@@ -192,8 +97,10 @@ namespace cuda_malley_emission
     int* face_rear_rays_count;
     int* face_rays_offset;
 
-    int* reduce_buffer_int;
-    float* reduce_buffer_float;
+    void* reduce_buffer;
+    size_t reduce_buffer_size;
+    int* reduce_result_int;
+    float* reduce_result_float;
 
     grid_calculator_t calculate_weights_grid;
     grid_calculator_t emit_malley_rays_grid;
@@ -280,10 +187,12 @@ namespace cuda_malley_emission
     }
   }
 
-  __global__ void calculate_rays_count(int n_faces, float count_factor, const float* front_weights, const float* rear_weights, int* front_counts, int* rear_counts)
+  __global__ void calculate_rays_count(int n_faces, int n_rays, const float* weights, const float* front_weights, const float* rear_weights, int* front_counts, int* rear_counts)
   {
     int face_idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
+
+    float count_factor = (float)n_rays / (weights[0] + weights[1]);
 
     for (; face_idx < n_faces; face_idx += stride)
     {
@@ -447,7 +356,7 @@ namespace cuda_malley_emission
     cudaMalloc((void**)&mesh_indices, n_meshes * sizeof(int));
     cudaMalloc((void**)&ray_counts, n_meshes * sizeof(int));
     
-    thrust::reduce_by_key(thrust::cuda::par(*system->thrust_allocator),
+    thrust::reduce_by_key(thrust::device,
       s.face_to_mesh,
       s.face_to_mesh + n_faces,
       system->face_front_rays_count,
@@ -455,7 +364,7 @@ namespace cuda_malley_emission
       ray_counts
     );
     cudaMemcpy(task->mesh_rays_emitted, ray_counts, n_meshes * sizeof(int), cudaMemcpyDeviceToHost);
-    thrust::reduce_by_key(thrust::cuda::par(*system->thrust_allocator),
+    thrust::reduce_by_key(thrust::device,
       s.face_to_mesh,
       s.face_to_mesh + n_faces,
       system->face_rear_rays_count,
@@ -494,13 +403,13 @@ namespace cuda_malley_emission
                              system->face_front_weight, system->face_rear_weight,
                              system->face_front_emission, system->face_rear_emission);
 
-    float front_weight_sum = thrust::reduce(thrust::cuda::par(*system->thrust_allocator), system->face_front_weight, system->face_front_weight + n_faces, 0.f);
-    float rear_weight_sum = thrust::reduce(thrust::cuda::par(*system->thrust_allocator), system->face_rear_weight, system->face_rear_weight + n_faces, 0.f);
-    float count_factor = float(system->params.n_rays ) / (front_weight_sum + rear_weight_sum);
+    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_weight, &system->reduce_result_float[0], n_faces);
+    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_weight, &system->reduce_result_float[1], n_faces);
 
     // Calculate rays count
     g = system->calculate_rays_count_grid;
-    calculate_rays_count << <g.grid(n_faces), g.block(n_faces) >> > (n_faces, count_factor,
+    calculate_rays_count << <g.grid(n_faces), g.block(n_faces) >> > (n_faces, system->params.n_rays,
+      system->reduce_result_float,
       system->face_front_weight, system->face_rear_weight,
       system->face_front_rays_count, system->face_rear_rays_count);
 
@@ -508,8 +417,13 @@ namespace cuda_malley_emission
       update_mesh_rays_emitted(system, task);
 
     // Calculate total rays count
-    int n_front_rays = thrust::reduce(thrust::cuda::par(*system->thrust_allocator), system->face_front_rays_count, system->face_front_rays_count + n_faces, 0);
-    int n_rear_rays = thrust::reduce(thrust::cuda::par(*system->thrust_allocator), system->face_rear_rays_count, system->face_rear_rays_count + n_faces, 0);
+    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, &system->reduce_result_int[0], n_faces);
+    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, &system->reduce_result_int[1], n_faces);
+
+    int n_rays_count[2];
+    cudaMemcpy(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost);
+    int n_front_rays = n_rays_count[0];
+    int n_rear_rays = n_rays_count[1];
 
     // Grow task
     int n_real_rays = n_front_rays + n_rear_rays;
@@ -534,7 +448,7 @@ namespace cuda_malley_emission
     g = system->emit_malley_rays_grid;
     if (n_front_rays)
     {
-      thrust::exclusive_scan(thrust::cuda::par(*system->thrust_allocator), system->face_front_rays_count, system->face_front_rays_count + n_faces, system->face_rays_offset);
+      cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<true> << <256, g.block(n_faces) >> > (scene_ctx,
         system->face_front_rays_count,
         system->face_rays_offset,
@@ -546,7 +460,7 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
-      thrust::exclusive_scan(thrust::cuda::par(*system->thrust_allocator), system->face_rear_rays_count, system->face_rear_rays_count + n_faces, system->face_rays_offset);
+      cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<false> << <256, g.block(n_faces) >> > (scene_ctx,
         system->face_rear_rays_count,
         system->face_rays_offset,
@@ -591,8 +505,6 @@ namespace cuda_malley_emission
     CURAND_CALL(curandMakeMTGP32KernelState(system->GenTheta, mtgp32dc_params_fast_11213, system->kernel_params,
       n_mtgp_blocks, 4));
 
-    system->thrust_allocator = new cached_allocator();
-
     system->calculate_weights_grid = grid_calculator_t(calculate_weights);
     system->emit_malley_rays_grid = grid_calculator_t(emit_malley_rays<true>);
     system->scale_emission_grid = grid_calculator_t(scale_emission);
@@ -625,8 +537,10 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rays_offset, scene->n_faces * sizeof(int)));
 
-    checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer_float, (scene->n_faces + 127) / 128 * sizeof(float)));
-    checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer_int, (scene->n_faces + 127) / 128 * sizeof(int)));
+    system->reduce_buffer_size = std::max(4096ULL, scene->n_faces * sizeof(int));
+    checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer, system->reduce_buffer_size));
+    checkCudaErrors(cudaMalloc((void**)&system->reduce_result_float, 2 * sizeof(float)));
+    checkCudaErrors(cudaMalloc((void**)&system->reduce_result_int, 2 * sizeof(int)));
 
     checkCudaErrors(cudaPeekAtLastError());
     checkCudaErrors(cudaDeviceSynchronize());
@@ -646,8 +560,6 @@ namespace cuda_malley_emission
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
 
-    delete system->thrust_allocator;
-
     cudaFree(system->mesh_temperature);
     cudaFree(system->face_front_weight);
     cudaFree(system->face_rear_weight);
@@ -656,8 +568,9 @@ namespace cuda_malley_emission
     cudaFree(system->face_front_rays_count);
     cudaFree(system->face_rear_rays_count);
     cudaFree(system->face_rays_offset);
-    cudaFree(system->reduce_buffer_int);
-    cudaFree(system->reduce_buffer_float);
+    cudaFree(system->reduce_buffer);
+    cudaFree(system->reduce_result_int);
+    cudaFree(system->reduce_result_float);
     system->mesh_temperature = 0;
     system->face_front_weight = 0;
     system->face_rear_weight = 0;
@@ -666,8 +579,9 @@ namespace cuda_malley_emission
     system->face_front_rays_count = 0;
     system->face_rear_rays_count = 0;
     system->face_rays_offset = 0;
-    system->reduce_buffer_int = 0;
-    system->reduce_buffer_float = 0;
+    system->reduce_buffer = 0;
+    system->reduce_result_int = 0;
+    system->reduce_result_float = 0;
 
     cudaStreamDestroy(system->generate_random_stream);
 
