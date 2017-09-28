@@ -157,7 +157,7 @@ namespace cpu_form_factors
     emission::task_t* emission_task = emission::task_create();
     emission_task->mesh_emission = system->mesh_emission;
     emission_task->mesh_temperatures = system->mesh_temperatures;
-    emission_task->mesh_rays_emitted = (int*)malloc(n_meshes * sizeof(int));
+    emission_task->mesh_rays_emitted = (int*)calloc(n_meshes, sizeof(int));
     
     system_relocate_task(system->emitter, emission_task, 0);
     if ((r = emission::system_calculate(emitter, emission_task)) < 0)

@@ -60,7 +60,10 @@ namespace emission
     */
     float* mesh_emission;
 
-    /// @brief Rays count emitted by mesh.
+    /**
+      @brief Rays count emitted by mesh.
+      @detail Owned by client.
+    */
     int* mesh_rays_emitted;
   };
 

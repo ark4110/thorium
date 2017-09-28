@@ -224,6 +224,9 @@ namespace malley_cpu
 
     int n_ray = 0;
 
+    if (task->mesh_rays_emitted)
+      memset(task->mesh_rays_emitted, 0, n_meshes * sizeof(int));
+
     for (int m = 0; m != n_meshes; ++m)
     {
       const subject::mesh_t& mesh = scene->meshes[m];
