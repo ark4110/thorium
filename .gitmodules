@@ -4,3 +4,6 @@
 [submodule "ext/libpredict"]
 	path = ext/libpredict
 	url = https://github.com/kroburg/libpredict.git
+[submodule "ext/cub"]
+	path = ext/cub
+	url = https://github.com/NVlabs/cub.git
