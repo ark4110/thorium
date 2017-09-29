@@ -37,7 +37,7 @@ namespace optix_hit_converter
 
   __device__ inline int warp_broadcast(int value, int leader)
   {
-    return __shfl(value, leader);
+    return __shfl_sync(~0, value, leader);
   }
 
   __global__ void convert_hits(const optix_hit_t* hits, int n_rays, int* offset,
@@ -53,7 +53,7 @@ namespace optix_hit_converter
 
       if (hit.distance > 0)
       {
-        int active = __ballot(1);
+        int active = __ballot_sync(~0, 1);
         int leader = __ffs(active) - 1;
         int warp_offset;
         if (lane_id() == leader)
