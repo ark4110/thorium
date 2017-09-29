@@ -96,6 +96,7 @@ namespace cuda_malley_emission
     int* face_front_rays_count;
     int* face_rear_rays_count;
     int* face_rays_offset;
+    int* face_rays_count_next;
 
     void* reduce_buffer;
     size_t reduce_buffer_size;
@@ -225,72 +226,62 @@ namespace cuda_malley_emission
   __global__ void emit_malley_rays(scene_ctx_t s,
                                    int* rays_count,
                                    int* face_rays_offset,
+                                   int* work_queue,
+                                   volatile int* queue_head,
+                                   volatile int* queue_tail,
+                                   int n_queue_size,
                                    int global_offset,
                                    const float* emissions,
                                    ray_t* rays,
                                    float* power
   )
   {
-    __shared__ volatile int steal_offset;
-    __shared__ volatile int block_faces_count;
-
-    int faces_per_block = s.n_faces  / gridDim.x;
-    faces_per_block += 128 - faces_per_block % 128;
-
-    if (threadIdx.x == 0)
-    {
-      steal_offset = 0;
-      if (faces_per_block * (1 + blockIdx.x) < s.n_faces)
-        block_faces_count = faces_per_block;
-      else
-        block_faces_count = s.n_faces % faces_per_block;
-    }
-
-    __syncthreads();
-
-    const int block_face_idx = faces_per_block * blockIdx.x;
-    int warp_face_idx = threadIdx.x / warpSize;
+    int read_pos = blockDim.x * blockIdx.x + threadIdx.x;
+    read_pos = read_pos < s.n_faces ? read_pos : -1;
 
     int face_idx = -1;
-    int next_face_idx = block_face_idx + warp_face_idx;
+    int next_face_idx;
 
     cuda_math::mat33 rotation;
     face_t face;
     float emission;
 
-    while (next_face_idx < s.n_faces)
-    {
-      int rays_to_gen = 0;
+    while (true) {
+      int rays_to_gen;
       int ray_offset;
-      if (lane_id() == 0)
-      {
-        while (warp_face_idx < block_faces_count)
-        {
-          next_face_idx = warp_face_idx + block_face_idx;
-          rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
-          if (rays_to_gen > 0)
-            break;
-          while (warp_face_idx == steal_offset)
-            atomicCAS((int*)&steal_offset, warp_face_idx, warp_face_idx + 1);
-          warp_face_idx = steal_offset;
-        }
 
-        if (rays_to_gen > 0)
-        {
-          rays_to_gen = min(rays_to_gen, warpSize);
-          ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
+      if (lane_id() == 0) {
+        rays_to_gen = 0;
+        while (true) {
+          if (read_pos < *queue_head) {
+            read_pos = atomicAdd((int*)queue_head, 1);
+          }
+
+          if (read_pos >= *queue_tail)
+            break;
+
+          do {
+            next_face_idx = work_queue[read_pos % n_queue_size];
+          } while (next_face_idx < 0);
+
+          rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
+
+          if (rays_to_gen > 0) {
+            if (rays_to_gen > warpSize) {
+              read_pos = atomicAdd((int*)queue_tail, 1);
+              work_queue[read_pos % n_queue_size] = next_face_idx;
+            }
+            rays_to_gen = min(rays_to_gen, warpSize);
+            ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
+          }
         }
       }
 
       rays_to_gen = warp_broadcast(rays_to_gen, 0);
-      if (rays_to_gen <= 0)
-        break;
 
-      if (lane_id() < rays_to_gen)
-      {
+      if (rays_to_gen > 0 && lane_id() < rays_to_gen) {
         next_face_idx = warp_broadcast(next_face_idx, 0);
-        if (next_face_idx != face_idx)
-        { 
+        if (next_face_idx != face_idx) {
           face_idx = next_face_idx;
           float3 face_normal = s.face_normal[face_idx];
           /// We prepared random uniform direction in ray itself.
@@ -302,15 +293,19 @@ namespace cuda_malley_emission
         ray_offset = lane_id() + global_offset + warp_broadcast(ray_offset, 0);
 
         power[ray_offset] = emission;
-        ray_t& ray = rays[ray_offset];
-        float3 direction = rotation * (front_emission ? ray.direction : invert_z(ray.direction)); // we prepared random uniform direction in ray itself
+        ray_t &ray = rays[ray_offset];
+        float3 direction = rotation * (front_emission ? ray.direction : invert_z(
+                ray.direction)); // we prepared random uniform direction in ray itself
         float a = ray.origin.x;
         float b = ray.origin.y;
         float3 u = face.points[1] - face.points[0];
         float3 v = face.points[2] - face.points[0];
         float3 origin = face.points[0] + a * u + b * v;
-        ray = { origin + direction * 0.0001f, direction };
+        ray = {origin + direction * 0.0001f, direction};
       }
+
+      if (rays_to_gen <= 0)
+        break;
     }
   }
 
@@ -383,6 +378,14 @@ namespace cuda_malley_emission
     free(temp);
   }
 
+  __global__ void init_work_queue(int n_faces, int n_queue_size, int* queue)
+  {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = gridDim.x * blockDim.x;
+    for (; idx < n_queue_size; idx += stride)
+      queue[idx] = idx < n_faces ? idx : -1;
+  }
+
   int calculate(system_t* system, emission::task_t* task)
   {
     if (task->rays && task->rays->allocation_device <= 0)
@@ -451,6 +454,16 @@ namespace cuda_malley_emission
       system->face_rear_emission
       );
 
+    int* work_queue;
+    int* queue_head;
+    int* queue_tail;
+    cudaMalloc((void**)&work_queue, sizeof(int)*n_real_rays);
+    cudaMalloc((void**)&queue_head, sizeof(int));
+    cudaMalloc((void**)&queue_tail, sizeof(int));
+    cudaMemset(queue_head, 0, sizeof(int));
+    cudaMemset(queue_tail, 0, sizeof(int));
+    init_work_queue<<<256, 1024>>>(n_faces, n_real_rays, work_queue);
+
     // Emit rays
     g = system->emit_malley_rays_grid;
     if (n_front_rays)
@@ -459,6 +472,10 @@ namespace cuda_malley_emission
       emit_malley_rays<true> << <256, g.block(n_faces) >> > (scene_ctx,
         system->face_front_rays_count,
         system->face_rays_offset,
+              work_queue,
+              queue_head,
+              queue_tail,
+              n_real_rays,
         0,
         system->face_front_emission,
         (ray_t*)task->rays->ray + n_input_rays,
@@ -467,16 +484,27 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
+      cudaMemset(queue_head, 0, sizeof(int));
+      cudaMemset(queue_tail, 0, sizeof(int));
+      init_work_queue<<<256, 1024>>>(n_faces, n_real_rays, work_queue);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<false> << <256, g.block(n_faces) >> > (scene_ctx,
         system->face_rear_rays_count,
         system->face_rays_offset,
+              work_queue,
+              queue_head,
+              queue_tail,
+              n_real_rays,
         n_front_rays,
         system->face_rear_emission,
         (ray_t*)task->rays->ray + n_input_rays,
         task->rays->power + n_input_rays
         );
     }
+
+    cudaFree(work_queue);
+    cudaFree(queue_head);
+    cudaFree(queue_tail);
 
     // Update mesh emission
     if (r = scene_relocate(system->scene, -1))
@@ -544,6 +572,7 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaMalloc((void**)&system->face_front_rays_count, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rays_offset, scene->n_faces * sizeof(int)));
+    checkCudaErrors(cudaMalloc((void**)&system->face_rays_count_next, scene->n_faces * sizeof(int)));
 
     system->reduce_buffer_size = std::max(size_t(4096), scene->n_faces * sizeof(int));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer, system->reduce_buffer_size));
@@ -576,6 +605,7 @@ namespace cuda_malley_emission
     cudaFree(system->face_front_rays_count);
     cudaFree(system->face_rear_rays_count);
     cudaFree(system->face_rays_offset);
+    cudaFree(system->face_rays_count_next);
     cudaFree(system->reduce_buffer);
     cudaFree(system->reduce_result_int);
     cudaFree(system->reduce_result_float);
@@ -587,6 +617,7 @@ namespace cuda_malley_emission
     system->face_front_rays_count = 0;
     system->face_rear_rays_count = 0;
     system->face_rays_offset = 0;
+    system->face_rays_count_next = 0;
     system->reduce_buffer = 0;
     system->reduce_result_int = 0;
     system->reduce_result_float = 0;
