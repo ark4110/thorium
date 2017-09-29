@@ -63,8 +63,8 @@ namespace cuda_task_relocation
 
     cuda_rays_data_copy_all(task->n_tasks, buffer_task, task, cudaMemcpyDeviceToHost);
     // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.    
-    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.ray, task->next_gen.ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.power, task->next_gen.power, task->n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.ray, task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.power, task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
 
     cuda_rays_data_free(task);
     cuda_rays_data_free(&task->next_gen);
@@ -77,15 +77,15 @@ namespace cuda_task_relocation
     
     rtask.n_tasks = task->n_tasks + n_rays;
     const int align_factor = 1024 * 128;
-    int n_alloc = rtask.n_tasks + (align_factor - rtask.n_tasks % align_factor) % align_factor;
+    int n_alloc = (rtask.n_tasks + align_factor - 1) & -align_factor;
     rtask.n_reserved = n_alloc;
 
     cuda_rays_data_alloc(n_alloc, &rtask);
     cuda_rays_data_alloc(n_alloc, &rtask.next_gen);
     
     cuda_rays_data_copy_all(task->n_tasks, &rtask, buffer_task, cudaMemcpyHostToDevice);
-    checkCudaErrors(cudaMemcpy(rtask.next_gen.ray, buffer_task->next_gen.ray, task->n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(rtask.next_gen.power, buffer_task->next_gen.power, task->n_tasks * sizeof(float), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(rtask.next_gen.ray, buffer_task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(rtask.next_gen.power, buffer_task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyHostToDevice));
     task_free(buffer_task);
 
     if (rtask.n_reserved > 128*1024)
@@ -115,7 +115,7 @@ namespace cuda_task_relocation
       rtask->relocate = &relocate_task;
 
       cuda_rays_data_copy_all(task->n_tasks, rtask, task, cudaMemcpyDeviceToHost);
-      cuda_rays_data_copy_all(task->n_tasks, &rtask->next_gen, &task->next_gen, cudaMemcpyDeviceToHost);
+      cuda_rays_data_copy_all(task->next_gen.n_tasks, &rtask->next_gen, &task->next_gen, cudaMemcpyDeviceToHost);
 
       task_free_data(task);
 
@@ -131,7 +131,7 @@ namespace cuda_task_relocation
       rtask.grow = &grow_task;
       rtask.relocate = &relocate_task;
 
-      int n_alloc = task->n_tasks + (1024 - task->n_tasks % 1024) % 1024;
+      int n_alloc = (task->n_tasks + 1023) & -1024;;
 
       rtask.n_tasks = task->n_tasks;
       rtask.next_gen.n_tasks = task->next_gen.n_tasks;
@@ -142,7 +142,7 @@ namespace cuda_task_relocation
       cuda_rays_data_alloc(n_alloc, &rtask.next_gen);
 
       cuda_rays_data_copy_all(task->n_tasks, &rtask, task, cudaMemcpyHostToDevice);
-      cuda_rays_data_copy_all(task->n_tasks, &rtask.next_gen, &task->next_gen, cudaMemcpyHostToDevice);
+      cuda_rays_data_copy_all(task->next_gen.n_tasks, &rtask.next_gen, &task->next_gen, cudaMemcpyHostToDevice);
 
       task_free_data(task);
       *task = rtask;
