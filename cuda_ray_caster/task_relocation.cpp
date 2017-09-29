@@ -38,6 +38,8 @@ namespace cuda_task_relocation
 
   void cuda_rays_data_copy_all(int n_tasks, ray_caster::rays_data_t* destination, ray_caster::rays_data_t* source, cudaMemcpyKind direction)
   {
+    if (!n_tasks)
+      return;
     checkCudaErrors(cudaMemcpy(destination->ray, source->ray, n_tasks * sizeof(math::ray_t), direction));
     checkCudaErrors(cudaMemcpy(destination->hit_distance, source->hit_distance, n_tasks * sizeof(float), direction));
     checkCudaErrors(cudaMemcpy(destination->hit_face_idx, source->hit_face_idx, n_tasks * sizeof(int), direction));
@@ -62,9 +64,12 @@ namespace cuda_task_relocation
     ray_caster::task_t* buffer_task = ray_caster::task_create(task->n_tasks);
 
     cuda_rays_data_copy_all(task->n_tasks, buffer_task, task, cudaMemcpyDeviceToHost);
-    // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.    
-    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.ray, task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(buffer_task->next_gen.power, task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
+    // We grow to create new rays -> no need to preserve hit_faces_idx and hit_point.
+    if (task->next_gen.n_tasks)
+    {
+      checkCudaErrors(cudaMemcpy(buffer_task->next_gen.ray, task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(buffer_task->next_gen.power, task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyDeviceToHost));
+    }
 
     cuda_rays_data_free(task);
     cuda_rays_data_free(&task->next_gen);
@@ -84,8 +89,11 @@ namespace cuda_task_relocation
     cuda_rays_data_alloc(n_alloc, &rtask.next_gen);
     
     cuda_rays_data_copy_all(task->n_tasks, &rtask, buffer_task, cudaMemcpyHostToDevice);
-    checkCudaErrors(cudaMemcpy(rtask.next_gen.ray, buffer_task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(rtask.next_gen.power, buffer_task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyHostToDevice));
+    if (task->next_gen.n_tasks)
+    {
+      checkCudaErrors(cudaMemcpy(rtask.next_gen.ray, buffer_task->next_gen.ray, task->next_gen.n_tasks * sizeof(math::ray_t), cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(rtask.next_gen.power, buffer_task->next_gen.power, task->next_gen.n_tasks * sizeof(float), cudaMemcpyHostToDevice));
+    }
     task_free(buffer_task);
 
     if (rtask.n_reserved > 128*1024)
