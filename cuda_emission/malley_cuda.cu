@@ -108,6 +108,7 @@ namespace cuda_malley_emission
     grid_calculator_t calculate_rays_count_grid;
 
     cudaStream_t generate_random_stream;
+    cudaStream_t memcpy_stream;
 
     int n_mtgp_blocks;
   };
@@ -313,8 +314,10 @@ namespace cuda_malley_emission
     }
   }
 
-  __global__ void generate_malley_random(random_ctx_t g, int n_rays, ray_t* rays)
+  __global__ void generate_malley_random(random_ctx_t g, const int* n_rays_counts, ray_t* rays)
   {
+    const int n_rays = n_rays_counts[0] + n_rays_counts[1];
+
     curandStateMtgp32* GenA     = &g.GenA[blockIdx.x];
     curandStateMtgp32* GenB     = &g.GenB[blockIdx.x];
     curandStateMtgp32* GenR     = &g.GenR[blockIdx.x];
@@ -421,17 +424,21 @@ namespace cuda_malley_emission
     cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, &system->reduce_result_int[1], n_faces);
 
     int n_rays_count[2];
-    cudaMemcpy(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost);
-    int n_front_rays = n_rays_count[0];
-    int n_rear_rays = n_rays_count[1];
+    cudaMemcpyAsync(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost, system->memcpy_stream);
 
     // Grow task
-    int n_real_rays = n_front_rays + n_rear_rays;
-    int n_input_rays = task_grow(task, n_real_rays);
+    int n_upper_bound = system->params.n_rays + 2 * n_faces;
+    int n_input_rays = task_grow(task, n_upper_bound);
 
     // Generate random
     random_ctx_t random_ctx = make_random_ctx(system);
-    generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, n_real_rays, (ray_t*)task->rays->ray + n_input_rays);
+    generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, system->reduce_result_int, (ray_t*)task->rays->ray + n_input_rays);
+
+    cudaStreamSynchronize(system->memcpy_stream);
+    int n_front_rays = n_rays_count[0];
+    int n_rear_rays = n_rays_count[1];
+    int n_real_rays = n_front_rays + n_rear_rays;
+    task->rays->n_tasks -= n_upper_bound - n_real_rays;
 
     // Scale face ray emission by rays count
     g = system->scale_emission_grid;
@@ -511,6 +518,7 @@ namespace cuda_malley_emission
     system->calculate_rays_count_grid = grid_calculator_t(calculate_rays_count);
 
     checkCudaErrors(cudaStreamCreate(&system->generate_random_stream));
+    checkCudaErrors(cudaStreamCreate(&system->memcpy_stream));
 
     return EMISSION_OK;
   }
@@ -584,6 +592,7 @@ namespace cuda_malley_emission
     system->reduce_result_float = 0;
 
     cudaStreamDestroy(system->generate_random_stream);
+    cudaStreamDestroy(system->memcpy_stream);
 
     return EMISSION_OK;
   }
