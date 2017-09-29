@@ -75,6 +75,42 @@ namespace cuda_malley_emission
     int n_block_size;
   };
 
+  struct work_queue_t
+  {
+    int n_faces;
+    int n_warps_per_block;
+    int n_blocks;
+    int n_faces_per_block;
+    int n_queue_size_per_block;
+
+    int* work;
+    int* head;
+    int* tail;
+  };
+
+  void queue_init(work_queue_t* queue, int n_faces, int n_warps_per_block = 16, int n_blocks = 256)
+  {
+    queue->n_faces = n_faces;
+    queue->n_warps_per_block = n_warps_per_block;
+    queue->n_blocks = n_blocks;
+
+    queue->n_faces_per_block = (n_faces + n_blocks - 1) / n_blocks;
+    queue->n_queue_size_per_block = (queue->n_faces_per_block + 2 * n_warps_per_block + 31) & -32;
+
+    cudaMalloc((void**)&queue->work, sizeof(int) * queue->n_queue_size_per_block * n_blocks);
+    
+    // @todo Pad with 128 bytes
+    cudaMalloc((void**)&queue->head, 128 * n_blocks);
+    cudaMalloc((void**)&queue->tail, 128 * n_blocks);
+  }
+
+  void queue_shutdown(work_queue_t* queue)
+  {
+    cudaFree(queue->work);
+    cudaFree(queue->head);
+    cudaFree(queue->tail);
+  }
+
   /// @brief Extended base system_t (C-style polymorphism)
   struct system_t : emission::system_t
   {
@@ -102,6 +138,8 @@ namespace cuda_malley_emission
     size_t reduce_buffer_size;
     int* reduce_result_int;
     float* reduce_result_float;
+
+    work_queue_t queue;
 
     grid_calculator_t calculate_weights_grid;
     grid_calculator_t emit_malley_rays_grid;
@@ -226,18 +264,21 @@ namespace cuda_malley_emission
   __global__ void emit_malley_rays(scene_ctx_t s,
                                    int* rays_count,
                                    int* face_rays_offset,
-                                   int* work_queue,
-                                   volatile int* queue_head,
-                                   volatile int* queue_tail,
-                                   int n_queue_size,
+
+                                   work_queue_t queue,
+
                                    int global_offset,
                                    const float* emissions,
                                    ray_t* rays,
                                    float* power
   )
   {
-    int read_pos = blockDim.x * blockIdx.x + threadIdx.x;
-    read_pos = read_pos < s.n_faces ? read_pos : -1;
+    const int n_queue_size = queue.n_queue_size_per_block;
+    int* work_queue = blockIdx.x * queue.n_queue_size_per_block + queue.work;
+    int* queue_head = queue.head + 32 * blockIdx.x;
+    int* queue_tail = queue.tail + 32 * blockIdx.x;
+
+    int read_pos = (threadIdx.x / warpSize) % (*queue_tail);
 
     int face_idx = -1;
     int next_face_idx;
@@ -252,27 +293,29 @@ namespace cuda_malley_emission
 
       if (lane_id() == 0) {
         rays_to_gen = 0;
-        while (true) {
-          if (read_pos < *queue_head) {
-            read_pos = atomicAdd((int*)queue_head, 1);
-          }
+        int head_pos = *queue_head;
+        int end_pos = *queue_tail;
+        while (head_pos < end_pos)
+        {
+          if (read_pos < head_pos)
+            read_pos = head_pos;
 
-          if (read_pos >= *queue_tail)
-            break;
+          if ((next_face_idx = work_queue[read_pos % n_queue_size]) >= 0)
+          {
+            rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
 
-          do {
-            next_face_idx = work_queue[read_pos % n_queue_size];
-          } while (next_face_idx < 0);
-
-          rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
-
-          if (rays_to_gen > 0) {
-            if (rays_to_gen > warpSize) {
-              read_pos = atomicAdd((int*)queue_tail, 1);
-              work_queue[read_pos % n_queue_size] = next_face_idx;
+            if (rays_to_gen > 0)
+            {
+              if (rays_to_gen > warpSize) {
+                read_pos = atomicAdd(queue_tail, 1);
+                work_queue[read_pos % n_queue_size] = next_face_idx;
+                rays_to_gen = warpSize;
+              }
+              ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
+              break;
             }
-            rays_to_gen = min(rays_to_gen, warpSize);
-            ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
+
+            head_pos = max(head_pos + 1, atomicCAS(queue_head, head_pos, head_pos + 1));
           }
         }
       }
@@ -304,7 +347,7 @@ namespace cuda_malley_emission
         ray = {origin + direction * 0.0001f, direction};
       }
 
-      if (rays_to_gen <= 0)
+      if (__syncthreads_and(rays_to_gen <= 0))
         break;
     }
   }
@@ -378,12 +421,31 @@ namespace cuda_malley_emission
     free(temp);
   }
 
-  __global__ void init_work_queue(int n_faces, int n_queue_size, int* queue)
+  __global__ void init_work_queue(int n_faces, int n_faces_per_block, int n_queue_size_per_block, int* queue, int* queue_head, int* queue_tail)
   {
-    int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    int stride = gridDim.x * blockDim.x;
-    for (; idx < n_queue_size; idx += stride)
-      queue[idx] = idx < n_faces ? idx : -1;
+    int idx = threadIdx.x;
+    int stride = blockDim.x;
+
+    int* block_queue = queue + blockIdx.x * n_queue_size_per_block;
+    int* head = queue_head + 32 * blockIdx.x;
+    int* tail = queue_tail + 32 * blockIdx.x;
+
+    if (threadIdx.x == 0)
+    {
+      *head = 0;
+      *tail = n_faces_per_block * blockIdx.x < n_faces ? n_faces_per_block : (n_faces % n_faces_per_block);
+    }
+
+    for (; idx < n_queue_size_per_block; idx += stride)
+    {
+      int face_idx = blockIdx.x * n_faces_per_block + idx;
+      block_queue[idx] = idx < n_faces ? face_idx : -1;
+    }
+  }
+
+  void queue_prepare(work_queue_t* queue)
+  {
+    init_work_queue << <queue->n_blocks, 1024 >> >(queue->n_faces, queue->n_faces_per_block, queue->n_queue_size_per_block, queue->work, queue->head, queue->tail);
   }
 
   int calculate(system_t* system, emission::task_t* task)
@@ -454,28 +516,16 @@ namespace cuda_malley_emission
       system->face_rear_emission
       );
 
-    int* work_queue;
-    int* queue_head;
-    int* queue_tail;
-    cudaMalloc((void**)&work_queue, sizeof(int)*n_real_rays);
-    cudaMalloc((void**)&queue_head, sizeof(int));
-    cudaMalloc((void**)&queue_tail, sizeof(int));
-    cudaMemset(queue_head, 0, sizeof(int));
-    cudaMemset(queue_tail, 0, sizeof(int));
-    init_work_queue<<<256, 1024>>>(n_faces, n_real_rays, work_queue);
-
     // Emit rays
     g = system->emit_malley_rays_grid;
     if (n_front_rays)
     {
+      queue_prepare(&system->queue);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
-      emit_malley_rays<true> << <256, g.block(n_faces) >> > (scene_ctx,
+      emit_malley_rays<true> << <system->queue.n_blocks, system->queue.n_warps_per_block * 32 >> > (scene_ctx,
         system->face_front_rays_count,
         system->face_rays_offset,
-              work_queue,
-              queue_head,
-              queue_tail,
-              n_real_rays,
+        system->queue,
         0,
         system->face_front_emission,
         (ray_t*)task->rays->ray + n_input_rays,
@@ -484,27 +534,18 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
-      cudaMemset(queue_head, 0, sizeof(int));
-      cudaMemset(queue_tail, 0, sizeof(int));
-      init_work_queue<<<256, 1024>>>(n_faces, n_real_rays, work_queue);
+      queue_prepare(&system->queue);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
-      emit_malley_rays<false> << <256, g.block(n_faces) >> > (scene_ctx,
+      emit_malley_rays<false> << <system->queue.n_blocks, system->queue.n_warps_per_block * 32 >> > (scene_ctx,
         system->face_rear_rays_count,
         system->face_rays_offset,
-              work_queue,
-              queue_head,
-              queue_tail,
-              n_real_rays,
+        system->queue,
         n_front_rays,
         system->face_rear_emission,
         (ray_t*)task->rays->ray + n_input_rays,
         task->rays->power + n_input_rays
         );
     }
-
-    cudaFree(work_queue);
-    cudaFree(queue_head);
-    cudaFree(queue_tail);
 
     // Update mesh emission
     if (r = scene_relocate(system->scene, -1))
@@ -564,6 +605,8 @@ namespace cuda_malley_emission
 
     system->scene = scene;
 
+    queue_init(&system->queue, scene->n_faces, 4, 1024);
+
     checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_weight, scene->n_faces * sizeof(float)));
@@ -596,6 +639,8 @@ namespace cuda_malley_emission
 
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
+
+    queue_shutdown(&system->queue);
 
     cudaFree(system->mesh_temperature);
     cudaFree(system->face_front_weight);
