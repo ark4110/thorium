@@ -22,7 +22,7 @@
     <ProjectGuid>{0730886B-2DF9-40DC-914C-07E6A22AA7B4}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ray_caster</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

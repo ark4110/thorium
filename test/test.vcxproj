@@ -44,16 +44,16 @@
       <Project>{52bc2630-b79c-41b3-ad12-af6cc7791ba1}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_emission\cuda_emission.vcxproj">
-      <Project>{9a8c8cf8-f6e6-4228-a5d9-5fe3428de7db}</Project>
+      <Project>{bb391192-f112-44cc-baa4-8d9bc753e09f}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_equation\cuda_equation.vcxproj">
-      <Project>{c5f9e143-544d-420e-ad3b-6c984116aefa}</Project>
+      <Project>{47fa5e17-269e-44b7-b783-b06f930146ab}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_misc\cuda_misc.vcxproj">
-      <Project>{49d7c7cb-eb0d-4f9e-927f-9916389ecf95}</Project>
+      <Project>{231b5f15-1c4f-462f-81dc-5738149e4913}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_ray_caster\cuda_ray_caster.vcxproj">
-      <Project>{558b0343-7bd0-43f8-86ec-660021b420fe}</Project>
+      <Project>{45d95b10-476d-4cc2-9548-65bd7ea437d9}</Project>
     </ProjectReference>
     <ProjectReference Include="..\emission\emission.vcxproj">
       <Project>{21db25d4-85e4-48e2-86a2-ac228605e760}</Project>
@@ -93,7 +93,7 @@
     <ProjectGuid>{0C15E81E-9F1A-4AEE-AF3B-5C77C77846C0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>test</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
