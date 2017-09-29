@@ -537,7 +537,7 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rays_offset, scene->n_faces * sizeof(int)));
 
-    system->reduce_buffer_size = std::max(4096ULL, scene->n_faces * sizeof(int));
+    system->reduce_buffer_size = std::max(size_t(4096), scene->n_faces * sizeof(int));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer, system->reduce_buffer_size));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_float, 2 * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_int, 2 * sizeof(int)));
