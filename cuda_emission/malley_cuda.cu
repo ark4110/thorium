@@ -88,14 +88,16 @@ namespace cuda_malley_emission
     int* tail;
   };
 
-  void queue_init(work_queue_t* queue, int n_faces, int n_warps_per_block = 16, int n_blocks = 256)
+  void queue_init(work_queue_t* queue, int n_faces, int n_warps_per_block, int n_blocks)
   {
     queue->n_faces = n_faces;
     queue->n_warps_per_block = n_warps_per_block;
-    queue->n_blocks = n_blocks;
+    
 
-    queue->n_faces_per_block = ((n_faces + n_blocks - 1) / n_blocks + 31) & -32;
+    queue->n_faces_per_block = ((n_faces + n_blocks - 1) / n_blocks + n_warps_per_block - 1) & -n_warps_per_block;
     queue->n_queue_size_per_block = queue->n_faces_per_block;
+
+    queue->n_blocks = (n_faces + queue->n_faces_per_block - 1) / queue->n_faces_per_block;
 
     cudaMalloc((void**)&queue->work, sizeof(int) * queue->n_queue_size_per_block * n_blocks);
 
@@ -440,7 +442,7 @@ namespace cuda_malley_emission
       if (blockIdx.x + 1 < final_block)
         *tail = n_faces_per_block;
       else if (blockIdx.x + 1 == final_block)
-        *tail = n_faces % n_faces_per_block;
+        *tail = n_faces - (blockIdx.x * n_faces_per_block);
       else
         *tail = 0;
     }
@@ -614,7 +616,7 @@ namespace cuda_malley_emission
 
     system->scene = scene;
 
-    queue_init(&system->queue, scene->n_faces, 4, 1024);
+    queue_init(&system->queue, scene->n_faces, 4, 65536);
 
     checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
