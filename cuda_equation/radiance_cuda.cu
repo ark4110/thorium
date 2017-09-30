@@ -211,7 +211,7 @@ namespace radiance_equation_cuda
 
   __device__ inline int warp_broadcast(int value, int leader)
   {
-    return __shfl_sync(~0, value, leader);
+    return __shfl(value, leader);
   }
 
   __global__ void make_ray_decisions(int n_rays, int* hit_face_idx, const ray_t* rays, curandStatePhilox4_32_10_t* ray_random,
@@ -280,7 +280,7 @@ namespace radiance_equation_cuda
       int value = counts[d];
       for (int i = 1; i <= 16; i *= 2)
       {
-        int n = __shfl_up_sync(~0, value, i);
+        int n = __shfl_up(value, i);
         if (lane_id() >= i)
           value += n;
       }
@@ -325,7 +325,7 @@ namespace radiance_equation_cuda
       int active;
       for (int i = 0; i != hit_interaction_count; ++i)
         if (i == decision)
-          active = __ballot_sync(~0, 1);
+          active = __ballot(1);
 
       int leader = __ffs(active) - 1;
       int warp_offset;

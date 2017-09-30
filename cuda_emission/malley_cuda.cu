@@ -94,11 +94,11 @@ namespace cuda_malley_emission
     queue->n_warps_per_block = n_warps_per_block;
     queue->n_blocks = n_blocks;
 
-    queue->n_faces_per_block = (n_faces + n_blocks - 1) / n_blocks;
-    queue->n_queue_size_per_block = (queue->n_faces_per_block + 2 * n_warps_per_block + 31) & -32;
+    queue->n_faces_per_block = ((n_faces + n_blocks - 1) / n_blocks + 31) & -32;
+    queue->n_queue_size_per_block = queue->n_faces_per_block;
 
     cudaMalloc((void**)&queue->work, sizeof(int) * queue->n_queue_size_per_block * n_blocks);
-    
+
     // @todo Pad with 128 bytes
     cudaMalloc((void**)&queue->head, 128 * n_blocks);
     cudaMalloc((void**)&queue->tail, 128 * n_blocks);
@@ -152,7 +152,7 @@ namespace cuda_malley_emission
     int n_mtgp_blocks;
   };
 
-  
+
 
 #define sigma 5.670400e-8f
 
@@ -199,9 +199,9 @@ namespace cuda_malley_emission
   }
 
   __global__ void calculate_weights(scene_ctx_t s,
-                                    const float* temperatures,
-                                    float* front_weight, float* rear_weight,
-                                    float* front_emission, float* rear_emission
+    const float* temperatures,
+    float* front_weight, float* rear_weight,
+    float* front_emission, float* rear_emission
   )
   {
     int face_idx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -257,28 +257,32 @@ namespace cuda_malley_emission
 
   __device__ inline int warp_broadcast(int value, int leader)
   {
-    return __shfl_sync(~0, value, leader);
+    return __shfl(value, leader);
   }
 
   template <bool front_emission>
   __global__ void emit_malley_rays(scene_ctx_t s,
-                                   int* rays_count,
-                                   int* face_rays_offset,
+    int* rays_count,
+    int* face_rays_offset,
 
-                                   work_queue_t queue,
+    work_queue_t queue,
 
-                                   int global_offset,
-                                   const float* emissions,
-                                   ray_t* rays,
-                                   float* power
+    int global_offset,
+    const float* emissions,
+    ray_t* rays,
+    float* power
   )
   {
-    const int n_queue_size = queue.n_queue_size_per_block;
+    int* queue_tail = queue.tail + 32 * blockIdx.x;
+    const int end_pos = *queue_tail;
+
+    if (!end_pos)
+      return;
+
     int* work_queue = blockIdx.x * queue.n_queue_size_per_block + queue.work;
     int* queue_head = queue.head + 32 * blockIdx.x;
-    int* queue_tail = queue.tail + 32 * blockIdx.x;
 
-    int read_pos = (threadIdx.x / warpSize) % (*queue_tail);
+    int read_pos = (threadIdx.x / warpSize) % end_pos;
 
     int face_idx = -1;
     int next_face_idx;
@@ -294,28 +298,27 @@ namespace cuda_malley_emission
       if (lane_id() == 0) {
         rays_to_gen = 0;
         int head_pos = *queue_head;
-        int end_pos = *queue_tail;
-        while (head_pos < end_pos)
+
+        while (read_pos < end_pos)
         {
-          if (read_pos < head_pos)
-            read_pos = head_pos;
+          next_face_idx = work_queue[read_pos];
+          rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
 
-          if ((next_face_idx = work_queue[read_pos % n_queue_size]) >= 0)
+          if (rays_to_gen > 0)
           {
-            rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
+            if (rays_to_gen > warpSize)
+              rays_to_gen = warpSize;
+            else
+              read_pos = head_pos;
 
-            if (rays_to_gen > 0)
-            {
-              if (rays_to_gen > warpSize) {
-                read_pos = atomicAdd(queue_tail, 1);
-                work_queue[read_pos % n_queue_size] = next_face_idx;
-                rays_to_gen = warpSize;
-              }
-              ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
-              break;
-            }
-
-            head_pos = max(head_pos + 1, atomicCAS(queue_head, head_pos, head_pos + 1));
+            ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
+            break;
+          }
+          else
+          {
+            if (read_pos == head_pos)
+              head_pos = max(head_pos + 1, atomicCAS(queue_head, head_pos, head_pos + 1));
+            read_pos = head_pos;
           }
         }
       }
@@ -338,13 +341,13 @@ namespace cuda_malley_emission
         power[ray_offset] = emission;
         ray_t &ray = rays[ray_offset];
         float3 direction = rotation * (front_emission ? ray.direction : invert_z(
-                ray.direction)); // we prepared random uniform direction in ray itself
+          ray.direction)); // we prepared random uniform direction in ray itself
         float a = ray.origin.x;
         float b = ray.origin.y;
         float3 u = face.points[1] - face.points[0];
         float3 v = face.points[2] - face.points[0];
         float3 origin = face.points[0] + a * u + b * v;
-        ray = {origin + direction * 0.0001f, direction};
+        ray = { origin + direction * 0.0001f, direction };
       }
 
       if (__syncthreads_and(rays_to_gen <= 0))
@@ -356,9 +359,9 @@ namespace cuda_malley_emission
   {
     const int n_rays = n_rays_counts[0] + n_rays_counts[1];
 
-    curandStateMtgp32* GenA     = &g.GenA[blockIdx.x];
-    curandStateMtgp32* GenB     = &g.GenB[blockIdx.x];
-    curandStateMtgp32* GenR     = &g.GenR[blockIdx.x];
+    curandStateMtgp32* GenA = &g.GenA[blockIdx.x];
+    curandStateMtgp32* GenB = &g.GenB[blockIdx.x];
+    curandStateMtgp32* GenR = &g.GenR[blockIdx.x];
     curandStateMtgp32* GenTheta = &g.GenTheta[blockIdx.x];
 
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -396,7 +399,7 @@ namespace cuda_malley_emission
     int* ray_counts;
     cudaMalloc((void**)&mesh_indices, n_meshes * sizeof(int));
     cudaMalloc((void**)&ray_counts, n_meshes * sizeof(int));
-    
+
     thrust::reduce_by_key(thrust::device,
       s.face_to_mesh,
       s.face_to_mesh + n_faces,
@@ -433,19 +436,25 @@ namespace cuda_malley_emission
     if (threadIdx.x == 0)
     {
       *head = 0;
-      *tail = n_faces_per_block * blockIdx.x < n_faces ? n_faces_per_block : (n_faces % n_faces_per_block);
+      const int final_block = (n_faces + n_faces_per_block - 1) / n_faces_per_block;
+      if (blockIdx.x + 1 < final_block)
+        *tail = n_faces_per_block;
+      else if (blockIdx.x + 1 == final_block)
+        *tail = n_faces % n_faces_per_block;
+      else
+        *tail = 0;
     }
 
     for (; idx < n_queue_size_per_block; idx += stride)
     {
       int face_idx = blockIdx.x * n_faces_per_block + idx;
-      block_queue[idx] = idx < n_faces ? face_idx : -1;
+      block_queue[idx] = face_idx < n_faces ? face_idx : -1;
     }
   }
 
   void queue_prepare(work_queue_t* queue)
   {
-    init_work_queue << <queue->n_blocks, 1024 >> >(queue->n_faces, queue->n_faces_per_block, queue->n_queue_size_per_block, queue->work, queue->head, queue->tail);
+    init_work_queue << <queue->n_blocks, 128 >> > (queue->n_faces, queue->n_faces_per_block, queue->n_queue_size_per_block, queue->work, queue->head, queue->tail);
   }
 
   int calculate(system_t* system, emission::task_t* task)
@@ -466,10 +475,10 @@ namespace cuda_malley_emission
 
     // Calculate face weights
     auto g = system->calculate_weights_grid;
-    calculate_weights<<<g.grid(n_faces), g.block(n_faces)>>>(scene_ctx,
-                             system->mesh_temperature,
-                             system->face_front_weight, system->face_rear_weight,
-                             system->face_front_emission, system->face_rear_emission);
+    calculate_weights << <g.grid(n_faces), g.block(n_faces) >> > (scene_ctx,
+      system->mesh_temperature,
+      system->face_front_weight, system->face_rear_weight,
+      system->face_front_emission, system->face_rear_emission);
 
     cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_weight, &system->reduce_result_float[0], n_faces);
     cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_weight, &system->reduce_result_float[1], n_faces);
