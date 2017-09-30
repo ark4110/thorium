@@ -28,7 +28,7 @@ namespace math
     point_t s2 = dot(v, v);
     point_t c = dot(subject, to); // TODO: Normalize?
 
-    mat33 rot = IDENTITY_33;
+    mat33 rot = IDENTITY_33();
 
     if (s2 > FLT_MIN)
     {
@@ -42,7 +42,7 @@ namespace math
       vec3 f = subject + to;
       float l = dot(f, f);
       if (l < FLT_EPSILON)
-        rot = REVERSE_33;
+        rot = REVERSE_33();
     }
 
     return rot;

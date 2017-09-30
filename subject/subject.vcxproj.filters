@@ -4,6 +4,7 @@
     <ClInclude Include="system.h" />
     <ClInclude Include="objects.h" />
     <ClInclude Include="generator.h" />
+    <ClInclude Include="operations.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="system.cpp" />
@@ -12,5 +13,6 @@
     <ClCompile Include="unify_normals.cpp" />
     <ClCompile Include="spherial_generator.cpp" />
     <ClCompile Include="cube_generator.cpp" />
+    <ClCompile Include="operations.cpp" />
   </ItemGroup>
 </Project>

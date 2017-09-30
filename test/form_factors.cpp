@@ -228,7 +228,7 @@ TYPED_TEST(FormFactors, ParallelPlanesCorrect)
   float distances[] = { .5f, 1, 2, 3, 10 };
   for (int i = 0; i != sizeof(distances) / sizeof(float); ++i)
   {
-    scene_t* stackScene = this->MakeParallelPlanesScene(distances[i], math::IDENTITY_33);
+    scene_t* stackScene = this->MakeParallelPlanesScene(distances[i], math::IDENTITY_33());
 
     system_set_scene(this->Calculator, stackScene);
 
@@ -266,7 +266,7 @@ TYPED_TEST(FormFactors, RotatedParallelPlanesCorrect)
 
 TYPED_TEST(FormFactors, PerpendicularPlanesCorrect)
 {
-  scene_t* stackScene = this->MakePerpendicularPlanesScene(math::IDENTITY_33);
+  scene_t* stackScene = this->MakePerpendicularPlanesScene(math::IDENTITY_33());
 
   system_set_scene(this->Calculator, stackScene);
 
@@ -297,7 +297,7 @@ TYPED_TEST(FormFactors, RotatedPerpendicularPlanesCorrect)
 
 TYPED_TEST(FormFactors, BoxCorrect)
 {
-  scene_t* scene = this->MakeBoxScene(math::IDENTITY_33);
+  scene_t* scene = this->MakeBoxScene(math::IDENTITY_33());
 
   system_set_scene(this->Calculator, scene);
 

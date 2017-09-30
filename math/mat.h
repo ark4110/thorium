@@ -84,10 +84,16 @@ namespace math
   }
 
   /// @brief Identity diagonal 3x3 matrix.
-  static const mat33 IDENTITY_33 = make_mat33(1, 0, 0, 0, 1, 0, 0, 0, 1);
+  inline mat33 IDENTITY_33()
+  {
+    return make_mat33(1, 0, 0, 0, 1, 0, 0, 0, 1);
+  }
 
   /// @brief Rotation matrix whiñh reverse vector direction.
-  static const mat33 REVERSE_33 = make_mat33(1, 0, 0, 0, -1, 0, 0, 0, -1);
+  inline mat33 REVERSE_33()
+  {
+    return make_mat33(1, 0, 0, 0, -1, 0, 0, 0, -1);
+  }
 
   /**
    * @brief Produces 3x3 matrix of rotation source 3d vector to target 3d vector.

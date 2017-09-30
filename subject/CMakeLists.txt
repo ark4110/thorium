@@ -9,6 +9,8 @@ set(SOURCE_FILES
   cube_generator.cpp
   mesh_graph.cpp
   objects.h
+  operations.h
+  operations.cpp
   system.cpp
   unify_normals.cpp)
 

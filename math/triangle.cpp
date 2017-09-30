@@ -519,4 +519,30 @@ namespace math
     vec3 norm = triangle_normal(face);
     return rotate_towards(z, norm);
   }
+
+  bool near_enough(const triangle_t& a, const triangle_t& b)
+  {
+    for (int i = 0; i != 3; ++i)
+      if (!near_enough(a.points[i], b.points[0]) &&
+        !near_enough(a.points[i], b.points[1]) &&
+        !near_enough(a.points[i], b.points[2]))
+        return false;
+    return true;
+  }
+
+  triangle_t triangle_translate(triangle_t triangle, vec3 translation)
+  {
+    for (int i = 0; i != 3; ++i)
+      triangle.points[i] += translation;
+
+    return triangle;
+  }
+  
+  triangle_t triangle_rotate(triangle_t triangle, vec3 from, vec3 to)
+  {
+    mat33 rotation = rotate_towards(from, to);
+    for (int i = 0; i != 3; ++i)
+      triangle.points[i] = rotation * triangle.points[i];
+    return triangle;
+  }
 }

@@ -16,8 +16,11 @@
 
 #include "gtest/gtest.h"
 
+#include "test_scene.h"
 #include "../import_export/obj_import.h"
 #include "../subject/system.h"
+#include "../math/mat.h"
+#include "../subject/operations.h"
 
 using namespace testing;
 
@@ -72,17 +75,17 @@ struct SceneEngineType
 };
 
 template <typename SceneEngineType>
-class AnimatedScene : public Test
+class ImportedAnimatedScene : public Test
 {
 public:
-  AnimatedScene()
+  ImportedAnimatedScene()
   {
     SceneSystem = subject::system_create(SceneEngineType::ID);
     system_create_scene(SceneSystem, &Scene);
     obj_import::scene("models/test_hierarchy.obj", Scene);
   }
 
-  ~AnimatedScene()
+  ~ImportedAnimatedScene()
   {
     scene_free(Scene);
     system_free(SceneSystem);
@@ -95,9 +98,9 @@ public:
 
 typedef ::testing::Types<SceneEngineType<SCENE_ENGINE_HOST>, SceneEngineType<SCENE_ENGINE_CUDA>> SceneEnginesTypes;
 
-TYPED_TEST_CASE(AnimatedScene, SceneEnginesTypes);
+TYPED_TEST_CASE(ImportedAnimatedScene, SceneEnginesTypes);
 
-TYPED_TEST(AnimatedScene, FinalizationTest)
+TYPED_TEST(ImportedAnimatedScene, FinalizationTest)
 {
   int r = 0;
   r = system_finalize_scene(this->SceneSystem, this->Scene);
@@ -110,11 +113,87 @@ TYPED_TEST(AnimatedScene, FinalizationTest)
   ASSERT_NE(nullptr, this->Scene->base_faces);
 }
 
-TYPED_TEST(AnimatedScene, SetFrameTest)
+TYPED_TEST(ImportedAnimatedScene, SetFrameTest)
 {  
   ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneSystem, this->Scene));
 
   int r = 0;
   r = scene_set_frame(this->Scene, 0);
   ASSERT_EQ(SCENE_ENGINE_OK, r);
+}
+
+template <int SceneEngineType, int EmissionType>
+struct AnimatedPlanesConfig
+{
+  static const int SceneSystem = SceneEngineType;
+  static const int EmissionSystem = EmissionType;
+};
+
+template <typename Config>
+class AnimatedPlanes : public Test
+{
+public:
+  AnimatedPlanes()
+  {
+    SceneSystem = subject::system_create(Config::SceneSystem);
+    StaticScene = MakeAssymetric3PlanesScene(SceneSystem);
+    AnimatedScene = MakeAssymetric3PlanesScene(SceneSystem);
+
+    AddMaterial(StaticScene, subject::black_body());
+    StaticScene->meshes[0].material_idx = 0;
+    StaticScene->meshes[1].material_idx = 0;
+    StaticScene->meshes[1].material_idx = 0;
+
+    AddMaterial(AnimatedScene, subject::black_body());
+    AnimatedScene->meshes[0].material_idx = 0;
+    AnimatedScene->meshes[1].material_idx = 0;
+    AnimatedScene->meshes[1].material_idx = 0;
+
+    AnimatedScene->animation = (subject::animation_t*) calloc(1, sizeof(subject::animation_t));
+    subject::animation_t* anim = AnimatedScene->animation;
+    anim->n_groups = 1;
+    anim->n_frames = 2;
+    anim->n_static_faces = 2;
+    anim->n_dynamic_faces = 4;
+    anim->n_current_frame = 0;
+    anim->frame_time_step = 1;
+    anim->groups = (subject::face_group_t*)calloc(1, sizeof(subject::face_group_t));
+    anim->groups[0].n_offset = 2;
+    anim->groups[0].n_length = 4;
+    anim->translations = (math::vec3*)calloc(2, sizeof(math::vec3));
+    anim->rotations = (math::mat33*)calloc(2, sizeof(math::mat33));
+    anim->rotations[0] = math::IDENTITY_33();
+    anim->rotations[1] = math::rotate_towards(math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
+
+    subject::system_finalize_scene(SceneSystem, StaticScene);
+    subject::system_finalize_scene(SceneSystem, AnimatedScene);
+  }
+
+  ~AnimatedPlanes()
+  {
+    scene_free(StaticScene);
+    scene_free(AnimatedScene);
+    system_free(SceneSystem);
+  }
+
+public:
+  subject::system_t* SceneSystem;
+  subject::scene_t* StaticScene;
+  subject::scene_t* AnimatedScene;
+};
+
+typedef ::testing::Types<AnimatedPlanesConfig<SCENE_ENGINE_HOST, EMISSION_MALLEY_CPU>, AnimatedPlanesConfig<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CUDA>> AnimatedPlanesConfigs;
+
+TYPED_TEST_CASE(AnimatedPlanes, AnimatedPlanesConfigs);
+
+TYPED_TEST(AnimatedPlanes, EqualAfterRotation)
+{
+  subject::scene_set_frame(this->AnimatedScene, 1);
+
+  subject::scene_relocate(this->StaticScene, -1);
+  subject::scene_relocate(this->AnimatedScene, -1);
+
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 0, 0));
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 1, 2));
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 2, 1));
 }

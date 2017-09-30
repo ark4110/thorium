@@ -139,4 +139,9 @@ namespace math
 
   /// @brief Creates rotation matrix of z vector towards face's normal.
   mat33 pick_face_rotation(const face_t& face, math::vec3 z);
+
+  bool near_enough(const triangle_t& a, const triangle_t& b);
+
+  triangle_t triangle_translate(triangle_t triangle, vec3 translation);
+  triangle_t triangle_rotate(triangle_t triangle, vec3 from, vec3 to);
 }

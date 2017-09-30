@@ -74,13 +74,13 @@ TEST(rotate_towards, NotNormalizedTarget)
 
 TEST(MatrixMultiplication, ByIdentity)
 {
-  mat33 result = IDENTITY_33 * IDENTITY_33;
-  ASSERT_EQ(IDENTITY_33, result);
+  mat33 result = IDENTITY_33() * IDENTITY_33();
+  ASSERT_EQ(IDENTITY_33(), result);
 
   mat33 sample = make_mat33(0.0f, 0.1f, 0.2f, 1.0f, 1.1f, 1.2f, 2.0f, 2.1f, 2.2f);
-  result = sample * IDENTITY_33;
+  result = sample * IDENTITY_33();
   ASSERT_EQ(sample, result);
 
-  result = IDENTITY_33 * sample;
+  result = IDENTITY_33() * sample;
   ASSERT_EQ(sample, result);
 }

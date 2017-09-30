@@ -1,5 +1,7 @@
 #include "test_scene.h"
-
+#include "../subject/operations.h"
+#include "../math/mat.h"
+#include "../math/triangle.h"
 #include <memory>
 
 namespace testing
@@ -86,5 +88,31 @@ namespace testing
     faces[1] = make_stack_face();
 
     return MakeSceneFromFaces(engine, n_faces, faces);
+  }
+
+  subject::scene_t* MakeAssymetric3PlanesScene(subject::system_t* engine)
+  {
+    subject::scene_t* scene;
+    system_create_scene(engine, &scene);
+
+    scene->n_faces = 6;
+    scene->faces = (math::triangle_t*)malloc(sizeof(math::triangle_t) * 6);
+
+    scene->faces[0] = make_floor_face1();
+    scene->faces[1] = make_floor_face2();
+    scene_mesh_compose(scene, 0, 2);
+    scene_mesh_translate(scene, 0, math::make_vec3(1, -0.5f, 0));
+    scene_mesh_rotate(scene, 0, math::make_vec3(1, 0, 0), math::make_vec3(0, 0, 1));
+
+    scene->faces[2] = make_floor_face1();
+    scene->faces[3] = make_floor_face2();
+    scene_mesh_compose(scene, 2, 2);
+    scene_mesh_translate(scene, 1, math::make_vec3(1, -0.5f, 1));
+
+    scene->faces[4] = math::triangle_rotate(scene->faces[2], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
+    scene->faces[5] = math::triangle_rotate(scene->faces[3], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
+    scene_mesh_compose(scene, 4, 2);
+
+    return scene;
   }
 }
