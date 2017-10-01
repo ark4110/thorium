@@ -305,6 +305,11 @@ int main(int argc, char* argv[])
       task->time_delta = time - prev_report_time;
       if (predictor)
         ballistics::predict_orbit(predictor, &prediction);
+      if ((r = subject::scene_relocate(scene, -1)))
+      {
+        fprintf(stderr, "Failed to relocate scene: %d\n", r);
+        return 1;
+      }
       binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
       
       task->time_delta = temp;
