@@ -109,7 +109,7 @@ namespace testing
     scene->faces[3] = make_floor_face2();
     math::triangle_unify_normals(scene->faces[2], scene->faces[3]);
     scene_mesh_compose(scene, 2, 2);
-    scene_mesh_translate(scene, 1, math::make_vec3(0, -0.5f, 0.2f));
+    scene_mesh_translate(scene, 1, math::make_vec3(-0.5f, -0.5f, 0.2f));
 
     scene->faces[4] = math::triangle_rotate(scene->faces[2], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
     scene->faces[5] = math::triangle_rotate(scene->faces[3], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
