@@ -305,6 +305,8 @@ int main(int argc, char* argv[])
       task->time_delta = time - prev_report_time;
       if (predictor)
         ballistics::predict_orbit(predictor, &prediction);
+
+      // @todo Relocate in export module instead of controller?
       if ((r = subject::scene_relocate(scene, -1)))
       {
         fprintf(stderr, "Failed to relocate scene: %d\n", r);
