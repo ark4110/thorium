@@ -144,7 +144,7 @@ namespace cpu_adams
   *  @brief Calculates thermal solution step for a given scene.
   */
   int calculate(cpu_system_t* system, thermal_solution::task_t* task)
-  {    
+  {
     int n = system->n_step;
     int k = 4;
     if (n < k)
@@ -152,6 +152,7 @@ namespace cpu_adams
     const double* u = u_matrix[k];
 
     const int n_meshes = system->scene->n_meshes;
+    const double start_time = task->current_time;
 
     float* Tresult = task->temperatures;
     float* En = get_step_energy(system, n);
@@ -184,7 +185,7 @@ namespace cpu_adams
     if (system->scene->animation)
     {
       subject::animation_t* anim = system->scene->animation;
-      int n_frame = (int)(task->current_time / anim->frame_time_step);
+      int n_frame = (int)((task->current_time - start_time)/ anim->frame_time_step);
       if (anim->n_current_frame != n_frame)
       {
         if ((r = scene_set_frame(system->scene, n_frame)))
