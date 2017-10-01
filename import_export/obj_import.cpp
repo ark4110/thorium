@@ -535,6 +535,9 @@ namespace obj_import
       scene->meshes[n_current_mesh++] = mesh;
     }
 
+    if (scene->animation)
+      scene->animation->n_static_faces = n_current_face;
+
     int current_group = 0;
     // Write animated geometry
     for (const auto& root_name : roots)
@@ -570,6 +573,9 @@ namespace obj_import
 
       scene->animation->groups[current_group++].n_length = n_current_face - n_group_start_face;
     }
+
+    if (scene->animation)
+      scene->animation->n_dynamic_faces = n_current_face - scene->animation->n_static_faces;
 
     if (n_current_mesh != (int)meshes.size())
     {
