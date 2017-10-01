@@ -41,7 +41,6 @@ namespace malley_cpu
     
     subject::scene_t* scene;
 
-    float* face_areas;
     float* face_weights;
 
     // Mersenne's twister uniformly distributed [0, 1) generators.
@@ -60,7 +59,6 @@ namespace malley_cpu
     system->params = *params;
     
     system->scene = 0;    
-    system->face_areas = 0;
     system->face_weights = 0;
 
     system->TPGenA = std::mt19937(1);
@@ -75,9 +73,6 @@ namespace malley_cpu
   int shutdown(cpu_system_t* system)
   {
     system->scene = 0;
-
-    free(system->face_areas);
-    system->face_areas = 0;
 
     free(system->face_weights);
     system->face_weights = 0;
@@ -102,9 +97,6 @@ namespace malley_cpu
 
     system->scene = scene;
 
-    // Precalculate area of the face because lookup of a single float is cheaper than lookup of the whole face.
-    build_faces_areas(system->scene, &system->face_areas);
-
     system->face_weights = (float*)realloc(system->face_weights, 2 * scene->n_faces * sizeof(float));
     memset(system->face_weights, 0, 2 * scene->n_faces * sizeof(float)); // reset all values to zero to avoid arithmetic exceptions in future
 
@@ -114,7 +106,7 @@ namespace malley_cpu
   void calculate_weights(cpu_system_t* system, const emission::task_t* task)
   {
     const float* temperatures = task->mesh_temperatures;
-    const float* face_areas = system->face_areas;
+    const float* face_areas = system->scene->face_areas;
     subject::scene_t* scene = system->scene;
 
     // Don't reset weights to zero because we don't care about orphan faces without mesh.
@@ -207,6 +199,10 @@ namespace malley_cpu
 
   int calculate(cpu_system_t* system, emission::task_t* task)
   {
+    int r;
+    if ((r = subject::scene_relocate(system->scene, -1)) < 0)
+      return r;
+
     // Calculate total amount of rays to emmit.
     calculate_weights(system, task);
     int n_real_rays = calculate_n_rays(system, task);
@@ -241,8 +237,8 @@ namespace malley_cpu
       // Emmit rays from each mesh face
       for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
       { 
-        const float front_emission = front_density * system->face_areas[f];
-        const float rear_emission = rear_density * system->face_areas[f];
+        const float front_emission = front_density * system->scene->face_areas[f];
+        const float rear_emission = rear_density * system->scene->face_areas[f];
 
         const int n_face_rays_front = emitted_front(system, f);
         const int n_face_rays_rear = emitted_rear(system, f);
