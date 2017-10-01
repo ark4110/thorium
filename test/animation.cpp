@@ -18,11 +18,21 @@
 
 #include "test_scene.h"
 #include "../import_export/obj_import.h"
-#include "../subject/system.h"
 #include "../math/mat.h"
+#include "../subject/system.h"
 #include "../subject/operations.h"
+#include "../emission/system.h"
+#include "../emission/malley_cpu.h"
+#include "../ray_caster/system.h"
+#include "../thermal_equation/system.h"
+#include "../thermal_equation/radiance_cpu.h"
 
 using namespace testing;
+
+float diff(float a, float b)
+{
+  return fabsf(a - b) / a / b;
+}
 
 /**
   @detail Test hierarchy scene consists of three object: standalone cube at the left, parent cube at the center and child cube at the right.
@@ -122,32 +132,40 @@ TYPED_TEST(ImportedAnimatedScene, SetFrameTest)
   ASSERT_EQ(SCENE_ENGINE_OK, r);
 }
 
-template <int SceneEngineType, int EmissionType>
+template <int SceneEngineType, int EmissionType, int RadianceType, int RayCasterType>
 struct AnimatedPlanesConfig
 {
   static const int SceneSystem = SceneEngineType;
   static const int EmissionSystem = EmissionType;
+  static const int RadianceSystem = RadianceType;
+  static const int RayCasterSystem = RayCasterType;
 };
 
-template <typename Config>
+template <typename ConfigT>
 class AnimatedPlanes : public Test
 {
 public:
+  typedef ConfigT Config;
+
   AnimatedPlanes()
   {
-    SceneSystem = subject::system_create(Config::SceneSystem);
+    SceneSystem = subject::system_create(ConfigT::SceneSystem);
     StaticScene = MakeAssymetric3PlanesScene(SceneSystem);
     AnimatedScene = MakeAssymetric3PlanesScene(SceneSystem);
 
-    AddMaterial(StaticScene, subject::black_body());
-    StaticScene->meshes[0].material_idx = 0;
-    StaticScene->meshes[1].material_idx = 0;
-    StaticScene->meshes[1].material_idx = 0;
+    auto one_side_black_body = subject::black_body();
+    one_side_black_body.front.emission.emissivity = 0;
 
+    AddMaterial(StaticScene, subject::black_body());
+    AddMaterial(StaticScene, one_side_black_body);
     AddMaterial(AnimatedScene, subject::black_body());
+    AddMaterial(AnimatedScene, one_side_black_body);
+    StaticScene->meshes[0].material_idx = 0;
+    StaticScene->meshes[1].material_idx = 1;
+    StaticScene->meshes[2].material_idx = 1;
     AnimatedScene->meshes[0].material_idx = 0;
-    AnimatedScene->meshes[1].material_idx = 0;
-    AnimatedScene->meshes[1].material_idx = 0;
+    AnimatedScene->meshes[1].material_idx = 1;
+    AnimatedScene->meshes[2].material_idx = 1;
 
     AnimatedScene->animation = (subject::animation_t*) calloc(1, sizeof(subject::animation_t));
     subject::animation_t* anim = AnimatedScene->animation;
@@ -182,9 +200,34 @@ public:
   subject::scene_t* AnimatedScene;
 };
 
-typedef ::testing::Types<AnimatedPlanesConfig<SCENE_ENGINE_HOST, EMISSION_MALLEY_CPU>, AnimatedPlanesConfig<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CUDA>> AnimatedPlanesConfigs;
+template <typename ConfigT>
+class AnimatedPlanesFFTest : public AnimatedPlanes<ConfigT>
+{};
+
+/**
+  @detail All this mumgling because Optix ray caster does not support only-host scenes.
+  @todo Support host scenes in Optix ray caster.
+*/
+typedef ::testing::Types<AnimatedPlanesConfig<SCENE_ENGINE_HOST, EMISSION_MALLEY_CPU, THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_OPTIX>
+> AnimatedPlanesConfigs;
+
+typedef ::testing::Types<
+  AnimatedPlanesConfig<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CPU, THERMAL_EQUATION_RADIANCE_CPU, RAY_CASTER_OPTIX>,
+  AnimatedPlanesConfig<SCENE_ENGINE_CUDA, EMISSION_MALLEY_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, RAY_CASTER_OPTIX>
+> AnimatedPlanesFFConfigs;
 
 TYPED_TEST_CASE(AnimatedPlanes, AnimatedPlanesConfigs);
+TYPED_TEST_CASE(AnimatedPlanesFFTest, AnimatedPlanesFFConfigs);
+
+TYPED_TEST(AnimatedPlanes, EqualBeforeRotation)
+{
+  subject::scene_relocate(this->StaticScene, -1);
+  subject::scene_relocate(this->AnimatedScene, -1);
+
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 0, 0));
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 1, 1));
+  ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 2, 2));
+}
 
 TYPED_TEST(AnimatedPlanes, EqualAfterRotation)
 {
@@ -196,4 +239,62 @@ TYPED_TEST(AnimatedPlanes, EqualAfterRotation)
   ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 0, 0));
   ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 1, 2));
   ASSERT_TRUE(scenes_mesh_faces_near_enough(this->AnimatedScene, this->StaticScene, 2, 1));
+}
+
+TYPED_TEST(AnimatedPlanesFFTest, FormFactors)
+{
+  malley_cpu::params_t emitter_params;
+  emitter_params.n_rays = 40000;
+  auto emitter = emission::system_create(Config::EmissionSystem, &emitter_params);
+  auto ray_caster = ray_caster::system_create(Config::RayCasterSystem);
+
+  radiance_equation::params_t radiance_params = {};
+  radiance_params.emitters = &emitter;
+  radiance_params.n_emitters = 1;
+  radiance_params.ray_caster = ray_caster;  
+  auto radiance = thermal_equation::system_create(Config::RadianceSystem, &radiance_params);
+  
+  auto static_task = thermal_equation::task_create(this->StaticScene);
+  auto dynamic_task = thermal_equation::task_create(this->AnimatedScene);
+
+  float* mesh_temperatures = (float*)calloc(3, sizeof(float));
+  mesh_temperatures[0] = 1000;
+  mesh_temperatures[1] = 20;
+  mesh_temperatures[2] = 20;
+  static_task->temperatures = mesh_temperatures;
+  dynamic_task->temperatures = mesh_temperatures;
+
+  ASSERT_EQ(THERMAL_EQUATION_OK, system_set_scene(radiance, this->StaticScene));
+  ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, static_task));
+
+  ASSERT_EQ(THERMAL_EQUATION_OK, system_set_scene(radiance, this->AnimatedScene));
+
+  // Check first frame equal to static scene
+  ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, dynamic_task));
+  ASSERT_NEAR(static_task->absorption[0], dynamic_task->absorption[0], 0.0001); // small and noisy value
+  ASSERT_NEAR(diff(static_task->absorption[1], dynamic_task->absorption[1]), 0, 0.0001);
+  ASSERT_NEAR(diff(static_task->absorption[2], dynamic_task->absorption[2]), 0, 0.0001);
+
+  // Update to first frame
+  memset(dynamic_task->emission, 0, 3 * sizeof(float));
+  memset(dynamic_task->absorption, 0, 3 * sizeof(float));
+  subject::scene_set_frame(this->AnimatedScene, 1);
+  ray_caster::system_update(ray_caster);
+  ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, dynamic_task));
+
+  // Sanity check
+  ASSERT_NEAR(diff(static_task->emission[0], dynamic_task->emission[0]), 0, 0.0001);
+  ASSERT_NEAR(diff(static_task->emission[1], dynamic_task->emission[1]), 0, 0.0001);
+  ASSERT_NEAR(diff(static_task->emission[2], dynamic_task->emission[2]), 0, 0.0001);
+
+  ASSERT_NEAR(static_task->absorption[0], dynamic_task->absorption[0], 0.0001); // small and noisy value
+  ASSERT_NEAR(diff(static_task->absorption[1], dynamic_task->absorption[2]), 0, 0.0001);
+  ASSERT_NEAR(diff(static_task->absorption[2], dynamic_task->absorption[1]), 0, 0.0001);
+
+  free(mesh_temperatures);
+  task_free(static_task);
+  task_free(dynamic_task);
+  system_free(radiance);
+  system_free(ray_caster);
+  system_free(emitter);
 }
