@@ -364,7 +364,7 @@ TYPED_TEST(AnimatedPlanesParallelEmissionTest, AbsorptionTest)
   ASSERT_NEAR(cosf(float(M_PI/4)), dynamic_task->absorption[1], 0.02);
 
   task_free(dynamic_task);
-  system_free(radiance);
-  system_free(ray_caster);
-  system_free(emitter);
+  thermal_equation::system_free(radiance);
+  ray_caster::system_free(ray_caster);
+  emission::system_free(emitter);
 }
