@@ -127,9 +127,19 @@ namespace optix_ray_caster
     if (scene->n_faces == 0)
       return RAY_CASTER_OK;
 
+    int r;
+    bool relocation_supported = true;
+    if ((r = scene_relocate(scene, 0)) != SCENE_ENGINE_OK)
+    {
+      if (r == -SCENE_ENGINE_NOT_SUPPORTED)
+        relocation_supported = false;
+      else
+        return r;
+    }
+
     if (rtpBufferDescCreate(system->context,
       RTP_BUFFER_FORMAT_VERTEX_FLOAT3,
-      RTP_BUFFER_TYPE_HOST, scene->faces, &system->vertices) != RTP_SUCCESS)
+      relocation_supported ? RTP_BUFFER_TYPE_CUDA_LINEAR : RTP_BUFFER_TYPE_HOST, scene->faces, &system->vertices) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
     if (rtpBufferDescSetRange(system->vertices, 0, scene->n_faces * 3) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
@@ -138,15 +148,20 @@ namespace optix_ray_caster
 
     if (rtpModelCreate(system->context, &system->model) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    if (rtpModelSetTriangles(system->model, 0, system->vertices) != RTP_SUCCESS)
+    /*if (rtpModelSetTriangles(system->model, 0, system->vertices) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    //if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
-    //  return -RAY_CASTER_ERROR;
-    //if (rtpModelFinish(system->model) != RTP_SUCCESS)
-    //  return -RAY_CASTER_ERROR;
+    if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;
+    if (rtpModelFinish(system->model) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;*/
     
     bool force_cpu = system->context_type == RTP_CONTEXT_TYPE_CPU;
+    if (system->converter_state)
+      state_free(system->converter_state);
     system->converter_state = optix_hit_converter::state_init(scene, force_cpu);
+
+    if (r = scene_relocate(scene, -1))
+      return r;
 
     return RAY_CASTER_OK;
   }
@@ -156,9 +171,10 @@ namespace optix_ray_caster
     if (!system->scene || system->scene->n_faces == 0)
       return -RAY_CASTER_ERROR;
 
-    if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
+    int r;
+    if ((r = rtpModelSetTriangles(system->model, 0, system->vertices)) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    if (rtpModelFinish(system->model) != RTP_SUCCESS)
+    if ((r = rtpModelUpdate(system->model, RTP_MODEL_HINT_ASYNC)) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
 
     return RAY_CASTER_OK;
@@ -168,6 +184,10 @@ namespace optix_ray_caster
   {
     if (task->n_tasks == 0)
       return RAY_CASTER_OK;
+
+    int r;
+    if ((r = rtpModelFinish(system->model)) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;
     
     int c = 0;
     RTPbufferdesc rays;
@@ -201,7 +221,7 @@ namespace optix_ray_caster
     rtpQueryExecute(query, 0);
     rtpQueryDestroy(query);
 
-    int r = convert(converter, task);
+    r = convert(converter, task);
 
     rtpBufferDescDestroy(hits);
     rtpBufferDescDestroy(rays);
