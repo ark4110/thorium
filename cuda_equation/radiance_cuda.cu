@@ -480,7 +480,7 @@ namespace radiance_equation_cuda
     } else
     {
       system->support_double_atomic = false;
-      fprintf(stderr, "WARNING: Using single-precision for mesh absorption accumulation.\n");
+      fprintf(stderr, "WARNING: Using single-precision for mesh absorption accumulation. CUDA compute capabilities >= 6 required for fast double-precision accumulation\n");
     }
 
     checkCudaErrors(cudaMalloc((void**)&system->kernel_params, sizeof(mtgp32_kernel_params)));
