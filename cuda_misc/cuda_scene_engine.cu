@@ -53,6 +53,7 @@ namespace cuda_scene_engine
 
   int create_scene(system_t* system, subject::scene_t** result)
   {
+    // @todo Create and later host scene?
     scene_t* scene = (scene_t*)calloc(1, sizeof(scene_t));
 
     scene->relocate = &cuda_relocate_scene;
@@ -61,6 +62,7 @@ namespace cuda_scene_engine
 
     scene->system = system;
     scene->n_current_device = -1; // After creation scene is host allocated.
+    scene->bsphere = (math::sphere_t*)calloc(1, sizeof(math::sphere_t));
 
     scene->host_scene = (scene_t*)calloc(1, sizeof(scene_t));
     *scene->host_scene = *scene;
@@ -107,10 +109,10 @@ namespace cuda_scene_engine
 
     device_set_frame << < n_grid_size, system->set_frame_block_size >> > (n_animated_faces, source, face_group_idx, rotation, translation, target, normals);
 
-    subject::host_scene_set_frame(scene->host_scene, n_frame);
-
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
+    // @todo Copy from first device only
+    cudaMemcpy(&scene->host_scene->faces[n_first_animated_face], &scene->faces[n_first_animated_face], n_animated_faces * sizeof(cuda_math::face_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&scene->host_scene->face_normals[n_first_animated_face], &scene->face_normals[n_first_animated_face], n_animated_faces * sizeof(float3), cudaMemcpyDeviceToHost);
+    subject::build_scene_bounding_sphere(scene->host_scene);
 
     return SCENE_ENGINE_OK;
   }
