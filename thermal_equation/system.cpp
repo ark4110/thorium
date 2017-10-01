@@ -71,6 +71,8 @@ namespace thermal_equation
   {
     if (system->methods->update)
       return system->methods->update(system);
+    else
+      return THERMAL_EQUATION_OK;
   }
 
   int system_calculate(system_t* system, task_t* task)
