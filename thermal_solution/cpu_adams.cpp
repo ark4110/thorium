@@ -152,7 +152,6 @@ namespace cpu_adams
     const double* u = u_matrix[k];
 
     const int n_meshes = system->scene->n_meshes;
-    const double start_time = task->current_time;
 
     float* Tresult = task->temperatures;
     float* En = get_step_energy(system, n);
@@ -185,16 +184,16 @@ namespace cpu_adams
     if (system->scene->animation)
     {
       subject::animation_t* anim = system->scene->animation;
-      int n_frame = (int)((task->current_time - start_time)/ anim->frame_time_step);
+      int n_frame = (int)(task->n_step * task->time_delta / anim->frame_time_step);
       if (anim->n_current_frame != n_frame)
       {
         if ((r = scene_set_frame(system->scene, n_frame)))
           return r;
-      }
 
-      for (int i = 0; i != system->params.n_equations; ++i)
-        if (r = thermal_equation::system_update(system->params.equations[i]))
-          return r;
+        for (int i = 0; i != system->params.n_equations; ++i)
+          if (r = thermal_equation::system_update(system->params.equations[i]))
+            return r;
+      }
     }
  
     return THERMAL_SOLUTION_OK;
