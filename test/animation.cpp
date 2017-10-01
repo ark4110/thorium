@@ -133,6 +133,20 @@ TYPED_TEST(ImportedAnimatedScene, SetFrameTest)
   ASSERT_EQ(SCENE_ENGINE_OK, r);
 }
 
+TYPED_TEST(ImportedAnimatedScene, StaticFacesCount)
+{
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneSystem, this->Scene));
+  
+  ASSERT_EQ(this->Scene->animation->n_static_faces, 12);
+}
+
+TYPED_TEST(ImportedAnimatedScene, DynamicFacesCount)
+{
+  ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneSystem, this->Scene));
+
+  ASSERT_EQ(this->Scene->animation->n_dynamic_faces, 24);
+}
+
 template <int SceneEngineType, int EmissionType, int RadianceType, int RayCasterType>
 struct AnimatedPlanesConfig
 {
