@@ -42,9 +42,6 @@ namespace cpu_form_factors
     float* mesh_temperatures;
     float* mesh_emission;
 
-    /// @brief Inverted index to find mesh from face idx.
-    int* face_to_mesh;
-
     emission::system_t* emitter;
     ray_caster::system_t* caster;
   };
@@ -57,7 +54,6 @@ namespace cpu_form_factors
     system->mesh_temperatures = 0;
     system->mesh_emission = 0;
     
-    system->face_to_mesh = 0;
     system->emitter = params->emitter;
     system->caster = params->caster;
     
@@ -74,9 +70,6 @@ namespace cpu_form_factors
 
     free(system->mesh_emission);
     system->mesh_emission = 0;
-
-    free(system->face_to_mesh);
-    system->face_to_mesh = 0;
 
     system->emitter = 0;
     system->caster = 0;
@@ -100,11 +93,8 @@ namespace cpu_form_factors
     if ((r = emission::system_set_scene(system->emitter, system->scene)) < 0)
       return r;
 
-    // @todo Move face->mesh index to scene?
-    build_face_to_mesh_index(scene->n_faces, scene->n_meshes, scene->meshes, &system->face_to_mesh);
-
-    system->mesh_emission = (float*)calloc(n_meshes, sizeof(float));
-    system->mesh_temperatures = (float*)calloc(n_meshes, sizeof(float));
+    system->mesh_emission = (float*)realloc(system->mesh_emission, n_meshes * sizeof(float));
+    system->mesh_temperatures = (float*)realloc(system->mesh_temperatures, n_meshes * sizeof(float));
     for (int m = 0; m != n_meshes; ++m)
       system->mesh_temperatures[m] = 1000;
 
@@ -114,7 +104,7 @@ namespace cpu_form_factors
   /// @brief Returns mesh for given face.
   int face2mesh(cpu_system_t* system, int face_idx)
   {
-    return system->face_to_mesh[face_idx];
+    return system->scene->face_to_mesh[face_idx];
   }
 
   int ray_source_face(const subject::scene_t* scene, const math::ray_t& ray)
@@ -159,7 +149,12 @@ namespace cpu_form_factors
     emission_task->mesh_temperatures = system->mesh_temperatures;
     emission_task->mesh_rays_emitted = (int*)calloc(n_meshes, sizeof(int));
     
-    system_relocate_task(system->emitter, emission_task, 0);
+    if ((r = system_relocate_task(system->emitter, emission_task, 0) < 0))
+    {
+      task_free(emission_task);
+      return r;
+    }
+
     if ((r = emission::system_calculate(emitter, emission_task)) < 0)
     {
       task_free(emission_task);
