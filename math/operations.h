@@ -106,6 +106,24 @@ namespace math
     a.z *= b;
   }
 
+  inline void operator*=(triangle_t& a, point_t b)
+  {
+    for(int i = 0; i != 3; ++i)
+      a.points[i] *= b;
+  }
+
+  inline triangle_t operator*(triangle_t a, point_t b)
+  {
+    for (int i = 0; i != 3; ++i)
+      a.points[i] *= b;
+    return a;
+  }
+
+  inline triangle_t operator*(point_t b, triangle_t a)
+  {
+    return a * b;
+  }
+
   /// @brief 3d vector to scalar multiplication.
   inline vec3 operator*(point_t b, vec3 a)
   {
