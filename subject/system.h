@@ -135,6 +135,7 @@ namespace subject
     int* face_animation_group; ///< Index of face animation group.
     float* mesh_areas;
     int* mesh_material; ///< Mesh material index without indirection.
+    math::sphere_t* bsphere; ///< Scene bounding sphere. @note Not relocated.
 
     face_t* base_faces; ///< Faces without transformation applied.
   };
@@ -234,6 +235,8 @@ namespace subject
   void build_mesh_material_index(const scene_t* scene, int** index);
 
   void build_face_animation_group_index(const scene_t* scene, int** index);
+
+  void build_scene_bounding_sphere(scene_t* scene);
 
   const material_t& mesh_material(const scene_t* scene, int mesh_idx);
 

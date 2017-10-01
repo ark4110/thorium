@@ -47,6 +47,7 @@ namespace subject
     free(scene->face_animation_group);
     free(scene->mesh_material);
     free(scene->mesh_areas);
+    free(scene->bsphere);
 
     free(scene->base_faces);
 
@@ -68,6 +69,7 @@ namespace subject
     s->free_data = &host_scene_free_data;
     s->relocate = &host_scene_relocate;
     s->set_frame = &host_scene_set_frame;
+    s->bsphere = (math::sphere_t*)calloc(1, sizeof(math::sphere_t));
 
     return s;
   }
@@ -145,6 +147,7 @@ namespace subject
     build_face_animation_group_index(scene, &scene->face_animation_group);
     build_mesh_material_index(scene, &scene->mesh_material);
     build_meshes_areas(scene, &scene->mesh_areas);
+    build_scene_bounding_sphere(scene);
 
     if (scene->animation && scene->animation->groups)
     {
@@ -182,6 +185,8 @@ namespace subject
         face_normals[f] = normalize(triangle_normal(target[f]));
       }
     }
+
+    build_scene_bounding_sphere(scene);
 
     return SCENE_ENGINE_OK;
   }
@@ -486,6 +491,12 @@ namespace subject
       for (int i = 0; i != group.n_length; ++i)
         (*index)[group.n_offset + i - n_first_animated_face] = g;
     }
+  }
+
+  void build_scene_bounding_sphere(scene_t* scene)
+  {
+    if (scene->bsphere)
+      *scene->bsphere = scene->n_faces ? math::triangles_gartner_bsphere(scene->faces, scene->n_faces) : math::sphere_t();
   }
 
   const material_t& mesh_material(const scene_t* scene, int mesh_idx)
