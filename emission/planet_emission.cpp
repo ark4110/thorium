@@ -51,10 +51,6 @@ namespace planet_emission
   /// @brief Shutdowns calculator system prior to free memory.
   int shutdown(system_t* system)
   {
-    int r = 0;
-    if ((r = system_shutdown(system->element_emitter)) < 0)
-      return r;
-
     system_free(system->element_emitter);
     free(system->element_params.sources);
     system->element_params = {};
