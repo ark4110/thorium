@@ -184,7 +184,9 @@ typedef ::testing::Types<
 #endif
 > ParallelEmissionConfigs;
 
-typedef ::testing::Types<BasicConfig<SCENE_ENGINE_HOST, EMISSION_PARALLEL_RAYS_CPU>, BasicConfig<SCENE_ENGINE_CUDA, EMISSION_PARALLEL_RAYS_CUDA>> ParallelEmissionTypes;
+typedef ::testing::Types<BasicConfig<SCENE_ENGINE_HOST, EMISSION_PARALLEL_RAYS_CPU>,
+  BasicConfig<SCENE_ENGINE_CUDA, EMISSION_PARALLEL_RAYS_CUDA>
+> ParallelEmissionTypes;
 
 TYPED_TEST_CASE(ParallelEmission, ParallelEmissionConfigs);
 
@@ -257,6 +259,7 @@ public:
     Scene = ToSubjectScene(MakeFloorScene(SceneSystem));
     AddMaterial(Scene, subject::black_body());
     AddMesh(Scene, { 0, 2, 0 });
+    subject::system_finalize_scene(SceneSystem, Scene);
 
     system_set_scene(this->Emitter, Scene);
   }
@@ -297,7 +300,7 @@ public:
 
     float total_flux = kahan_summation(task->rays->power, task->rays->power + task->rays->n_tasks);
 
-    math::sphere_t sphere = math::triangles_bsphere(Scene->faces, Scene->n_faces);
+    math::sphere_t sphere = *Scene->bsphere;
     float bsphere_scale = parallel_rays_emission_cpu::scene_bsphere_emission_scale;
     float effective_area = float(M_PI) * sphere.radius * sphere.radius * bsphere_scale * bsphere_scale;
     float flux = total_flux / effective_area;
