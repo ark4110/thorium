@@ -319,21 +319,19 @@ TYPED_TEST(AnimatedPlanesParallelEmissionTest, AbsorptionTest)
   parallel_rays_emission_cpu::params_t emitter_params;
   emitter_params.n_sources = 1;
   emitter_params.sources = &source_params;
-  auto emitter = emission::system_create(Config::EmissionSystem, &emitter_params);
-  auto ray_caster = ray_caster::system_create(Config::RayCasterSystem);
+  emission::system_t* emitter = emission::system_create(this->EmissionSystemID, &emitter_params);
+  auto ray_caster = ray_caster::system_create(this->RayCasterSystemID);
 
   radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = &emitter;
   radiance_params.n_emitters = 1;
   radiance_params.ray_caster = ray_caster;
-  auto radiance = thermal_equation::system_create(Config::RadianceSystem, &radiance_params);
+  thermal_equation::system_t* radiance = thermal_equation::system_create(this->RadianceSystemID, &radiance_params);
 
   auto dynamic_task = thermal_equation::task_create(this->AnimatedScene);
 
   float mesh_temperatures[] = { 300, 300, 300 };
-  mesh_temperatures[0] = 300;
-  mesh_temperatures[1] = 300;
-  mesh_temperatures[2] = 300;
+  dynamic_task->temperatures = mesh_temperatures;
   
   ASSERT_EQ(THERMAL_EQUATION_OK, system_set_scene(radiance, this->AnimatedScene));
 
