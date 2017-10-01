@@ -30,23 +30,6 @@
     <CudaCompile Include="malley_cuda.cu" />
     <CudaCompile Include="parallel_cuda.cu" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\cuda_misc\cuda_misc.vcxproj">
-      <Project>{231b5f15-1c4f-462f-81dc-5738149e4913}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\cuda_ray_caster\cuda_ray_caster.vcxproj">
-      <Project>{45d95b10-476d-4cc2-9548-65bd7ea437d9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\emission\emission.vcxproj">
-      <Project>{21db25d4-85e4-48e2-86a2-ac228605e760}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\math\math.vcxproj">
-      <Project>{4de00af7-2632-4a7b-981a-9411663d4048}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\subject\subject.vcxproj">
-      <Project>{1ee5de7f-60f6-4bb0-a5a0-b1a0a4d2c990}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{BB391192-F112-44CC-BAA4-8D9BC753E09F}</ProjectGuid>
     <RootNamespace>cuda_emission</RootNamespace>
@@ -57,27 +40,27 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

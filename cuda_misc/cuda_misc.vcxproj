@@ -21,17 +21,6 @@
   <ItemGroup>
     <CudaCompile Include="cuda_scene_engine.cu" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ballistics\ballistics.vcxproj">
-      <Project>{52bc2630-b79c-41b3-ad12-af6cc7791ba1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\math\math.vcxproj">
-      <Project>{4de00af7-2632-4a7b-981a-9411663d4048}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\subject\subject.vcxproj">
-      <Project>{1ee5de7f-60f6-4bb0-a5a0-b1a0a4d2c990}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{231B5F15-1C4F-462F-81DC-5738149E4913}</ProjectGuid>
     <RootNamespace>cuda_misc</RootNamespace>
@@ -42,14 +31,14 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
