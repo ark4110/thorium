@@ -174,6 +174,7 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
 
     if (system->scene->animation)
+      // @todo Init with frame number 0.
       if (system->scene->animation->n_current_frame == system->last_update_frame && system->scene->animation->n_current_frame != -1)
         return RAY_CASTER_OK;
       else
