@@ -98,16 +98,18 @@ namespace testing
     scene->n_faces = 6;
     scene->faces = (math::triangle_t*)malloc(sizeof(math::triangle_t) * 6);
 
-    scene->faces[0] = make_floor_face1();
-    scene->faces[1] = make_floor_face2();
+    scene->faces[0] = 0.2f * make_floor_face1();
+    scene->faces[1] = 0.2f * make_floor_face2();
+    math::triangle_unify_normals(scene->faces[0], scene->faces[1]);
+    
     scene_mesh_compose(scene, 0, 2);
-    scene_mesh_translate(scene, 0, math::make_vec3(1, -0.5f, 0));
-    scene_mesh_rotate(scene, 0, math::make_vec3(1, 0, 0), math::make_vec3(0, 0, 1));
+    scene_mesh_translate(scene, 0, math::make_vec3(-0.1f, -0.1f, 0.19f));
 
     scene->faces[2] = make_floor_face1();
     scene->faces[3] = make_floor_face2();
+    math::triangle_unify_normals(scene->faces[2], scene->faces[3]);
     scene_mesh_compose(scene, 2, 2);
-    scene_mesh_translate(scene, 1, math::make_vec3(1, -0.5f, 1));
+    scene_mesh_translate(scene, 1, math::make_vec3(0, -0.5f, 0.2f));
 
     scene->faces[4] = math::triangle_rotate(scene->faces[2], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));
     scene->faces[5] = math::triangle_rotate(scene->faces[3], math::make_vec3(0, 0, 1), math::make_vec3(0, 0, -1));

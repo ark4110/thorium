@@ -18,15 +18,5 @@ namespace testing
   void AddMaterial(subject::scene_t* scene, subject::material_t material);
   void AddMesh(subject::scene_t* scene, subject::mesh_t mesh);
 
-  /**
-  Test scene config:
-            | <-- Mesh 0
-               __ <-- Mesh 1
-(0, 0, 0)-> .
-               __ <-- Mesh 2
-    Mesh 0 offset (0, 0, 1)
-    Mesh 1 offset (1, 0, 1)
-    Mesh 2 offset (1, 0, -1)
-  */
   subject::scene_t* MakeAssymetric3PlanesScene(subject::system_t* engine);
 }
