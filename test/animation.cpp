@@ -136,21 +136,19 @@ TYPED_TEST(ImportedAnimatedScene, SetFrameTest)
 template <int SceneEngineType, int EmissionType, int RadianceType, int RayCasterType>
 struct AnimatedPlanesConfig
 {
-  static const int SceneSystem = SceneEngineType;
-  static const int EmissionSystem = EmissionType;
-  static const int RadianceSystem = RadianceType;
-  static const int RayCasterSystem = RayCasterType;
+  static const int SceneSystemID = SceneEngineType;
+  static const int EmissionSystemID = EmissionType;
+  static const int RadianceSystemID = RadianceType;
+  static const int RayCasterSystemID = RayCasterType;
 };
 
-template <typename ConfigT>
-class AnimatedPlanes : public Test
+template <typename Config>
+class AnimatedPlanes : public Test, public Config
 {
 public:
-  typedef ConfigT Config;
-
   AnimatedPlanes()
   {
-    SceneSystem = subject::system_create(ConfigT::SceneSystem);
+    SceneSystem = subject::system_create(this->SceneSystemID);
     StaticScene = MakeAssymetric3PlanesScene(SceneSystem);
     AnimatedScene = MakeAssymetric3PlanesScene(SceneSystem);
 
@@ -257,17 +255,17 @@ TYPED_TEST(AnimatedPlanesMalleyTest, AbsorptionTest)
 {
   malley_cpu::params_t emitter_params;
   emitter_params.n_rays = 40000;
-  auto emitter = emission::system_create(Config::EmissionSystem, &emitter_params);
-  auto ray_caster = ray_caster::system_create(Config::RayCasterSystem);
+  auto emitter = emission::system_create(this->EmissionSystemID, &emitter_params);
+  auto ray_caster = ray_caster::system_create(this->RayCasterSystemID);
 
   radiance_equation::params_t radiance_params = {};
   radiance_params.emitters = &emitter;
   radiance_params.n_emitters = 1;
   radiance_params.ray_caster = ray_caster;  
-  auto radiance = thermal_equation::system_create(Config::RadianceSystem, &radiance_params);
+  thermal_equation::system_t* radiance = thermal_equation::system_create(this->RadianceSystemID, &radiance_params);
   
-  auto static_task = thermal_equation::task_create(this->StaticScene);
-  auto dynamic_task = thermal_equation::task_create(this->AnimatedScene);
+  thermal_equation::task_t* static_task = thermal_equation::task_create(this->StaticScene);
+  thermal_equation::task_t* dynamic_task = thermal_equation::task_create(this->AnimatedScene);
 
   float* mesh_temperatures = (float*)calloc(3, sizeof(float));
   mesh_temperatures[0] = 1000;
@@ -306,9 +304,9 @@ TYPED_TEST(AnimatedPlanesMalleyTest, AbsorptionTest)
   free(mesh_temperatures);
   task_free(static_task);
   task_free(dynamic_task);
-  system_free(radiance);
-  system_free(ray_caster);
-  system_free(emitter);
+  thermal_equation::system_free(radiance);
+  ray_caster::system_free(ray_caster);
+  emission::system_free(emitter);
 }
 
 TYPED_TEST(AnimatedPlanesParallelEmissionTest, AbsorptionTest)
