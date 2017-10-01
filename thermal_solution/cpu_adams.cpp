@@ -190,7 +190,10 @@ namespace cpu_adams
         if ((r = scene_set_frame(system->scene, n_frame)))
           return r;
       }
-        
+
+      for (int i = 0; i != system->params.n_equations; ++i)
+        if (r = thermal_equation::system_update(system->params.equations[i]))
+          return r;
     }
  
     return THERMAL_SOLUTION_OK;

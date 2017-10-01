@@ -65,6 +65,9 @@ namespace thermal_equation
     /// @note System does not own scene object.
     int(*set_scene)(system_t* system, subject::scene_t* scene);
 
+    /// @brief Update (scene?) to current state.
+    int(*update)(system_t* system);
+
     /// @brief Calculates energy flow for given system.
     int(*calculate)(system_t* system, task_t* task);
   };
@@ -89,5 +92,6 @@ namespace thermal_equation
   int system_init(system_t* system, void* params);
   int system_shutdown(system_t* system);
   int system_set_scene(system_t* system, subject::scene_t* scene);
+  int system_update(system_t* system);
   int system_calculate(system_t* system, task_t* task);
 }

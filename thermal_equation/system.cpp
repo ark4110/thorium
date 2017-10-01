@@ -67,6 +67,12 @@ namespace thermal_equation
     return system->methods->set_scene(system, scene);
   }
 
+  int system_update(system_t* system)
+  {
+    if (system->methods->update)
+      return system->methods->update(system);
+  }
+
   int system_calculate(system_t* system, task_t* task)
   {
     return system->methods->calculate(system, task);

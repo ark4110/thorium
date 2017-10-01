@@ -28,6 +28,7 @@ namespace optix_ray_caster
   {
     bool use_cpu;
     subject::scene_t* scene;
+    int last_update_frame;
 
     RTPcontexttype context_type;
     
@@ -123,6 +124,7 @@ namespace optix_ray_caster
       system_release_scene_data(system);
 
     system->scene = scene;
+    system->last_update_frame = -1;
 
     if (scene->n_faces == 0)
       return RAY_CASTER_OK;
@@ -166,10 +168,16 @@ namespace optix_ray_caster
     return RAY_CASTER_OK;
   }
 
-  int prepare(system_t* system)
+  int update(system_t* system)
   {
     if (!system->scene || system->scene->n_faces == 0)
       return -RAY_CASTER_ERROR;
+
+    if (system->scene->animation)
+      if (system->scene->animation->n_current_frame == system->last_update_frame)
+        return RAY_CASTER_OK;
+      else
+        system->last_update_frame = system->scene->animation->n_current_frame;
 
     int r;
     if ((r = rtpModelSetTriangles(system->model, 0, system->vertices)) != RTP_SUCCESS)
@@ -241,7 +249,7 @@ namespace optix_ray_caster
     (int(*)(ray_caster::system_t* system))&init,
     (int(*)(ray_caster::system_t* system))&shutdown,
     (int(*)(ray_caster::system_t* system, subject::scene_t* scene))&set_scene,
-    (int(*)(ray_caster::system_t* system))&prepare,
+    (int(*)(ray_caster::system_t* system))&update,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task))&cast,
     (int(*)(ray_caster::system_t* system, ray_caster::task_t* task, int device))&relocate,
   };

@@ -83,7 +83,6 @@ namespace subject
     if (anim->n_current_frame == n_frame)
       return SCENE_ENGINE_OK;
     int r = scene->set_frame(scene, n_frame);
-    anim->n_current_frame = n_frame;
     return r;
   }
 
@@ -187,6 +186,8 @@ namespace subject
     }
 
     build_scene_bounding_sphere(scene);
+
+    scene->animation->n_current_frame = n_frame;
 
     return SCENE_ENGINE_OK;
   }

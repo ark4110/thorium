@@ -114,6 +114,10 @@ namespace cuda_scene_engine
     cudaMemcpy(&scene->host_scene->face_normals[n_first_animated_face], &scene->face_normals[n_first_animated_face], n_animated_faces * sizeof(float3), cudaMemcpyDeviceToHost);
     subject::build_scene_bounding_sphere(scene->host_scene);
 
+    // @todo Pain, meet Ugly. Ugly, pain
+    scene->animation->n_current_frame = n_frame;
+    scene->host_scene->animation->n_current_frame = n_frame;
+
     return SCENE_ENGINE_OK;
   }
 

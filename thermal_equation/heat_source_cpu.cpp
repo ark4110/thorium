@@ -63,11 +63,17 @@ namespace heat_source_equation
     return THERMAL_EQUATION_OK;
   }
 
+  int update(cpu_system_t* system)
+  {
+    return THERMAL_EQUATION_OK;
+  }
+
   const thermal_equation::system_methods_t methods =
   {
     (int(*)(thermal_equation::system_t* system, void* params))&init,
     (int(*)(thermal_equation::system_t* system))&shutdown,
     (int(*)(thermal_equation::system_t* system, subject::scene_t* scene))&set_scene,
+    (int(*)(thermal_equation::system_t* system))&update,
     (int(*)(thermal_equation::system_t* system, thermal_equation::task_t* task))&calculate,
   };
 
