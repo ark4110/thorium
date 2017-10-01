@@ -38,7 +38,6 @@ namespace parallel_rays_emission_cpu
     params_t params;
 
     subject::scene_t* scene;    
-    math::sphere_t bsphere;
 
     // Mersenne's twister uniformly distributed [0, 1) generators.
     std::mt19937 TPGenR;
@@ -76,7 +75,6 @@ namespace parallel_rays_emission_cpu
       return -EMISSION_ERROR;
 
     system->scene = scene;
-    system->bsphere = math::triangles_gartner_bsphere(scene->faces, scene->n_faces);
 
     return EMISSION_OK;
   }
@@ -98,6 +96,8 @@ namespace parallel_rays_emission_cpu
     task_reserve(task, n_total_rays);
 
     ray_caster::task_t* ray_caster_task = task->rays;
+
+    const math::sphere_t bsphere = *system->scene->bsphere;
     
     for (int source_idx = 0; source_idx != system->params.n_sources; ++source_idx)
     {
@@ -105,7 +105,7 @@ namespace parallel_rays_emission_cpu
       int n_rays = source.n_rays;
       int n_input_rays = task_grow(task, n_rays);
 
-      float radius = system->bsphere.radius * scene_bsphere_emission_scale;
+      float radius = bsphere.radius * scene_bsphere_emission_scale;
       float offset = 1.3f + radius;
       float ray_power = source.power * (float(M_PI) * radius * radius) / n_rays;
 
@@ -117,7 +117,7 @@ namespace parallel_rays_emission_cpu
         float theta_dice = system->Distr_Theta(system->TPGenTheta);
         float x = radius_dice * cosf(theta_dice);
         float y = radius_dice * sinf(theta_dice);
-        math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + system->bsphere.center;
+        math::vec3 origin = rotation * math::make_vec3(x, y, -offset) + bsphere.center;
         math::vec3 direction = source.direction;
 
         ray_caster_task->ray[n_input_rays + r] = { origin, direction };

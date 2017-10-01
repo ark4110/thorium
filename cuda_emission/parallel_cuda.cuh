@@ -44,16 +44,10 @@ namespace cuda_parallel_rays_emission
 
   struct context_t
   {
-    // Scene parameters
-    float3 origin; // bounding sphere center
-    float radius; // bounding sphere radius
-
-    int n_allocated;
-
     curandStateMtgp32* HSGenR;
     curandStateMtgp32* HSGenTheta;
-  };
 
-  __global__ void emit_parallel_rays(context_t* ctx, source_params_t params, ray_t* rays);
-  __global__ void emit_multiple_parallel_rays(context_t* ctx, const multi_source_params_t* params, ray_t* rays);
+    float3 scene_origin;
+    float scene_radius;
+  };
 }
