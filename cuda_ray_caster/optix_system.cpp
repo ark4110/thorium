@@ -226,10 +226,23 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
 
     RTPquery query;
-    rtpQueryCreate(system->model, RTP_QUERY_TYPE_CLOSEST, &query);
-    rtpQuerySetRays(query, rays);
-    rtpQuerySetHits(query, hits);
-    rtpQueryExecute(query, 0);
+    if (rtpQueryCreate(system->model, RTP_QUERY_TYPE_CLOSEST, &query) != RTP_SUCCESS)
+      return -RAY_CASTER_ERROR;
+    if (rtpQuerySetRays(query, rays) != RTP_SUCCESS)
+    {
+      rtpQueryDestroy(query);
+      return -RAY_CASTER_ERROR;
+    }
+    if (rtpQuerySetHits(query, hits) != RTP_SUCCESS)
+    {
+      rtpQueryDestroy(query);
+      return -RAY_CASTER_ERROR;
+    }
+    if ((r = rtpQueryExecute(query, 0)) != RTP_SUCCESS)
+    {
+      rtpQueryDestroy(query);
+      return -RAY_CASTER_ERROR;
+    }
     rtpQueryDestroy(query);
 
     r = convert(converter, task);
