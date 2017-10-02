@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 
   task->time_delta = 0.1f;
   
-  r = obj_import::task(input_task, scene->n_meshes, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
+  r = obj_import::task(input_task, scene, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
   if (r < 0)
     return r;
 
