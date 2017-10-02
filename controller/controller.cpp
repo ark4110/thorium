@@ -121,6 +121,7 @@ int main(int argc, char* argv[])
   r = obj_import::task(input_task, scene, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
   if (r < 0)
     return r;
+  const int n_meshes_loaded = r;
 
   if (task->current_time == 0)
   { 
@@ -204,7 +205,7 @@ int main(int argc, char* argv[])
     planet_emitter = emission::system_create(EMISSION_PLANET_CPU, &planet_emission_params);
   }
 
-  if (r < scene->n_meshes)
+  if (n_meshes_loaded < scene->n_meshes)
   {
     std::cerr << "There are not enough object temperatures defined in task. Initializing to default value 300." << std::endl;
     task->temperatures = (float*)realloc(task->temperatures, scene->n_meshes * sizeof(float));

@@ -808,6 +808,7 @@ namespace obj_import
             t->temperatures = (float*)realloc(t->temperatures, allocated * sizeof(float));
           }
 
+          ++n_meshes_loaded;
           initialized_meshes.insert(name);
           t->temperatures[mesh_idx] = temperature;
           return true;
