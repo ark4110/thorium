@@ -185,6 +185,7 @@ namespace obj_import
     std::map<int, frame_t> frames;
     std::set<std::string> roots;
     std::map<std::string, std::string> hierarchy;
+    std::set<std::string> dummies;
     
     int current_frame = -1;
     float frame_time_scale = 1.f;
@@ -204,6 +205,11 @@ namespace obj_import
         roots.insert(parent);
         hierarchy[obj] = parent;
         return obj != "" && parent != "";
+      };
+
+      actions["dummy_object"] = [&](const char* line) {
+        dummies.insert(line);
+        return true;
       };
 
       actions["frame"] = [&](const char* line) {
@@ -299,7 +305,7 @@ namespace obj_import
       fprintf(stderr, "INFO: Loaded %d animation groups\n", n_groups);
     }
 
-    return std::make_tuple(r, frames, roots, hierarchy);
+    return std::make_tuple(r, frames, roots, dummies, hierarchy);
   }
 
   int scene(const char* filename, subject::scene_t** result)
@@ -321,7 +327,8 @@ namespace obj_import
 
     std::map<int, frame_t> frames = std::move(std::get<1>(animation_result));
     std::set<std::string> roots = std::move(std::get<2>(animation_result));
-    std::map<std::string, std::string> parents = std::move(std::get<3>(animation_result));
+    std::set <std::string> dummies = std::move(std::get<3>(animation_result));
+    std::map<std::string, std::string> parents = std::move(std::get<4>(animation_result));
     std::multimap<std::string, std::string> children;
     for (const auto& i : parents)
       children.insert(std::make_pair(i.second, i.first));
@@ -551,6 +558,8 @@ namespace obj_import
         auto found = meshes.find(child_name);
         if (found == meshes.end())
         {
+          if (dummies.find(child_name) != dummies.end())
+            continue;
           fprintf(stderr, "ERROR: Missing animated mesh %s\n", child_name.c_str());
           return -OBJ_IMPORT_OBJECT_NOT_FOUND;
         }

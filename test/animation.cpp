@@ -65,6 +65,25 @@ TEST(AnimationImport, BasicImport)
   system_free(scene_system);
 }
 
+TEST(AnimationImport, DummyNode)
+{
+  subject::system_t* scene_system = subject::system_create(SCENE_ENGINE_HOST);
+  subject::scene_t* scene = 0;
+  int r = 0;
+  r = subject::system_create_scene(scene_system, &scene);
+  ASSERT_TRUE(r == SCENE_ENGINE_OK);
+  r = obj_import::scene("models/dummy_hierarchy.obj", scene);
+  ASSERT_EQ(OBJ_IMPORT_OK, r);
+
+  ASSERT_EQ(1, scene->animation->n_groups);
+
+  r = subject::system_finalize_scene(scene_system, scene);
+  ASSERT_EQ(SCENE_ENGINE_OK, r);
+  
+  scene_free(scene);
+  system_free(scene_system);
+}
+
 TEST(CudaSceneEngine, Relocation)
 {
   auto system = subject::system_create(SCENE_ENGINE_CUDA);
