@@ -6,7 +6,7 @@ emission_rays_count 1000000
 solar_rays_count 1000000
 emsplnt 6.3568e6 0.34 250 1353 30
 dstsrc 1300.000000 0.000000 0.000000 -1.000000
-tmprt 300.000000 Standalone
-tmprt 300.000000 Parent
-tmprt 300.000000 Child
+tmprt 1000.000000 Standalone
+tmprt 2000.000000 Parent
+tmprt 3000.000000 Child
 
