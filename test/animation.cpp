@@ -65,6 +65,28 @@ TEST(AnimationImport, BasicImport)
   system_free(scene_system);
 }
 
+TEST(AnimationImport, Temperatures)
+{
+  subject::system_t* scene_system = subject::system_create(SCENE_ENGINE_HOST);
+  subject::scene_t* scene = 0;
+  int r = 0;
+  r = subject::system_create_scene(scene_system, &scene);
+  ASSERT_TRUE(r == SCENE_ENGINE_OK);
+  r = obj_import::scene("models/test_hierarchy.obj", scene);
+  ASSERT_TRUE(r == OBJ_IMPORT_OK);
+
+  thermal_solution::task_t* task = thermal_solution::task_create(0);
+  r = obj_import::task("models/test_hierarchy.task", scene, task, 0, 0, 0, 0);
+
+  ASSERT_EQ(1000, task->temperatures[0]);
+  ASSERT_EQ(3000, task->temperatures[1]);
+  ASSERT_EQ(2000, task->temperatures[2]);
+
+  task_free(task);
+  scene_free(scene);
+  system_free(scene_system);
+}
+
 TEST(AnimationImport, DummyNode)
 {
   subject::system_t* scene_system = subject::system_create(SCENE_ENGINE_HOST);

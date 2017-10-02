@@ -60,6 +60,14 @@ namespace obj_import
       [optional] emsplnt Planet emission <planet radius(m)> <planet albedo> <planet temperature (K)> <solar flux (W/m^2)> <subdivisions count>
   */
   int task(const char* filename
+    , const subject::scene_t* scene
+    , thermal_solution::task_t* t
+    , heat_source_equation::params_t* heat_source
+    , parallel_rays_emission_cpu::params_t* distant_source
+    , planet_emission::params_t* planet_emission_params
+    , subject::task_t* simulation_params
+  );
+  int task(const char* filename
           , int n_meshes
           , thermal_solution::task_t* t
           , heat_source_equation::params_t* heat_source

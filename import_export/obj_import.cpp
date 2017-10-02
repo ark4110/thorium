@@ -608,6 +608,7 @@ namespace obj_import
 
   int task(const char* filename
     , int n_meshes
+    , const subject::scene_t* scene
     , thermal_solution::task_t* t
     , heat_source_equation::params_t* heat_source
     , parallel_rays_emission_cpu::params_t* distant_source
@@ -628,75 +629,73 @@ namespace obj_import
       std::function<void()> report;
     };
 
+    std::map<std::string, int> mesh_name_to_id;
+    std::set<std::string> initialized_meshes;
+    if (scene)
+    {
+      for (int m = 0; m != scene->n_meshes; ++m)
+      {
+        const subject::mesh_t& mesh = scene->meshes[m];
+        if (mesh.name)
+          mesh_name_to_id[mesh.name] = m;
+      }
+    }
+
     std::map<std::string, action_t> actions;
-    actions["frame_time_scale"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->frame_time_scale) == 1; },
+    if (simulation_params)
+    {
+      actions["frame_time_scale"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->frame_time_scale) == 1; },
       [&]() { fprintf(stderr, "Frame time scale %f\n", simulation_params->frame_time_scale); } };
 
-    actions["current_time"] = { [&](const char* line) { return sscanf(line, "%lf", &t->current_time) == 1; },
-      [&]() { fprintf(stderr, "Current time set to %lf\n", t->current_time); } };
+      actions["simulation_duration"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->duration) == 1; },
+        [&]() { fprintf(stderr, "Simulation duration %f seconds\n", simulation_params->duration); } };
 
-    actions["step"] = { [&](const char* line) { return sscanf(line, "%f", &t->time_delta) == 1; },
-      [&]() {fprintf(stderr, "Simulation step %f\n", t->time_delta); } };
+      actions["solar_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_solar_rays) == 1; },
+        [&]() { fprintf(stderr, "Solar (distant) rays count %d\n", simulation_params->n_solar_rays); } };
 
-    actions["simulation_duration"] = { [&](const char* line) { return sscanf(line, "%f", &simulation_params->duration) == 1; },
-      [&]() { fprintf(stderr, "Simulation duration %f seconds\n", simulation_params->duration); } };
+      actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_emission_rays) == 1; },
+        [&]() { fprintf(stderr, "Emission rays count %d\n", simulation_params->n_emission_rays); }
+      };
 
-    actions["solar_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_solar_rays) == 1; },
-      [&]() { fprintf(stderr, "Solar (distant) rays count %d\n", simulation_params->n_solar_rays); } };
+      actions["tle_orbit"] = { [&](const char* line) {
+        std::string library_name = line;
+        std::string library_path = library_name;
 
-    actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_emission_rays) == 1; },
-      [&]() { fprintf(stderr, "Emission rays count %d\n", simulation_params->n_emission_rays); }
-    };
-
-    actions["tle_orbit"] = { [&](const char* line) {
-      std::string library_name = line;
-      std::string library_path = library_name;
-
-      if (library_name.find("/\\") > library_name.length())
-      {
-        std::string base_name(filename);
-        size_t dir_pos = base_name.find_last_of("/\\");
-        if (dir_pos < base_name.length())
-          base_name = base_name.substr(0, dir_pos + 1);
-        else
-          base_name = "";
-        library_path = base_name + library_name;
-      }
-
-      fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
-
-      return orbit(library_path.c_str(), &simulation_params->tle_orbit) == OBJ_IMPORT_OK;
-    },
-      [&]() {}
-    };
-
-
-    int n_meshes_loaded = 0;
-    size_t left = 0;
-
-    actions["tmprt"] = { [&](const char* line) {
-        if (left == 0)
+        if (library_name.find("/\\") > library_name.length())
         {
-          left = 8;
-          t->temperatures = (float*)realloc(t->temperatures, (n_meshes_loaded + left) * sizeof(float));
+          std::string base_name(filename);
+          size_t dir_pos = base_name.find_last_of("/\\");
+          if (dir_pos < base_name.length())
+            base_name = base_name.substr(0, dir_pos + 1);
+          else
+            base_name = "";
+          library_path = base_name + library_name;
         }
-        bool result = sscanf(line, "%f", t->temperatures + (n_meshes_loaded++)) == 1;
-        --n_meshes;
-        --left;
-        return result;
-      },
-      [&]() {}
-    };
 
-    actions["newfrm"] = { [&](const char*) {
-        left += n_meshes_loaded;
-        n_meshes_loaded = 0;
-        return true;
-      },
-      [&]() {}
-    };
+        fprintf(stderr, "Loading tle orbit '%s'\n", library_path.c_str());
 
-    actions["htsrc"] = { [&](const char* line) {
+        return orbit(library_path.c_str(), &simulation_params->tle_orbit) == OBJ_IMPORT_OK;
+      },
+        [&]() {}
+      };
+    }
+    else
+    {
+      actions["frame_time_scale"] = { [&](const char* line) { return true; },
+        [&]() {} };
+      actions["simulation_duration"] = { [&](const char* line) { return true; },
+        [&]() {} };
+      actions["solar_rays_count"] = { [&](const char* line) { return true; },
+        [&]() {} };
+      actions["emission_rays_count"] = { [&](const char* line) { return true; },
+        [&]() {} };
+      actions["tle_orbit"] = { [&](const char* line) { return true; },
+        [&]() {} };
+    }
+
+    if (heat_source)
+    {
+      actions["htsrc"] = { [&](const char* line) {
         heat_source_equation::heat_source_t source;
 
         if (sscanf(line, "%d %f", &source.mesh_idx, &source.power) != 2)
@@ -705,9 +704,34 @@ namespace obj_import
         heat_source->sources[heat_source->n_sources++] = source;
         return true;
       },
-      [&]() {} };
+        [&]() {} };
+    }
+    else
+    {
+      actions["htsrc"] = { [&](const char* line) { return true; },
+        [&]() {} };
+    }
 
-    actions["emsplnt"] = { [&](const char* line) {
+    if (distant_source)
+    {
+      actions["dstsrc"] = { [&](const char* line) {
+        distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
+        parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
+        ++distant_source->n_sources;
+        return sscanf(line, "%f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
+      },
+        [&]() { fprintf(stderr, "Loaded distant rays source with power %f\n", distant_source->sources[distant_source->n_sources - 1].power); }
+      };
+    }
+    else
+    {
+      actions["dstsrc"] = { [&](const char* line) { return true; },
+        [&]() {} };
+    }
+
+    if (planet_emission_params)
+    {
+      actions["emsplnt"] = { [&](const char* line) {
         if (!planet_emission_params)
         {
           fprintf(stderr, "Ignored planet emission '%s'\n", line);
@@ -721,27 +745,94 @@ namespace obj_import
           &planet_emission_params->solar_flux,
           &planet_emission_params->n_subdisivion) == 5;
       },
-      [&]() { fprintf(stderr, "Loaded planet emission:\n"
-        "  radius\t%f\n"
-        "  albedo\t%f\n"
-        "  planet temper\t%f\n"
-        "  solar flux\t%f\n"
-        "  n_subdiv\t%d\n",
-        planet_emission_params->planet_radius,
-        planet_emission_params->planet_albedo,
-        planet_emission_params->planet_temperature,
-        planet_emission_params->solar_flux,
-        planet_emission_params->n_subdisivion
-      ); }
+        [&]() { fprintf(stderr, "Loaded planet emission:\n"
+          "  radius\t%f\n"
+          "  albedo\t%f\n"
+          "  planet temper\t%f\n"
+          "  solar flux\t%f\n"
+          "  n_subdiv\t%d\n",
+          planet_emission_params->planet_radius,
+          planet_emission_params->planet_albedo,
+          planet_emission_params->planet_temperature,
+          planet_emission_params->solar_flux,
+          planet_emission_params->n_subdisivion
+        ); }
+      };
+    }
+    else
+    {
+      actions["emsplnt"] = { [&](const char* line) { return true; },
+        [&]() {} };
+    }
+
+    actions["current_time"] = { [&](const char* line) { return sscanf(line, "%lf", &t->current_time) == 1; },
+      [&]() { fprintf(stderr, "Current time set to %lf\n", t->current_time); } };
+
+    actions["step"] = { [&](const char* line) { return sscanf(line, "%f", &t->time_delta) == 1; },
+      [&]() {fprintf(stderr, "Simulation step %f\n", t->time_delta); } };
+
+    int n_meshes_loaded = 0;
+    size_t allocated = 0;
+    std::vector<char> mesh_name(1024);
+
+    actions["tmprt"] = { [&](const char* line) {
+        if (allocated <= n_meshes_loaded)
+        {
+          allocated = n_meshes_loaded + 8;
+          t->temperatures = (float*)realloc(t->temperatures, allocated * sizeof(float));
+        }
+
+        float temperature;
+        if (sscanf(line, "%f %s", &temperature, &mesh_name[0]) == 2)
+        {
+          std::string name(&mesh_name[0]);
+          auto found = mesh_name_to_id.find(name);
+          if (found == mesh_name_to_id.end())
+          {
+            if (mesh_name_to_id.empty())
+            {
+              // @not This is a corner case, just put an error and retreat.
+              fprintf(stderr, "ERROR: Using named meshes for unnamed scene import.\n");
+            }
+            else
+            {
+              fprintf(stderr, "ERROR: Mesh '%s' not found during task temperatures import.\n", name.c_str());
+            }
+            return false;
+          }
+
+          int mesh_idx = found->second;
+          if (allocated <= mesh_idx)
+          {
+            allocated = mesh_idx + 8;
+            t->temperatures = (float*)realloc(t->temperatures, allocated * sizeof(float));
+          }
+
+          initialized_meshes.insert(name);
+          t->temperatures[mesh_idx] = temperature;
+          return true;
+        }
+        else
+        {
+          if (!mesh_name_to_id.empty())
+          {
+            fprintf(stderr, "ERROR: Detected temperature for unnamed mesh during import scene with named meshes.\n");
+            return false;
+          }
+
+          bool result = sscanf(line, "%f", t->temperatures + (n_meshes_loaded++)) == 1;
+          --n_meshes;
+          return result;
+        }
+      },
+      [&]() {}
     };
 
-    actions["dstsrc"] = { [&](const char* line) {
-        distant_source->sources = (parallel_rays_emission_cpu::parallel_rays_source_t*)realloc(distant_source->sources, (distant_source->n_sources + 1) * sizeof(parallel_rays_emission_cpu::parallel_rays_source_t));
-        parallel_rays_emission_cpu::parallel_rays_source_t& source = distant_source->sources[distant_source->n_sources];
-        ++distant_source->n_sources;
-        return sscanf(line, "%f %f %f %f", &source.power, &source.direction.x, &source.direction.y, &source.direction.z) == 4;
+    actions["newfrm"] = { [&](const char*) {
+        n_meshes_loaded = 0;
+        return true;
       },
-      [&]() { fprintf(stderr, "Loaded distant rays source with power %f\n", distant_source->sources[distant_source->n_sources - 1].power); }
+      [&]() {}
     };
 
     std::string line;
@@ -775,7 +866,42 @@ namespace obj_import
       action.report();
     }
 
+    if (initialized_meshes.size() != mesh_name_to_id.size())
+    {
+      fprintf(stderr, "ERROR: Not all named meshes initialized with its initial temperature value. Broken meshes:\n");
+      for (const auto& r : mesh_name_to_id)
+      {
+        if (initialized_meshes.find(r.first) == initialized_meshes.end())
+          fprintf(stderr, "\t%s\n", r.first.c_str());
+      }
+      return -OBJ_IMPORT_FILE_ERROR;
+    }
+
     return n_meshes_loaded;
+  }
+
+  int task(const char* filename
+    , int n_meshes
+    , thermal_solution::task_t* t
+    , heat_source_equation::params_t* heat_source
+    , parallel_rays_emission_cpu::params_t* distant_source
+    , planet_emission::params_t* planet_emission_params
+    , subject::task_t* simulation_params
+  )
+  {
+    return task(filename, n_meshes, 0, t, heat_source, distant_source, planet_emission_params, simulation_params);
+  }
+
+  int task(const char* filename
+    , const subject::scene_t* scene
+    , thermal_solution::task_t* t
+    , heat_source_equation::params_t* heat_source
+    , parallel_rays_emission_cpu::params_t* distant_source
+    , planet_emission::params_t* planet_emission_params
+    , subject::task_t* simulation_params
+  )
+  {
+    return task(filename, scene->n_meshes, scene, t, heat_source, distant_source, planet_emission_params, simulation_params);
   }
 
   int orbit(const char* filename, ballistics::tle_orbit_t** target)
