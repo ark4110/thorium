@@ -629,6 +629,7 @@ namespace obj_import
       std::function<void()> report;
     };
 
+    std::vector<char> mesh_name(1024);
     std::map<std::string, int> mesh_name_to_id;
     std::set<std::string> initialized_meshes;
     if (scene)
@@ -698,8 +699,17 @@ namespace obj_import
       actions["htsrc"] = { [&](const char* line) {
         heat_source_equation::heat_source_t source;
 
-        if (sscanf(line, "%d %f", &source.mesh_idx, &source.power) != 2)
+        if (sscanf(line, "%s %f", &mesh_name[0], &source.power) != 2)
           return false;
+        std::string name(&mesh_name[0]);
+        auto found = mesh_name_to_id.find(name);
+        if (found == mesh_name_to_id.end())
+        {
+          fprintf(stderr, "ERROR: Heat source %s not found.\n", name.c_str());
+          return false;
+        }
+
+        source.mesh_idx = found->second;
         heat_source->sources = (heat_source_equation::heat_source_t*)realloc(heat_source->sources, (1 + heat_source->n_sources) * sizeof(source));
         heat_source->sources[heat_source->n_sources++] = source;
         return true;
@@ -773,7 +783,6 @@ namespace obj_import
 
     int n_meshes_loaded = 0;
     size_t allocated = 0;
-    std::vector<char> mesh_name(1024);
 
     actions["tmprt"] = { [&](const char* line) {
         if (allocated <= n_meshes_loaded)
