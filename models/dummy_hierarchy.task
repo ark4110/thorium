@@ -1,0 +1,10 @@
+newfrm frame_0
+step 0.500000
+frame_time_scale 5.000000
+simulation_duration 50.000000
+emission_rays_count 1000000
+solar_rays_count 1000000
+emsplnt 6.3568e6 0.34 250 1353 30
+dstsrc 1300.000000 0.000000 0.000000 -1.000000
+tmprt 300.000000 Icosphere
+
