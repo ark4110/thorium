@@ -162,7 +162,7 @@ namespace optix_ray_caster
       state_free(system->converter_state);
     system->converter_state = optix_hit_converter::state_init(scene, force_cpu);
 
-    if (r = scene_relocate(scene, -1))
+    if ((r = scene_relocate(scene, -1)))
       return r;
 
     return RAY_CASTER_OK;
@@ -174,11 +174,13 @@ namespace optix_ray_caster
       return -RAY_CASTER_ERROR;
 
     if (system->scene->animation)
+    {
       // @todo Init with frame number 0.
       if (system->scene->animation->n_current_frame == system->last_update_frame && system->scene->animation->n_current_frame != -1)
         return RAY_CASTER_OK;
       else
         system->last_update_frame = system->scene->animation->n_current_frame;
+    }
 
     int r;
     if ((r = rtpModelSetTriangles(system->model, 0, system->vertices)) != RTP_SUCCESS)

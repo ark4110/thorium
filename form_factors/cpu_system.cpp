@@ -163,8 +163,6 @@ namespace cpu_form_factors
     
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     
-    int n_rays = ray_caster_task->n_tasks;
-    
     if ((r = system_relocate_task(system->caster, emission_task->rays, 0)) < 0)
       return r;
     if ((r = ray_caster::system_cast(system->caster, emission_task->rays)) < 0)

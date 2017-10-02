@@ -191,7 +191,7 @@ namespace cpu_adams
           return r;
 
         for (int i = 0; i != system->params.n_equations; ++i)
-          if (r = thermal_equation::system_update(system->params.equations[i]))
+          if ((r = thermal_equation::system_update(system->params.equations[i])))
             return r;
       }
     }

@@ -259,7 +259,7 @@ namespace cuda_malley_emission
 
   __device__ inline int warp_broadcast(int value, int leader)
   {
-    return __shfl(value, leader);
+    return __shfl_sync(0xffffffff, value, leader);
   }
 
   template <bool front_emission>
