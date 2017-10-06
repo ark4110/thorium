@@ -782,7 +782,7 @@ namespace obj_import
       [&]() {fprintf(stderr, "Simulation step %f\n", t->time_delta); } };
 
     int n_meshes_loaded = 0;
-    size_t allocated = 0;
+    int allocated = 0;
 
     actions["tmprt"] = { [&](const char* line) {
         if (allocated <= n_meshes_loaded)

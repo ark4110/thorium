@@ -19,6 +19,7 @@
  */
 
 #include "mat.h"
+#include <cstdio>
 
 namespace math
 {
