@@ -460,8 +460,6 @@ namespace Miniball {
       {
         for (j = 0; j < D; ++j)
         {
-          if (fsize >= D + 1)
-            printf("%d\n", fsize);
           v[fsize][j] -= a[fsize][i] * v[i][j];
         }
       }
