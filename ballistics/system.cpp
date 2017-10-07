@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
+// along with thorium.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "system.h"
 #include "libpredict_tle.h"

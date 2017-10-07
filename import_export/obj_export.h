@@ -12,7 +12,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with form_factors.  If not, see <http://www.gnu.org/licenses/>.
+// along with thoirum.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
 * This module contains functionality of exporting in near-OBJ format.
