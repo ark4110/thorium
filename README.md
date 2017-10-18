@@ -33,7 +33,7 @@ Limitations:
 * Only triangle supported as basic geometry element (i.e. no quads or bars).
 
 
-[Installation instruction](https://bitbucket.org/radiosity/engine/wiki/Install)
+[Installation instructions](https://bitbucket.org/radiosity/engine/wiki/Install)
 
 [Building instructions](https://bitbucket.org/radiosity/engine/wiki/Build)
 
