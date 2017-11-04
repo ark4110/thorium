@@ -1,46 +1,40 @@
-# Welcome
+# Welcome to Thorium engine!
 
-Welcome to Thorium engine!
-Thorium is a set of libraries and tools used to solve radiance and conductive thermal problems.
+Thorium is a set of libraries and tools to solve radiance and conductive thermal problems.
 
+Features:
 
-## Running on Windows
-Download repository and go /bin directory. There are 64-bit version of Thorium binaries and corresponding .dll
-
-[Visual Studio 2015 Redistributable](https://www.microsoft.com/download/details.aspx?id=48145) may be required.
-
-
-## Building on Windows
-
-1. Install [Visual Studio 2015](https://www.visualstudio.com/downloads/). Community Edition is enough.
-
-2. Install Nvidia [CUDA](https://developer.nvidia.com/cuda-downloads). Nvidia developer program registration is required for download.
-
-3. Install Nvidia [OptiX](https://developer.nvidia.com/designworks/optix/download). Define OPTIX_INCLUDE_DIR and OPTIX_LIB_X64_DIR environment variables. Default installation directory for OptiX is C:\ProgramData\NVIDIA Corporation\OptiX SDK 4.0.1
-
-4. Open solution.sln and build.
-
-Please notice that due to OptiX 64-bit only distribution, most tools has only 64-bit version or will be compiled without OptiX ray caster support.
+* Heat solution for conductive and radiance problems.
+* Implement correct physics of the thermal problem.
+* Implement all basic physical and optical properties of materials: density, heat capacity, thermal conductivity, emissivity, specular/diffuse reflectance, absorbance and transmittance.
+* Use monte-carlo method for radiance problem simulation.
+* Support elements self-emission radiance, direct Sun, Sun reflected from Earth and Earth self radiance.
+* Support static heat source/sink elements.
+* Implement affine transformation of geometry.
+* Use [Blender 3D editor](https://www.blender.org/) as front-end for problem definition and results visualization.
+* Support satellite orbital orientation and ballistic definition using TLE.
+* Use simple [OBJ format](https://ru.wikipedia.org/wiki/Obj) for geometry and problem definition.
+* Performant. Calculate up to 20 integration steps per second for problem with 200K triangles using 10M simulation rays.
+* Scales up to 60M simulation rays and millions of triangles on GTX 1080.
+* Runs on Windows and Linux. Written in C/C++and CUDA.
+* Provide C API for programming language bindings generation.
 
 
-## Building on Linux
+Upcoming features:
 
-Required components:
+* Multi-GPU support with linear scaling by GPU count.
+* Generation of rays with different frequency depending on source temperature.
+* Nonlinear optical properties dependent on frequency.
 
-1. gcc and tool chain.
+Limitations:
 
-2. cmake >3.0.
+* Only shell (2D thin constructs) elements supported.
+* Conductive solution support is limited to 2D shell and triangle elements.
+* Only triangle supported as basic geometry element (i.e. no quads or bars).
 
-3. Nvidia [CUDA](https://developer.nvidia.com/cuda-downloads)
 
-Building:
+[Installation instructions](https://bitbucket.org/radiosity/engine/wiki/Install)
 
-1. Optix for Linux is already included into distribution. (Should be removed in #7)
+[Building instructions](https://bitbucket.org/radiosity/engine/wiki/Build)
 
-2. Create out-of-source build directory.
-
-3. cmake ../engine
-
-4. make
-
-5. Binaries will be deployed to bin directory
+[Architecture](https://bitbucket.org/radiosity/engine/wiki/Architecture)
