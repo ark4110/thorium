@@ -16,8 +16,10 @@
 
 #include "gtest/gtest.h"
 
+#include "test_scene.h"
 #include "math/operations.h"
 #include "math/triangle.h"
+#include "math/mat.h"
 #include "emission/system.h"
 #include "form_factors/system.h"
 #include "emission/malley_cpu.h"
@@ -132,6 +134,91 @@ public:
   thermal_solution::task_t* Task;
 };
 
+template <typename EnginesConfig>
+class ParallelPlanesSolution
+  : public Test
+{
+public:
+  ParallelPlanesSolution()
+  {
+    Step = 0.1f;
+
+    SceneEngine = subject::system_create(EnginesConfig::SceneEngine);
+    RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
+
+    malley_cpu::params_t emitterParams;
+    emitterParams.n_rays = 40000;
+    Emitter = emission::system_create(EnginesConfig::EmissionEngine, &emitterParams);
+
+    radiance_equation::params_t equationParams = {};
+    equationParams.emitters = &Emitter;
+    equationParams.n_emitters = 1;
+    equationParams.ray_caster = RayCaster;
+    Equation = thermal_equation::system_create(EnginesConfig::EquationEngine, &equationParams);
+
+    thermal_solution::params_t solutionParams = { 1, &Equation };
+    System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &solutionParams);
+    
+    Temperatures[0] = 300.f;
+    Temperatures[1] = 300.f;
+
+    Task = thermal_solution::task_create(2);
+    Task->time_delta = Step;
+  }
+
+  float FormFactor(float distance) {
+    float a = 1;
+    float b = 1;
+    float c = distance;
+    auto x = a / c, y = b / c, xq = x * x, yq = y * y;
+    auto result = 2 / math::point_t(M_PI) / x / y * (logf(sqrtf((1 + xq) * (1 + yq) / (1 + xq + yq))) + x * sqrtf(1 + yq) * atanf(x / sqrtf(1 + yq)) + y * sqrtf(1 + xq) * atanf(y / sqrtf(1 + xq)) - x * atanf(x) - y * atanf(y));
+    return result / 2;
+  }
+
+  float Theoretical(float distance, float timestamp)
+  {
+    float sigma = 5.670400e-8f;
+    float e = 1.f;
+    float c = 1000.f;
+    float m = 1.450f;
+    float C = c * m;
+    float K = FormFactor(distance) * 2;
+    float A = (K - 2) * e * sigma / C;
+    float T0 = 300.f;
+    return 1.f / powf(1.f / T0/ T0 / T0 - 3 * A * timestamp, 1.f / 3);
+  }
+
+  void MakeScene(float distance)
+  {
+    Scene = MakeParallelPlanesScene(SceneEngine, distance, math::IDENTITY_33());
+    Scene->materials[0].shell.density = 1450;
+    Scene->materials[0].shell.heat_capacity = 1000;
+    Scene->materials[0].shell.thickness = 0.001f;
+    system_finalize_scene(SceneEngine, Scene);
+  }
+
+  ~ParallelPlanesSolution()
+  {
+    thermal_solution::task_free(Task);
+    thermal_solution::system_free(System);
+    thermal_equation::system_free(Equation);
+    emission::system_free(Emitter);
+    ray_caster::system_free(RayCaster);
+    scene_free(Scene);
+    system_free(SceneEngine);
+  }
+
+  float Step;
+  subject::system_t* SceneEngine;
+  ray_caster::system_t* RayCaster;
+  emission::system_t* Emitter;
+  thermal_equation::system_t* Equation;
+  thermal_solution::system_t* System;
+  subject::scene_t* Scene;
+  float Temperatures[2];
+  thermal_solution::task_t* Task;
+};
+
 #if defined _WIN64 || !defined  _WIN32
 typedef ::testing::Types<
   EnginesConfig<SCENE_ENGINE_CUDA, THERMAL_EQUATION_RADIANCE_CUDA, EMISSION_MALLEY_CPU, RAY_CASTER_OPTIX>,
@@ -144,6 +231,7 @@ typedef ::testing::Types<
 #endif
 
 TYPED_TEST_CASE(RadianceSolution, RadianceEquationTypes);
+TYPED_TEST_CASE(ParallelPlanesSolution, RadianceEquationTypes);
 
 TYPED_TEST(RadianceSolution, BoxPreserveEnergy)
 {
@@ -267,4 +355,21 @@ TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
   ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
+}
+
+TYPED_TEST(ParallelPlanesSolution, Correct)
+{
+  this->MakeScene(0.1f);
+
+  int r = 0;
+  r = system_set_scene(this->System, this->Scene, this->Temperatures);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  for (int step = 0; step < 1000; ++step)
+  {
+    r = system_calculate(this->System, this->Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+    ASSERT_NEAR(Theoretical(0.1f, 0.1f * step), this->Task->temperatures[0], 0.1);
+  }
+
+  
 }

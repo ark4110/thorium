@@ -117,4 +117,48 @@ namespace testing
 
     return scene;
   }
+
+  math::triangle_t make_floor_face1(math::vec3 offset)
+  {
+    math::vec3 a = { 0.f, 0.f, 0.f };
+    math::vec3 b = { 1.f, 0.f, 0.f };
+    math::vec3 c = { 0.f, 1.f, 0.f };
+
+    return math::make_face(a + offset, b + offset, c + offset);
+  }
+
+  math::triangle_t make_floor_face2(math::vec3 offset)
+  {
+    math::vec3 a = { 1.f, 0.f, 0.f };
+    math::vec3 b = { 1.f, 1.f, 0.f };
+    math::vec3 c = { 0.f, 1.f, 0.f };
+
+    return math::make_face(a + offset, b + offset, c + offset);
+  }
+
+  subject::scene_t* MakeParallelPlanesScene(subject::system_t* engine, float distance, math::mat33 rotation)
+  {
+    int n_faces = 4;
+    math::triangle_t* faces = (math::triangle_t*)malloc(n_faces * sizeof(math::triangle_t));
+    faces[0] = make_floor_face1(math::make_vec3(0, 0, 0));
+    faces[1] = make_floor_face2(math::make_vec3(0, 0, 0));
+    faces[2] = make_floor_face1(math::make_vec3(0, 0, distance));
+    faces[3] = make_floor_face2(math::make_vec3(0, 0, distance));
+
+    for (int i = 0; i != n_faces; ++i)
+    {
+      faces[i].points[0] = rotation * faces[i].points[0];
+      faces[i].points[1] = rotation * faces[i].points[1];
+      faces[i].points[2] = rotation * faces[i].points[2];
+    }
+
+    subject::scene_t* scene = MakeSceneFromFaces(engine, n_faces, faces);
+    AddMaterial(scene, subject::black_body());
+    AddMesh(scene, { 0, 2, 0 });
+    AddMesh(scene, { 2, 2, 0 });
+
+    system_finalize_scene(engine, scene);
+
+    return scene;
+  }
 }
