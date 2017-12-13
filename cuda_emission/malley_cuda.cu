@@ -35,6 +35,7 @@
 #include <thrust/device_ptr.h>
 #include <thrust/scan.h>
 #include <thrust/reduce.h>
+#include <thrust/sort.h>
 #include <thrust/execution_policy.h>
 
 #include "../ext/cub/cub/cub.cuh"
@@ -196,8 +197,8 @@ namespace cuda_malley_emission
 
     for (; face_idx < n_faces; face_idx += stride)
     {
-      front_counts[face_idx] = (int)(ceilf(count_factor * front_weights[face_idx]));
-      rear_counts[face_idx] = (int)(ceilf(count_factor * rear_weights[face_idx]));
+      front_counts[face_idx] = ((int)(ceilf(count_factor * front_weights[face_idx] + 0.01f)) + 1) & -2;
+      rear_counts[face_idx] = ((int)(ceilf(count_factor * rear_weights[face_idx] + 0.01f)) + 1) & -2;
     }
   }
 
@@ -240,6 +241,39 @@ namespace cuda_malley_emission
       float b = ray.origin.y;      
       float3 origin = face.points[0] + a * u + b * v;
       ray = { origin + direction * 0.0001f, direction };
+    }
+  }
+  template <bool front_emission>
+  __global__ void emit_few_malley_rays(scene_ctx_t s,
+                                     int n_faces,
+                                     int* rays_count,
+                                     int* face_rays_offset,
+                                     int global_offset,
+                                     const float* emissions,
+                                     ray_t* rays,
+                                     float* power
+  ) {
+    int face_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (face_idx < n_faces) {
+      cuda_math::mat33 rotation = pick_face_rotation(s.face_normal[face_idx]);
+      face_t face = s.faces[face_idx];
+      float3 u = face.points[1] - face.points[0];
+      float3 v = face.points[2] - face.points[0];
+      float emission = emissions[face_idx];
+      int n_face_rays = rays_count[face_idx];
+      int offset = global_offset + face_rays_offset[face_idx];
+
+      for (int r = 0; r < n_face_rays; ++r) {
+        int ray_offset = r + offset;
+        power[ray_offset] = emission;
+        ray_t &ray = rays[ray_offset];
+        float3 direction = rotation * (front_emission ? ray.direction : invert_z(
+                ray.direction)); // we prepared random uniform direction in ray itself
+        float a = ray.origin.x;
+        float b = ray.origin.y;
+        float3 origin = face.points[0] + a * u + b * v;
+        ray = {origin + direction * 0.0001f, direction};
+      }
     }
   }
 
@@ -340,6 +374,42 @@ namespace cuda_malley_emission
     }
   }
 
+    __managed__ __device__ int selected;
+
+    struct histogram_conversion_op
+    {
+        __device__ __forceinline__
+        int operator()(int rays_count) const
+        {
+          if (rays_count < 32)
+            return rays_count / 2;
+          else
+            return 11 + ceilf(__log2f(rays_count));
+        }
+    };
+
+    __managed__ __device__ int histogram[64];
+    __managed__ __device__ int hist_value[32];
+    __managed__ __device__ int hist_count[32];
+
+    __global__ void set_flags(int n_faces, int n_rays_limit, const int* face_rays_count, int* flags)
+    {
+      int face_idx = threadIdx.x + blockIdx.x * blockDim.x;
+      int stride = blockDim.x * gridDim.x;
+      for (; face_idx < n_faces; face_idx += stride)
+        flags[face_idx] = int(face_rays_count[face_idx] > n_rays_limit);
+    }
+
+    __global__ void make_hist(int n_faces, const int* face_rays_count, int* hist, int* faces)
+    {
+      int face_idx = threadIdx.x + blockIdx.x * blockDim.x;
+      for (; face_idx < n_faces; face_idx += blockDim.x * gridDim.x) {
+        int rays_count = face_rays_count[face_idx];
+        hist[face_idx] = rays_count < 32 ? rays_count / 2 : (11 + ceilf(__log2f(rays_count)));
+        faces[face_idx] = face_idx;
+      }
+    }
+
   int calculate(system_t* system, emission::task_t* task)
   {
     if (task->rays && task->rays->allocation_device <= 0)
@@ -384,7 +454,7 @@ namespace cuda_malley_emission
     cudaMemcpyAsync(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost, system->memcpy_stream);
 
     // Grow task
-    int n_upper_bound = system->params.n_rays + 2 * n_faces;
+    int n_upper_bound = system->params.n_rays + 4 * n_faces;
     int n_input_rays = task_grow(task, n_upper_bound);
 
     // Generate random
@@ -411,9 +481,84 @@ namespace cuda_malley_emission
     // Emit rays
     if (n_front_rays)
     {
-      int n_block_size = std::min(1024, (n_front_rays / n_faces + 31) & -32);
+
+      cub::TransformInputIterator<int, histogram_conversion_op, int*> histogram_iter(system->face_front_rays_count, histogram_conversion_op());
+      cub::DeviceHistogram::HistogramEven(
+              system->reduce_buffer,
+              system->reduce_buffer_size,
+              histogram_iter,
+              histogram,
+              64,
+              0, 63,
+              n_faces
+      );
+      cudaDeviceSynchronize();
+      for (int i = 0; i != 64; ++i)
+        fprintf(stderr, "%d\t%d\n", i < 32 ? i : ((int)pow(2, i -32)), histogram[i]);
+
+      //cub::CountingInputIterator<int> faces(0);
+      int* face_indices;
+      cudaMallocManaged(&face_indices, sizeof(int) * n_faces);
+
+      int* keys;
+      cudaMallocManaged(&keys, sizeof(int) * n_faces);
+      int* keys_out;
+      cudaMallocManaged(&keys_out, sizeof(int) * n_faces);
+
+      make_hist<<<512, 1024>>>(n_faces, system->face_front_rays_count, keys, face_indices);
+    //  cudaDeviceSynchronize();
+
+      cub::DoubleBuffer<int> dkeys(keys, keys_out);
+      cub::DoubleBuffer<int> dfaces(face_indices, system->face_rays_offset);
+      cub::DeviceRadixSort::SortPairs(
+              system->reduce_buffer,
+              system->reduce_buffer_size,
+              dkeys,
+              dfaces,
+              n_faces,
+              0,
+              8
+      );
+  //    checkCudaErrors(cudaPeekAtLastError());
+  //    checkCudaErrors(cudaDeviceSynchronize());
+
+/*
+      for (int i = n_faces - 32; i != n_faces; ++i)
+        fprintf(stderr, "%d\t%d\t%d\t%d\n", face_indices[i], keys[i], keys_out[i], system->face_rays_offset[i]);
+*/
+        cub::DeviceRunLengthEncode::NonTrivialRuns(
+                system->reduce_buffer,
+                system->reduce_buffer_size,
+                keys_out, // transformed rays count
+                hist_value, // empty -> key_value
+                hist_count, // empty-> counts
+                histogram, // runs count
+                n_faces
+        );
+
+      cudaDeviceSynchronize();
+      cudaFree(keys);
+      cudaFree(keys_out);
+      cudaFree(face_indices);
+      fprintf(stderr, "Runs count %d\n", histogram[0]);
+      for (int i = 0; i != 32; ++i)
+        fprintf(stderr, "%d\t%d\n", hist_value[i], hist_count[i]);
+
+
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
-      emit_malley_rays<true> << <n_faces, n_block_size >> > (scene_ctx,
+      int n_block_size = std::min(1024, (n_front_rays / n_faces + 31) & -32);
+      emit_few_malley_rays<true> << <(n_faces + 255) &-256, 256 >> > (scene_ctx,
+              n_faces,
+              system->face_front_rays_count,
+              system->face_rays_offset,
+              0,
+              system->face_front_emission,
+              (ray_t*)task->rays->ray + n_input_rays,
+              task->rays->power + n_input_rays
+      );
+
+      /*
+        emit_malley_rays<true> << <n_faces, n_block_size >> > (scene_ctx,
         system->face_front_rays_count,
         system->face_rays_offset,
         0,
@@ -421,6 +566,7 @@ namespace cuda_malley_emission
         (ray_t*)task->rays->ray + n_input_rays,
         task->rays->power + n_input_rays
         );
+        */
     }
     if (n_rear_rays)
     {
@@ -499,10 +645,10 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_emission, scene->n_faces * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_front_rays_count, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rear_rays_count, scene->n_faces * sizeof(int)));
-    checkCudaErrors(cudaMalloc((void**)&system->face_rays_offset, scene->n_faces * sizeof(int)));
+    checkCudaErrors(cudaMallocManaged((void**)&system->face_rays_offset, scene->n_faces * sizeof(int)));
     checkCudaErrors(cudaMalloc((void**)&system->face_rays_count_next, scene->n_faces * sizeof(int)));
 
-    system->reduce_buffer_size = std::max(size_t(4096), scene->n_faces * sizeof(int));
+    system->reduce_buffer_size = std::max(size_t(4096), 2 * scene->n_faces * sizeof(int));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer, system->reduce_buffer_size));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_float, 2 * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_int, 2 * sizeof(int)));
