@@ -1,9 +1,26 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(tests)
 
-enable_testing()
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+# Download and unpack googletest at configure time
+configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test/googletest-download" )
+execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test/googletest-download" )
+
+# Prevent GoogleTest from overriding our compiler/linker options
+# when building with Visual Studio
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Add googletest directly to our build. This adds
+# the following targets: gtest, gtest_main, gmock
+# and gmock_main
+add_subdirectory("${CMAKE_BINARY_DIR}/googletest-src"
+        "${CMAKE_BINARY_DIR}/googletest-build")
+
+
+include_directories("${gtest_SOURCE_DIR}/include"
+        "${gmock_SOURCE_DIR}/include")
 
 set(SOURCE_FILES
   adams_solution.cpp
@@ -41,7 +58,7 @@ configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.task ${CMAKE_RUNTIME_OU
 
 add_executable(tests ${SOURCE_FILES})
 
-target_link_libraries(tests ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(tests gtest gmock_main)
 target_link_libraries(tests ballistics ray_caster cuda_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission cuda_misc cuda_equation)
 target_link_libraries(tests predict_static)
 target_link_libraries(tests ${CUDA_LIBRARIES})
