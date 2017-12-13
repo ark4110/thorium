@@ -164,7 +164,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_0)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
@@ -182,7 +182,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_0)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
@@ -204,7 +204,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_0)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\Win32;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
@@ -227,7 +227,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_0)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
