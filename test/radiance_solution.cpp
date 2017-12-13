@@ -368,7 +368,7 @@ TYPED_TEST(ParallelPlanesSolution, Correct)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-    ASSERT_NEAR(Theoretical(0.1f, 0.1f * step), this->Task->temperatures[0], 0.1);
+    ASSERT_NEAR(this->Theoretical(0.1f, 0.1f * step), this->Task->temperatures[0], 0.1);
   }
 
   
