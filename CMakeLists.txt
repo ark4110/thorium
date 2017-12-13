@@ -9,14 +9,14 @@ set(CMAKE_MODULE_PATH
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(".")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto -Ofast")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast")
 
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 
 find_package(CUDA REQUIRED)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_30,code=sm_30  -gencode arch=compute_35,code=sm_35 -gencode arch=compute_50,code=sm_50  -gencode arch=compute_61,code=sm_61)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode arch=compute_61,code=sm_61)
 find_package(OptiX REQUIRED)
 include_directories("/usr/local/cuda/samples/common/inc")
 

@@ -364,12 +364,14 @@ TYPED_TEST(ParallelPlanesSolution, Correct)
   int r = 0;
   r = system_set_scene(this->System, this->Scene, this->Temperatures);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-  for (int step = 0; step < 1000; ++step)
+  for (int step = 0; step < 200; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
-    ASSERT_NEAR(this->Theoretical(0.1f, 0.1f * step), this->Task->temperatures[0], 0.1);
+    float theoretical = this->Theoretical(0.1f, 0.1f * step);
+    float actual = this->Task->temperatures[0];
+    float diff = fabsf(theoretical - actual) / (theoretical + actual);
+    ASSERT_NEAR(0.f, diff, 0.0001);
   }
-
-  
 }
+

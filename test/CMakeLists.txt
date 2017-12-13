@@ -56,6 +56,11 @@ configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.mtl ${CMAKE_RUNTIME_OUT
 configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.anim ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.anim)
 configure_file(${CMAKE_SOURCE_DIR}/models/test_hierarchy.task ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/test_hierarchy.task)
 
+configure_file(${CMAKE_SOURCE_DIR}/models/dummy_hierarchy.obj ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/dummy_hierarchy.obj)
+configure_file(${CMAKE_SOURCE_DIR}/models/dummy_hierarchy.mtl ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/dummy_hierarchy.mtl)
+configure_file(${CMAKE_SOURCE_DIR}/models/dummy_hierarchy.anim ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/dummy_hierarchy.anim)
+configure_file(${CMAKE_SOURCE_DIR}/models/dummy_hierarchy.task ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models/dummy_hierarchy.task)
+
 add_executable(tests ${SOURCE_FILES})
 
 target_link_libraries(tests gtest gmock_main)
