@@ -138,7 +138,7 @@ namespace optix_hit_converter
     if (!allocation_valid)
       return -RAY_CASTER_INVALID_TASK_ALLOCATION;
 
-    state->n_hits = task->n_tasks;
+    state->n_hits = (task->n_tasks + 2047) & -2048;
 
     if (cuda_enabled)
     {

@@ -62,6 +62,9 @@ namespace cuda_parallel_rays_emission
     int n_mtgp_blocks;
 
     mtgp32_kernel_params *kernel_params;
+    
+    int n_multi_source_params;
+    multi_source_params_t* device_multi_source_params;
 
     subject::scene_t* scene;
   };
@@ -114,6 +117,9 @@ namespace cuda_parallel_rays_emission
     int n_mtgp_blocks = 128;
     system->n_mtgp_blocks = n_mtgp_blocks;
 
+    system->n_multi_source_params = 0;
+    system->device_multi_source_params = 0;
+
     checkCudaErrors(cudaMalloc((void **)&system->HSGenR, n_mtgp_blocks * sizeof(curandStateMtgp32)));
     checkCudaErrors(cudaMalloc((void **)&system->HSGenTheta, n_mtgp_blocks * sizeof(curandStateMtgp32)));
 
@@ -130,6 +136,9 @@ namespace cuda_parallel_rays_emission
     checkCudaErrors(cudaFree(system->HSGenR));
     checkCudaErrors(cudaFree(system->HSGenTheta));
     checkCudaErrors(cudaFree(system->kernel_params));
+
+    system->n_multi_source_params = 0;
+    checkCudaErrors(cudaFree(system->device_multi_source_params));
 
     system->HSGenR = 0;
     system->HSGenTheta = 0;
@@ -269,8 +278,14 @@ namespace cuda_parallel_rays_emission
       offset += f.n_rays;
     }
 
-    multi_source_params_t* device_multi_source_params = 0;
-    checkCudaErrors(cudaMalloc(&device_multi_source_params, sizeof(multi_source_params_t) * n_sources));
+    if (n_sources > system->n_multi_source_params)
+    {
+      cudaFree(system->device_multi_source_params);
+      checkCudaErrors(cudaMalloc(&system->device_multi_source_params, sizeof(multi_source_params_t) * n_sources));
+      system->n_multi_source_params = n_sources;
+    }
+
+    multi_source_params_t* device_multi_source_params = system->device_multi_source_params;    
     checkCudaErrors(cudaMemcpy(device_multi_source_params, host_multi_source_params, sizeof(multi_source_params_t) * n_sources, cudaMemcpyHostToDevice));
 
     emit_multiple_parallel_rays << <system->n_mtgp_blocks, 256 >> > (make_context(system), device_multi_source_params, n_sources, device_rays, device_powers);
@@ -286,10 +301,6 @@ namespace cuda_parallel_rays_emission
       }
     }
 
-    checkCudaErrors(cudaPeekAtLastError());
-    checkCudaErrors(cudaDeviceSynchronize());
-
-    checkCudaErrors(cudaFree(device_multi_source_params));
     free(host_multi_source_params);
 
     return EMISSION_OK;
