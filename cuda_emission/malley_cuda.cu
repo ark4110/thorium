@@ -75,44 +75,6 @@ namespace cuda_malley_emission
     int n_block_size;
   };
 
-  struct work_queue_t
-  {
-    int n_faces;
-    int n_warps_per_block;
-    int n_blocks;
-    int n_faces_per_block;
-    int n_queue_size_per_block;
-
-    int* work;
-    int* head;
-    int* tail;
-  };
-
-  void queue_init(work_queue_t* queue, int n_faces, int n_warps_per_block, int n_blocks)
-  {
-    queue->n_faces = n_faces;
-    queue->n_warps_per_block = n_warps_per_block;
-    
-
-    queue->n_faces_per_block = ((n_faces + n_blocks - 1) / n_blocks + n_warps_per_block - 1) & -n_warps_per_block;
-    queue->n_queue_size_per_block = queue->n_faces_per_block;
-
-    queue->n_blocks = (n_faces + queue->n_faces_per_block - 1) / queue->n_faces_per_block;
-
-    cudaMalloc((void**)&queue->work, sizeof(int) * queue->n_queue_size_per_block * n_blocks);
-
-    // @todo Pad with 128 bytes
-    cudaMalloc((void**)&queue->head, 128 * n_blocks);
-    cudaMalloc((void**)&queue->tail, 128 * n_blocks);
-  }
-
-  void queue_shutdown(work_queue_t* queue)
-  {
-    cudaFree(queue->work);
-    cudaFree(queue->head);
-    cudaFree(queue->tail);
-  }
-
   /// @brief Extended base system_t (C-style polymorphism)
   struct system_t : emission::system_t
   {
@@ -141,14 +103,10 @@ namespace cuda_malley_emission
     int* reduce_result_int;
     float* reduce_result_float;
 
-    work_queue_t queue;
-
     grid_calculator_t calculate_weights_grid;
-    grid_calculator_t emit_malley_rays_grid;
     grid_calculator_t scale_emission_grid;
     grid_calculator_t calculate_rays_count_grid;
 
-    cudaStream_t generate_random_stream;
     cudaStream_t memcpy_stream;
 
     int n_mtgp_blocks;
@@ -252,108 +210,36 @@ namespace cuda_malley_emission
       emission[face_idx] /= (float)rays_count[face_idx];
   }
 
-  __device__ inline int lane_id(void)
-  {
-    return threadIdx.x % warpSize;
-  }
-
-  __device__ inline int warp_broadcast(int value, int leader)
-  {
-    return __shfl_sync(0xffffffff, value, leader);
-  }
-
   template <bool front_emission>
   __global__ void emit_malley_rays(scene_ctx_t s,
     int* rays_count,
     int* face_rays_offset,
-
-    work_queue_t queue,
-
     int global_offset,
     const float* emissions,
     ray_t* rays,
     float* power
   )
   {
-    int* queue_tail = queue.tail + 32 * blockIdx.x;
-    const int end_pos = *queue_tail;
+    int face_idx = blockIdx.x;
+    cuda_math::mat33 rotation = pick_face_rotation(s.face_normal[face_idx]);
+    face_t face = s.faces[face_idx];
+    float3 u = face.points[1] - face.points[0];
+    float3 v = face.points[2] - face.points[0];
+    float emission = emissions[face_idx];
+    int n_face_rays = rays_count[face_idx];
+    int offset = global_offset + face_rays_offset[face_idx];
 
-    if (!end_pos)
-      return;
-
-    int* work_queue = blockIdx.x * queue.n_queue_size_per_block + queue.work;
-    int* queue_head = queue.head + 32 * blockIdx.x;
-
-    int read_pos = (threadIdx.x / warpSize) % end_pos;
-
-    int face_idx = -1;
-    int next_face_idx;
-
-    cuda_math::mat33 rotation;
-    face_t face;
-    float emission;
-
-    while (true) {
-      int rays_to_gen;
-      int ray_offset;
-
-      if (lane_id() == 0) {
-        rays_to_gen = 0;
-        int head_pos = *queue_head;
-
-        while (read_pos < end_pos)
-        {
-          next_face_idx = work_queue[read_pos];
-          rays_to_gen = atomicSub(&rays_count[next_face_idx], warpSize);
-
-          if (rays_to_gen > 0)
-          {
-            if (rays_to_gen > warpSize)
-              rays_to_gen = warpSize;
-            else
-              read_pos = head_pos;
-
-            ray_offset = atomicAdd(&face_rays_offset[next_face_idx], rays_to_gen);
-            break;
-          }
-          else
-          {
-            if (read_pos == head_pos)
-              head_pos = max(head_pos + 1, atomicCAS(queue_head, head_pos, head_pos + 1));
-            read_pos = head_pos;
-          }
-        }
-      }
-
-      rays_to_gen = warp_broadcast(rays_to_gen, 0);
-
-      if (rays_to_gen > 0 && lane_id() < rays_to_gen) {
-        next_face_idx = warp_broadcast(next_face_idx, 0);
-        if (next_face_idx != face_idx) {
-          face_idx = next_face_idx;
-          float3 face_normal = s.face_normal[face_idx];
-          /// We prepared random uniform direction in ray itself.
-          rotation = pick_face_rotation(face_normal);
-          face = s.faces[face_idx];
-          emission = emissions[face_idx];
-        }
-
-        ray_offset = lane_id() + global_offset + warp_broadcast(ray_offset, 0);
-
-        power[ray_offset] = emission;
-        ray_t &ray = rays[ray_offset];
-        float3 direction = rotation * (front_emission ? ray.direction : invert_z(
-          ray.direction)); // we prepared random uniform direction in ray itself
-        float a = ray.origin.x;
-        float b = ray.origin.y;
-        float3 u = face.points[1] - face.points[0];
-        float3 v = face.points[2] - face.points[0];
-        float3 origin = face.points[0] + a * u + b * v;
-        ray = { origin + direction * 0.0001f, direction };
-      }
-
-      if (__syncthreads_and(rays_to_gen <= 0))
-        break;
+    for (int r = threadIdx.x; r < n_face_rays; r += blockDim.x)
+    {
+      int ray_offset = r + offset;
+      power[ray_offset] = emission;
+      ray_t &ray = rays[ray_offset];
+      float3 direction = rotation * (front_emission ? ray.direction : invert_z(
+        ray.direction)); // we prepared random uniform direction in ray itself
+      float a = ray.origin.x;
+      float b = ray.origin.y;      
+      float3 origin = face.points[0] + a * u + b * v;
+      ray = { origin + direction * 0.0001f, direction };
     }
   }
 
@@ -454,11 +340,6 @@ namespace cuda_malley_emission
     }
   }
 
-  void queue_prepare(work_queue_t* queue)
-  {
-    init_work_queue << <queue->n_blocks, 128 >> > (queue->n_faces, queue->n_faces_per_block, queue->n_queue_size_per_block, queue->work, queue->head, queue->tail);
-  }
-
   int calculate(system_t* system, emission::task_t* task)
   {
     if (task->rays && task->rays->allocation_device <= 0)
@@ -528,15 +409,13 @@ namespace cuda_malley_emission
       );
 
     // Emit rays
-    g = system->emit_malley_rays_grid;
     if (n_front_rays)
     {
-      queue_prepare(&system->queue);
+      int n_block_size = std::min(1024, (n_front_rays / n_faces + 31) & -32);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
-      emit_malley_rays<true> << <system->queue.n_blocks, system->queue.n_warps_per_block * 32 >> > (scene_ctx,
+      emit_malley_rays<true> << <n_faces, n_block_size >> > (scene_ctx,
         system->face_front_rays_count,
         system->face_rays_offset,
-        system->queue,
         0,
         system->face_front_emission,
         (ray_t*)task->rays->ray + n_input_rays,
@@ -545,12 +424,11 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
-      queue_prepare(&system->queue);
+      int n_block_size = std::min(1024, (n_rear_rays / n_faces + 31) & -32);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
-      emit_malley_rays<false> << <system->queue.n_blocks, system->queue.n_warps_per_block * 32 >> > (scene_ctx,
+      emit_malley_rays<false> << <n_faces, n_block_size>> > (scene_ctx,
         system->face_rear_rays_count,
         system->face_rays_offset,
-        system->queue,
         n_front_rays,
         system->face_rear_emission,
         (ray_t*)task->rays->ray + n_input_rays,
@@ -593,11 +471,9 @@ namespace cuda_malley_emission
       n_mtgp_blocks, 4));
 
     system->calculate_weights_grid = grid_calculator_t(calculate_weights);
-    system->emit_malley_rays_grid = grid_calculator_t(emit_malley_rays<true>);
     system->scale_emission_grid = grid_calculator_t(scale_emission);
     system->calculate_rays_count_grid = grid_calculator_t(calculate_rays_count);
 
-    checkCudaErrors(cudaStreamCreate(&system->generate_random_stream));
     checkCudaErrors(cudaStreamCreate(&system->memcpy_stream));
 
     return EMISSION_OK;
@@ -615,8 +491,6 @@ namespace cuda_malley_emission
       return -EMISSION_ERROR;
 
     system->scene = scene;
-
-    queue_init(&system->queue, scene->n_faces, 4, 65536);
 
     checkCudaErrors(cudaMalloc((void**)&system->mesh_temperature, scene->n_meshes * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->face_front_weight, scene->n_faces * sizeof(float)));
@@ -651,8 +525,6 @@ namespace cuda_malley_emission
     cudaFree(system->kernel_params);
     system->kernel_params = 0;
 
-    queue_shutdown(&system->queue);
-
     cudaFree(system->mesh_temperature);
     cudaFree(system->face_front_weight);
     cudaFree(system->face_rear_weight);
@@ -678,7 +550,6 @@ namespace cuda_malley_emission
     system->reduce_result_int = 0;
     system->reduce_result_float = 0;
 
-    cudaStreamDestroy(system->generate_random_stream);
     cudaStreamDestroy(system->memcpy_stream);
 
     return EMISSION_OK;
