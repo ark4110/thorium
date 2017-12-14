@@ -426,12 +426,18 @@ namespace subject
   {
     *areas = (float*)realloc(*areas, sizeof(float) * scene->n_faces);
 
+    int n_empty_faces = 0;
     const int n_faces = scene->n_faces;
     for (int f = 0; f != n_faces; ++f)
     {
       float area = math::triangle_area(scene->faces[f]);
+      if (area < 0.000001f)
+        ++n_empty_faces;
       (*areas)[f] = area;
     }
+
+    if (n_empty_faces)
+      fprintf(stderr, "There are %d empty faces in scene.\n", n_empty_faces);
   }
 
   void build_face_to_mesh_index(int n_faces, int n_meshes, const mesh_t* meshes, int** index)
@@ -460,9 +466,18 @@ namespace subject
   {
     if (!*normals)
       *normals = (math::vec3*)malloc(scene->n_faces * sizeof(math::vec3));
-    
+
+    int n_zero_normals = 0;
     for (int f = 0; f != scene->n_faces; ++f)
-      (*normals)[f] = normalize(triangle_normal(scene->faces[f]));
+    {
+      math::vec3 normal = normalize(triangle_normal(scene->faces[f]));
+      if (math::norm(normal) < 0.000001f)
+        ++n_zero_normals;
+      (*normals)[f] = normal;
+    }
+
+    if (n_zero_normals)
+      fprintf(stderr, "There are %d faces with zero normal.\n", n_zero_normals);
   }
 
   void build_mesh_material_index(const scene_t* scene, int** index)
