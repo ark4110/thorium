@@ -196,8 +196,8 @@ namespace cuda_malley_emission
 
     for (; face_idx < n_faces; face_idx += stride)
     {
-      front_counts[face_idx] = ((int)(ceilf(count_factor * front_weights[face_idx] + 0.01f)) + 1) & -2;
-      rear_counts[face_idx] = ((int)(ceilf(count_factor * rear_weights[face_idx] + 0.01f)) + 1) & -2;
+      front_counts[face_idx] = (int)(ceilf(count_factor * front_weights[face_idx]));
+      rear_counts[face_idx] = (int)(ceilf(count_factor * rear_weights[face_idx]));
     }
   }
 
@@ -221,25 +221,26 @@ namespace cuda_malley_emission
   )
   {
     int face_idx = blockIdx.x;
-    cuda_math::mat33 rotation = pick_face_rotation(s.face_normal[face_idx]);
-    face_t face = s.faces[face_idx];
-    float3 u = face.points[1] - face.points[0];
-    float3 v = face.points[2] - face.points[0];
-    float emission = emissions[face_idx];
     int n_face_rays = rays_count[face_idx];
-    int offset = global_offset + face_rays_offset[face_idx];
+    if (threadIdx.x < n_face_rays) {
+      cuda_math::quat_t rotation_q = make_z_rotation_quat(s.face_normal[face_idx]);
 
-    for (int r = threadIdx.x; r < n_face_rays; r += blockDim.x)
-    {
-      int ray_offset = r + offset;
-      power[ray_offset] = emission;
-      ray_t &ray = rays[ray_offset];
-      float3 direction = rotation * (front_emission ? ray.direction : invert_z(
-        ray.direction)); // we prepared random uniform direction in ray itself
-      float a = ray.origin.x;
-      float b = ray.origin.y;      
-      float3 origin = face.points[0] + a * u + b * v;
-      ray = { origin + direction * 0.0001f, direction };
+      face_t face = s.faces[face_idx];
+      float3 u = face.points[1] - face.points[0];
+      float3 v = face.points[2] - face.points[0];
+      float emission = emissions[face_idx];
+      int offset = global_offset + face_rays_offset[face_idx];
+
+      for (int r = threadIdx.x; r < n_face_rays; r += blockDim.x) {
+        int ray_offset = r + offset;
+        power[ray_offset] = emission;
+        ray_t &ray = rays[ray_offset];
+        float3 q_direction = quat_mult_vec(rotation_q, front_emission ? ray.direction : invert_z(ray.direction));
+        float a = ray.origin.x;
+        float b = ray.origin.y;
+        float3 origin = face.points[0] + a * u + b * v;
+        ray = {origin + q_direction * 0.0001f, q_direction};
+      }
     }
   }
 
@@ -408,10 +409,11 @@ namespace cuda_malley_emission
       system->face_rear_emission
       );
 
+    const int n_emit_block_size = 64;
     // Emit rays
     if (n_front_rays)
     {
-      int n_block_size = std::min(1024, (n_front_rays / n_faces + 31) & -32);
+      int n_block_size = std::min(1024, (n_front_rays / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<true> << <n_faces, n_block_size >> > (scene_ctx,
         system->face_front_rays_count,
@@ -424,7 +426,7 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
-      int n_block_size = std::min(1024, (n_rear_rays / n_faces + 31) & -32);
+      int n_block_size = std::min(1024, (n_rear_rays / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<false> << <n_faces, n_block_size>> > (scene_ctx,
         system->face_rear_rays_count,

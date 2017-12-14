@@ -56,6 +56,45 @@ namespace cuda_math
     float p[9];
   };
 
+  struct quat_t
+  {
+    float3 a;
+    float w;
+    float v;
+  };
+
+    // from (0, 0, 1) to target 'to' vector
+  inline __device__ quat_t make_z_rotation_quat(float3 to)
+  {
+    float cos_alpha= to.z;
+
+    //if (cos_alpha < 0.000001f && to.x * to.x < 0.000001f && to.y * to.y < 0.000001f)
+    //  return {{}, 0, 0};
+
+    if (1.f - cos_alpha < 0.000001f)
+        return {{}, 0, 1.f};
+
+    if (cos_alpha + 1.0f < 0.000001f)
+        return {{1.f, 0, 0}, 0, -1.f};
+
+    float theta = acosf(cos_alpha) / 2;
+    float sin_theta, cos_theta;
+    __sincosf(theta, &sin_theta, &cos_theta);
+    float3 axis = normalize(make_float3(-to.y, to.x, 0)) * sin_theta;
+
+    return {axis, cos_theta, cos_theta * cos_theta - sin_theta * sin_theta};
+  };
+
+// q * v * q(star)
+inline __device__ float3 quat_mult_vec(const quat_t& q, float3 s)
+{
+  float v = q.v;
+  float u = 2.f * dot(q.a, s);
+  float c = 2.f * q.w;
+  return v * s + u * q.a + c * cross(q.a, s);
+}
+
+
   inline __device__ void convert_face_to_uv(face_t& face)
   {
     float3 origin = face.points[0];
