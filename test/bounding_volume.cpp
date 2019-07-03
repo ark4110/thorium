@@ -58,9 +58,9 @@ namespace {
     for (int i = 0; i != n_triangles; ++i)
     {
       const math::triangle_t &t = triangles[i];
-      m = std::max(m, math::dot(t.points[0], t.points[0]));
-      m = std::max(m, math::dot(t.points[1], t.points[1]));
-      m = std::max(m, math::dot(t.points[2], t.points[2]));
+      m = ::max(m, math::dot(t.points[0], t.points[0]));
+      m = ::max(m, math::dot(t.points[1], t.points[1]));
+      m = ::max(m, math::dot(t.points[2], t.points[2]));
     }
 
     return sqrtf(m);

@@ -44,16 +44,16 @@
       <Project>{52bc2630-b79c-41b3-ad12-af6cc7791ba1}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_emission\cuda_emission.vcxproj">
-      <Project>{bb391192-f112-44cc-baa4-8d9bc753e09f}</Project>
+      <Project>{ddf30e5b-f2c2-4ee1-a543-9624fc804c2a}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_equation\cuda_equation.vcxproj">
-      <Project>{47fa5e17-269e-44b7-b783-b06f930146ab}</Project>
+      <Project>{49f013a8-9430-4a97-836d-4f4968909dba}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_misc\cuda_misc.vcxproj">
-      <Project>{231b5f15-1c4f-462f-81dc-5738149e4913}</Project>
+      <Project>{56009d92-d6f3-49ee-9e48-7b6cbf086a17}</Project>
     </ProjectReference>
     <ProjectReference Include="..\cuda_ray_caster\cuda_ray_caster.vcxproj">
-      <Project>{45d95b10-476d-4cc2-9548-65bd7ea437d9}</Project>
+      <Project>{4da00107-d1f2-4370-9bcf-0a22d5a899f1}</Project>
     </ProjectReference>
     <ProjectReference Include="..\emission\emission.vcxproj">
       <Project>{21db25d4-85e4-48e2-86a2-ac228605e760}</Project>
@@ -93,32 +93,32 @@
     <ProjectGuid>{0C15E81E-9F1A-4AEE-AF3B-5C77C77846C0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>test</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -182,8 +182,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.6.0.0.lib</AdditionalDependencies>
       <EntryPointSymbol>
       </EntryPointSymbol>
     </Link>
@@ -227,8 +227,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH_V9_1)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cudart.lib;optix_prime.1.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Configuration)\;$(CUDA_PATH)\lib\x64;$(OPTIX_LIB_X64_DIR)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart.lib;optix_prime.6.0.0.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

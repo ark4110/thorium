@@ -37,14 +37,14 @@ namespace math
     u = triangle.points[1] - triangle.points[0];
     v = triangle.points[2] - triangle.points[0];
     n = cross(u, v);              // cross product
-    if (dot(n, n) < _FLT_EPSILON)      // triangle is degenerate
+    if (dot(n, n) < FLT_EPSILON)      // triangle is degenerate
       return -1; // do not deal with this case
 
     dir = ray.direction; // ray direction vec3
     w0 = ray.origin - triangle.points[0];
     a = -dot(n, w0);
     b = dot(n, dir);
-    if (fabs(b) < _FLT_EPSILON) { // ray is  parallel to triangle plane
+    if (fabs(b) < FLT_EPSILON) { // ray is  parallel to triangle plane
       return -1; // if (a == 0) ray lies in triangle plane else ray disjoint from plane
     }
 

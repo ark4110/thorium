@@ -85,7 +85,7 @@ namespace obj_import
           return -OBJ_IMPORT_FORMAT_ERROR;
         }
 
-        strncpy(m.name, name.c_str(), std::min(sizeof(m.name), name.length()));
+        strncpy(m.name, name.c_str(), ::min(sizeof(m.name), name.length()));
 
         typedef std::map<std::string, float*> MaterialPropertiesMap;
         MaterialPropertiesMap materialProperties;
@@ -517,7 +517,7 @@ namespace obj_import
     scene->faces = (subject::face_t *)malloc(scene->n_faces * sizeof(subject::face_t));
     int n_current_face = 0;
 
-    scene->n_meshes = std::max(1, (int)meshes.size());
+    scene->n_meshes = ::max(1, (int)meshes.size());
     scene->meshes = (subject::mesh_t *)malloc(sizeof(subject::mesh_t) * scene->n_meshes);
     int n_current_mesh = 0;
 
@@ -593,7 +593,7 @@ namespace obj_import
       return -OBJ_IMPORT_ERROR;
     }
 
-    scene->n_materials = std::max(1, (int)materials.size());
+    scene->n_materials = ::max(1, (int)materials.size());
     scene->materials = (subject::material_t*)malloc(sizeof(subject::material_t) * scene->n_materials);
     if (materials.empty())
     {
