@@ -75,6 +75,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Include>$(NVCUDASAMPLES10_0_ROOT)/common/inc;$(OPTIX_INCLUDE_DIR)</Include>
+      <CodeGeneration>compute_35,sm_35;compute_61,sm_61</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -96,6 +97,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Include>$(NVCUDASAMPLES10_0_ROOT)/common/inc;$(OPTIX_INCLUDE_DIR)</Include>
+      <CodeGeneration>compute_35,sm_35;compute_61,sm_61</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
