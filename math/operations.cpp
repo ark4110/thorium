@@ -26,7 +26,7 @@ namespace math
     float diff = fabs(a - b);
     if (diff < precision)
       return true;
-    float scale = std::max(fabs(a), fabs(b));
+    float scale = ::max(fabs(a), fabs(b));
     return diff < scale * precision;
   }
 

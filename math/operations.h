@@ -21,14 +21,25 @@
 #pragma once
 
 #include "types.h"
-#include "operations.h"
 #include <cmath>
-#include <algorithm>
+//#include <algorithm>
 
 /**
  * Precision of floating point variable.
  */
 #define _FLT_EPSILON   0.00000001
+
+template <typename T>
+inline T min(T x, T y)
+{
+  return x < y ? x : y;
+}
+
+template <typename T>
+inline T max(T x, T y)
+{
+  return x < y ? y : x;
+}
 
 namespace math
 {
@@ -174,13 +185,13 @@ namespace math
   /// @brief 3d vector containing minimum coordinates of two 3d vectors.
   inline vec3 min(vec3 a, vec3 b)
   {
-    return make_vec3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+    return make_vec3(::min(a.x, b.x), ::min(a.y, b.y), ::min(a.z, b.z));
   }
 
   /// @brief 3d vector containing maximum coordinates of two 3d vectors.
   inline vec3 max(vec3 a, vec3 b)
   {
-    return make_vec3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+    return make_vec3(::max(a.x, b.x), ::max(a.y, b.y), ::max(a.z, b.z));
   }
 
   /// @brief Normalizes 3d vector.

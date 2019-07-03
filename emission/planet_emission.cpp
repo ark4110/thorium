@@ -87,7 +87,7 @@ namespace planet_emission
 
     const params_t& params = system->params;
     int n_elements = (2 * params.n_subdisivion - 1) * (2 * params.n_subdisivion - 1);
-    int n_element_rays =  std::max<int>(1, params.n_rays / n_elements);
+    int n_element_rays = max<int>(1, params.n_rays / n_elements);
 
     float inverse_na = 1.f / n_elements;
     
