@@ -29,7 +29,7 @@ namespace optix_hit_converter
   {
     return u * face.points[0] + v * face.points[1] + (1.f - u - v) * face.points[2];
   }
-
+#if CUDART_VERSION > 6
   __device__ inline int lane_id(void)
   {
     return threadIdx.x % warpSize;
@@ -72,6 +72,32 @@ namespace optix_hit_converter
       }
     }
   }
+
+#else
+    __global__ void convert_hits(const optix_hit_t* hits, int n_rays, int* offset,
+                                 const cuda_math::ray_t* s_ray, const float* s_power,
+                                 cuda_math::ray_t* t_ray, int* t_hit_face_idx, float* t_hit_distance, float* t_power
+    )
+    {
+      int ray_idx = blockDim.x * blockIdx.x + threadIdx.x;
+      int stride = gridDim.x * blockDim.x;
+      for (; ray_idx < n_rays; ray_idx += stride)
+      {
+        const optix_hit_t hit = hits[ray_idx];
+
+        if (hit.distance > 0)
+        {
+          int thread_offset = atomicAdd(offset, 1);
+
+          t_ray[thread_offset] = s_ray[ray_idx];
+          t_power[thread_offset] = s_power[ray_idx];
+          t_hit_face_idx[thread_offset] = hit.triangle_id;
+          t_hit_distance[thread_offset] = hit.distance;
+        }
+      }
+    }
+
+#endif
 
   bool resolve_supported()
   {
