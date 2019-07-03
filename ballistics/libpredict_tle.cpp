@@ -39,8 +39,8 @@ namespace libpredict_tle
     char line1[1024];
     char line2[1024];
 
-    strncpy(line1, params->orbit.tle.line_1, sizeof(line1));
-    strncpy(line2, params->orbit.tle.line_2, sizeof(line2));
+    strncpy(line1, params->orbit.tle.line_1, sizeof(line1) - 1);
+    strncpy(line2, params->orbit.tle.line_2, sizeof(line2) - 1);
 
     char *tle[2] = { line1, line2 };
     system->elements = predict_parse_tle(tle);

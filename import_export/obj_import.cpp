@@ -178,7 +178,8 @@ namespace obj_import
     std::map<std::string, math::mat44> transformations;
   };
 
-  auto animation(const char* filename, subject::scene_t* scene)
+  std::tuple<int, std::map<int, frame_t>, std::set<std::string>, std::set<std::string>, std::map<std::string, std::string>>
+   animation(const char* filename, subject::scene_t* scene)
   {
     int r = OBJ_IMPORT_OK;
 

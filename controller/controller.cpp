@@ -30,6 +30,7 @@
 #include "../emission/malley_cpu.h"
 #include "../emission/parallel_rays_cpu.h"
 #include "../import_export/obj_export.h"
+#include "../cuda_misc/cuda_util.h"
 #include <helper_timer.h>
 #include <iostream>
 #include <cstring>
@@ -84,7 +85,7 @@ int main(int argc, char* argv[])
   }
 
   int r = 0;
-  subject::system_t* scene_engine = subject::system_create(SCENE_ENGINE_CUDA);
+  subject::system_t* scene_engine = subject::system_create(is_cuda_supported() ? SCENE_ENGINE_CUDA : SCENE_ENGINE_HOST);
   if (!scene_engine)
   {
     fprintf(stderr, "Failed to create cuda scene engine\n");

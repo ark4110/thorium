@@ -217,7 +217,7 @@ namespace subject
     std::vector<int> order(animation->n_groups);
     std::iota(order.begin(), order.end(), 0);
     std::vector<int> correct_order = order;
-    std::sort(order.begin(), order.end(), [animation](int l, int r) { return animation->groups[l].n_offset < animation->groups[l].n_offset; });
+    std::sort(order.begin(), order.end(), [animation](int l, int r) { return animation->groups[l].n_offset < animation->groups[r].n_offset; });
 
     if (order != correct_order)
     {

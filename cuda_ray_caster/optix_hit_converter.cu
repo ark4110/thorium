@@ -148,7 +148,7 @@ namespace optix_hit_converter
     }
     else
     {
-      state->hits = (optix_hit_t*)realloc(state->hits, task->n_tasks * sizeof(optix_hit_t));
+      state->hits = (optix_hit_t*)realloc(state->hits, state->n_hits * sizeof(optix_hit_t));
     }
 
     return RAY_CASTER_OK;
