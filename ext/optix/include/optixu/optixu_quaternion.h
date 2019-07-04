@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) 2010 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA Corporation and its licensors retain all intellectual property and proprietary
  * rights in and to this software, related documentation and any modifications thereto.
@@ -19,15 +19,13 @@
  * SUCH DAMAGES
  */
 
-#ifndef __optixu_optixu_matrix_h__
-#define __optixu_optixu_matrix_h__
+#ifndef __optixu_optixu_quaternion_h__
+#define __optixu_optixu_quaternion_h__
 
-/*
- * This needs to be included first in order to make sure the CUDA vector types are defined
- * in the global namespace necessary to maintain backward compatibility.
- */
+// This needs to be included first, to make sure the CUDA vector types make it into the
+// global namespace to maintain backward compatibility.
 #include "optixu_math.h"
 
-#include "optixu_matrix_namespace.h"
+#include "optixu_quaternion_namespace.h"
 
-#endif /*  __optixu_optixu_matrix_h__ */
+#endif // #ifndef __optixu_optixu_quaternion_h__
