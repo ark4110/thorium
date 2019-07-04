@@ -23,12 +23,7 @@
 #include "types.h"
 #include <float.h>
 #include <cmath>
-//#include <algorithm>
-
-/**
- * Precision of floating point variable.
- */
-#define _FLT_EPSILON   0.00000001
+#include <cfloat>
 
 template <typename T>
 inline T min(T x, T y)
@@ -199,7 +194,7 @@ namespace math
   inline vec3 normalize(vec3 a)
   {
     point_t n = norm(a);
-    if (n > _FLT_EPSILON) {
+    if (n > FLT_EPSILON) {
       a /= n;
     }
     return a;
