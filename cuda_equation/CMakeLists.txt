@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(cuda_equation)
+project(cuda_equation CXX CUDA)
 
 set(SOURCE_FILES
     cuda_equation.h
@@ -9,4 +9,6 @@ set(SOURCE_FILES
     radiance_cuda.cu
     )
 
-cuda_add_library(cuda_equation STATIC ${SOURCE_FILES})
+add_library(cuda_equation STATIC ${SOURCE_FILES})
+
+target_compile_options(cuda_equation PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-gencode ${Thorium_CUDA_Compute_Config}>)

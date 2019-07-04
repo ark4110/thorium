@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(cuda_emission)
+project(cuda_emission CXX CUDA)
 
 set(SOURCE_FILES
     cuda_emission.h
@@ -10,5 +10,6 @@ set(SOURCE_FILES
     parallel_cuda.cu
     )
 
-cuda_add_library(cuda_emission STATIC ${SOURCE_FILES})
+add_library(cuda_emission STATIC ${SOURCE_FILES})
 
+target_compile_options(cuda_emission PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-gencode ${Thorium_CUDA_Compute_Config}>)

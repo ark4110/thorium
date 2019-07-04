@@ -23,6 +23,9 @@
   <ItemGroup>
     <CudaCompile Include="cuda_scene_engine.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{56009D92-D6F3-49EE-9E48-7B6CBF086A17}</ProjectGuid>
     <RootNamespace>cuda_misc</RootNamespace>

@@ -63,6 +63,18 @@ configure_file(${CMAKE_SOURCE_DIR}/models/dummy_hierarchy.task ${CMAKE_RUNTIME_O
 
 add_executable(tests ${SOURCE_FILES})
 
+target_compile_options(tests PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:-gencode arch=compute_61,code=sm_61>)
+
+# TODO: FIXME
+if(MSVC)
+  cmake_policy(SET CMP0053 NEW)
+  set(Optix_dll_name "optix_prime.6.0.0.dll")
+  message(STATUS "Copy ${Optix_dll_name} to directories with binaries")
+  configure_file(${OptiX_INSTALL_DIR}/bin64/${Optix_dll_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Debug/${Optix_dll_name} COPYONLY)
+  configure_file(${OptiX_INSTALL_DIR}/bin64/${Optix_dll_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Release/${Optix_dll_name} COPYONLY)
+  configure_file(${OptiX_INSTALL_DIR}/bin64/${Optix_dll_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/RelWithDebInfo/${Optix_dll_name} COPYONLY)
+endif()
+
 target_link_libraries(tests gtest gmock_main)
 target_link_libraries(tests ballistics ray_caster cuda_ray_caster form_factors import_export subject math thermal_solution thermal_equation emission cuda_emission cuda_misc cuda_equation)
 target_link_libraries(tests predict_static)

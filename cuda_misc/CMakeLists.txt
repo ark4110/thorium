@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(cuda_misc)
+project(cuda_misc CXX CUDA)
 
 set(SOURCE_FILES
     cuda_scene_engine.h
@@ -10,4 +10,6 @@ set(SOURCE_FILES
     cuda_util.cpp
     )
 
-cuda_add_library(cuda_misc STATIC ${SOURCE_FILES})
+add_library(cuda_misc STATIC ${SOURCE_FILES})
+
+target_compile_options(cuda_misc PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-gencode ${Thorium_CUDA_Compute_Config}>)

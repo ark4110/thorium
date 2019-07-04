@@ -22,6 +22,9 @@
     <CudaCompile Include="malley_cuda.cu" />
     <CudaCompile Include="parallel_cuda.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DDF30E5B-F2C2-4EE1-A543-9624FC804C2A}</ProjectGuid>
     <RootNamespace>cuda_emission</RootNamespace>

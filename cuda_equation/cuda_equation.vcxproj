@@ -21,6 +21,9 @@
   <ItemGroup>
     <CudaCompile Include="radiance_cuda.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{49F013A8-9430-4A97-836D-4F4968909DBA}</ProjectGuid>
     <RootNamespace>cuda_equation</RootNamespace>
