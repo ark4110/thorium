@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(cuda_misc CXX CUDA)
 
 set(SOURCE_FILES
+    cuda_data_util.cuh
     cuda_scene_engine.h
     cuda_scene_engine.cpp
     cuda_scene_engine.cuh

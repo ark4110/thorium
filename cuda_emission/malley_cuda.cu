@@ -22,6 +22,7 @@
 #include "../math/triangle.h"
 #include "../math/mat.h"
 #include "../math/ray.h"
+#include "../cuda_misc/cuda_data_util.cuh"
 #include <float.h>
 #include <random>
 #include <cmath>
@@ -30,12 +31,6 @@
 #include <cstring>
 
 #include <helper_cuda.h>
-
-#include <thrust/device_vector.h>
-#include <thrust/device_ptr.h>
-#include <thrust/scan.h>
-#include <thrust/reduce.h>
-#include <thrust/execution_policy.h>
 
 #include "../ext/cub/cub/cub.cuh"
 
@@ -106,6 +101,7 @@ namespace cuda_malley_emission
     grid_calculator_t calculate_weights_grid;
     grid_calculator_t scale_emission_grid;
     grid_calculator_t calculate_rays_count_grid;
+    grid_calculator_t update_mesh_rays_count;
 
     cudaStream_t memcpy_stream;
 
@@ -278,66 +274,37 @@ namespace cuda_malley_emission
     }
   }
 
+  __global__ void update_mesh_rays_count(int n_faces, const int* face_to_mesh, const int* face_front_rays_count, const int* face_rear_rays_count, int* mesh_rays_emitted)
+  {
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    for (; id < n_faces; id += blockDim.x * gridDim.x)
+    {
+      int mesh = face_to_mesh[id];
+      atomicAdd(mesh_rays_emitted + mesh, face_front_rays_count[id] + face_rear_rays_count[id]);
+    }
+  }
+
   void update_mesh_rays_emitted(system_t* system, emission::task_t* task)
   {
     scene_ctx_t s = make_scene_ctx(system->scene);
     const int n_faces = s.n_faces;
     const int n_meshes = system->scene->n_meshes;
 
-    int* mesh_indices;
-    int* ray_counts;
-    cudaMalloc((void**)&mesh_indices, n_meshes * sizeof(int));
-    cudaMalloc((void**)&ray_counts, n_meshes * sizeof(int));
-
-    thrust::reduce_by_key(thrust::device,
-      s.face_to_mesh,
-      s.face_to_mesh + n_faces,
-      system->face_front_rays_count,
-      mesh_indices,
-      ray_counts
-    );
-    cudaMemcpy(task->mesh_rays_emitted, ray_counts, n_meshes * sizeof(int), cudaMemcpyDeviceToHost);
-    thrust::reduce_by_key(thrust::device,
-      s.face_to_mesh,
-      s.face_to_mesh + n_faces,
-      system->face_rear_rays_count,
-      mesh_indices,
-      ray_counts
-    );
-    int* temp = (int*)malloc(n_meshes * sizeof(int));
-    cudaMemcpy(temp, ray_counts, n_meshes * sizeof(int), cudaMemcpyDeviceToHost);
-    cudaFree(mesh_indices);
-    cudaFree(ray_counts);
-    for (int m = 0; m != n_meshes; ++m)
-      task->mesh_rays_emitted[m] += temp[m];
-    free(temp);
-  }
-
-  __global__ void init_work_queue(int n_faces, int n_faces_per_block, int n_queue_size_per_block, int* queue, int* queue_head, int* queue_tail)
-  {
-    int idx = threadIdx.x;
-    int stride = blockDim.x;
-
-    int* block_queue = queue + blockIdx.x * n_queue_size_per_block;
-    int* head = queue_head + 32 * blockIdx.x;
-    int* tail = queue_tail + 32 * blockIdx.x;
-
-    if (threadIdx.x == 0)
+    int *d_mesh_rays_count = (int *) system->reduce_buffer;
     {
-      *head = 0;
-      const int final_block = (n_faces + n_faces_per_block - 1) / n_faces_per_block;
-      if (blockIdx.x + 1 < final_block)
-        *tail = n_faces_per_block;
-      else if (blockIdx.x + 1 == final_block)
-        *tail = n_faces - (blockIdx.x * n_faces_per_block);
-      else
-        *tail = 0;
+      cuda_math::reset << < 160, 256 >> > (n_meshes, d_mesh_rays_count);
+
+      auto g = system->update_mesh_rays_count;
+      update_mesh_rays_count << < g.grid(n_faces), g.block(n_faces)>> > (n_faces, s.face_to_mesh,
+              system->face_front_rays_count, system->face_rear_rays_count,
+              d_mesh_rays_count);
+
+      checkCudaErrors(cudaDeviceSynchronize());
     }
 
-    for (; idx < n_queue_size_per_block; idx += stride)
-    {
-      int face_idx = blockIdx.x * n_faces_per_block + idx;
-      block_queue[idx] = face_idx < n_faces ? face_idx : -1;
+    for (int m = 0; m != n_meshes; ++m) {
+      fprintf(stderr, "rays count %d %d\n", m, d_mesh_rays_count[m]);
+      task->mesh_rays_emitted[m] += d_mesh_rays_count[m];
     }
   }
 
@@ -475,6 +442,7 @@ namespace cuda_malley_emission
     system->calculate_weights_grid = grid_calculator_t(calculate_weights);
     system->scale_emission_grid = grid_calculator_t(scale_emission);
     system->calculate_rays_count_grid = grid_calculator_t(calculate_rays_count);
+    system->update_mesh_rays_count = grid_calculator_t(update_mesh_rays_count);
 
     checkCudaErrors(cudaStreamCreate(&system->memcpy_stream));
 
@@ -505,7 +473,7 @@ namespace cuda_malley_emission
     checkCudaErrors(cudaMalloc((void**)&system->face_rays_count_next, scene->n_faces * sizeof(int)));
 
     system->reduce_buffer_size = std::max(size_t(4096), scene->n_faces * sizeof(int));
-    checkCudaErrors(cudaMalloc((void**)&system->reduce_buffer, system->reduce_buffer_size));
+    checkCudaErrors(cudaMallocManaged((void**)&system->reduce_buffer, system->reduce_buffer_size));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_float, 2 * sizeof(float)));
     checkCudaErrors(cudaMalloc((void**)&system->reduce_result_int, 2 * sizeof(int)));
 
