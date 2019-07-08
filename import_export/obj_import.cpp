@@ -785,6 +785,10 @@ namespace obj_import
     int n_meshes_loaded = 0;
     int allocated = 0;
 
+    float default_tmprt = -1;
+    actions["default_tmprt"] = {[&default_tmprt](const char* line) { return sscanf(line, "%f", &default_tmprt) == 1; },
+      [&default_tmprt]() {fprintf(stderr, "Default temperature for meshes %f\n", default_tmprt);} };
+
     actions["tmprt"] = { [&](const char* line) {
         if (allocated <= n_meshes_loaded)
         {
@@ -879,13 +883,33 @@ namespace obj_import
 
     if (initialized_meshes.size() != mesh_name_to_id.size())
     {
-      fprintf(stderr, "ERROR: Not all named meshes initialized with its initial temperature value. Broken meshes:\n");
-      for (const auto& r : mesh_name_to_id)
-      {
-        if (initialized_meshes.find(r.first) == initialized_meshes.end())
-          fprintf(stderr, "\t%s\n", r.first.c_str());
+      if (default_tmprt > 0) {
+        fprintf(stderr, "Setting default temperature %f for meshes.'\n", default_tmprt);
+        for (const auto& m: mesh_name_to_id)
+        {
+          if (initialized_meshes.find(m.first) != initialized_meshes.end())
+            continue;
+          //fprintf(stderr, "%s,", m.first.c_str());
+          int mesh_idx = m.second;
+          if (allocated <= mesh_idx)
+          {
+            allocated = mesh_idx + 8;
+            t->temperatures = (float*)realloc(t->temperatures, allocated * sizeof(float));
+          }
+
+          ++n_meshes_loaded;
+          initialized_meshes.insert(m.first);
+          t->temperatures[mesh_idx] = default_tmprt;
+        }
       }
-      return -OBJ_IMPORT_FILE_ERROR;
+      else {
+        fprintf(stderr, "ERROR: Not all named meshes initialized with its initial temperature value. Broken meshes:\n");
+        for (const auto &r : mesh_name_to_id) {
+          if (initialized_meshes.find(r.first) == initialized_meshes.end())
+            fprintf(stderr, "\t%s\n", r.first.c_str());
+        }
+        return -OBJ_IMPORT_FILE_ERROR;
+      }
     }
 
     return n_meshes_loaded;
