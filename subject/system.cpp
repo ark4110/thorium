@@ -166,6 +166,9 @@ namespace subject
       return SCENE_ENGINE_OK;
 
     const animation_t* anim = scene->animation;
+		if (anim->n_frames == 0)
+			return SCENE_ENGINE_OK;
+
     if (n_frame >= anim->n_frames)
       return -SCENE_ENGINE_FRAME_OUT_OF_RANGE;
 

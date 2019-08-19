@@ -272,8 +272,12 @@ namespace obj_import
     }
 
     animation_free(scene->animation);
-    scene->animation = subject::animation_create(n_groups, n_frames);
-    scene->animation->frame_time_step = frame_time_scale;
+
+		if (n_frames)
+		{
+			scene->animation = subject::animation_create(n_groups, n_frames);
+			scene->animation->frame_time_step = frame_time_scale;
+		}
 
     for (const auto& frame_iter : frames)
     {
@@ -300,7 +304,7 @@ namespace obj_import
         break;
     }
 
-    if (r == OBJ_IMPORT_OK)
+    if (n_frames && r == OBJ_IMPORT_OK)
     {
       fprintf(stderr, "INFO: Loaded %d animation frames\n", n_frames);
       fprintf(stderr, "INFO: Loaded %d animation groups\n", n_groups);
