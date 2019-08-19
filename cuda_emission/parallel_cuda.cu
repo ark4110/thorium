@@ -30,12 +30,6 @@
 #include <cstring>
 
 #include <helper_cuda.h>
-#include <thrust/device_vector.h>
-#include <thrust/device_ptr.h>
-#include <thrust/scan.h>
-#include <thrust/execution_policy.h>
-
-#include <iostream>
 
 namespace {
 #include <curand_mtgp32_host.h>
