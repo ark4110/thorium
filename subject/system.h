@@ -34,7 +34,7 @@ namespace subject
     float density; ///< kg/m^3
     float heat_capacity; ///< dQ/dT J/(kg*K)
     float thermal_conductivity; ///< W/(m*K)
-    float thickness; ///< m
+    float thickness; ///< m, <= 0 for solid
   };
 
   shell_properties_t default_shell_properties();
@@ -211,6 +211,8 @@ namespace subject
 
   float mesh_area(const scene_t* scene, const mesh_t& mesh);
   float mesh_area(const scene_t* scene, int mesh_idx);
+  float mesh_volume(const scene_t* scene, const mesh_t& mesh);
+  float mesh_volume(const scene_t* scene, int mesh_idx);
 
   /// @brief Calculate areas for all meshes.
   /// @return Total area.

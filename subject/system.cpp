@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <cstdio>
 #include <cstring>
+#include <assert.h>
 
 #include <algorithm>
 #include <numeric>
@@ -407,6 +408,18 @@ namespace subject
   float mesh_area(const scene_t* scene, int mesh_idx)
   {
     return mesh_area(scene, scene->meshes[mesh_idx]);
+  }
+
+  float mesh_volume(const scene_t* scene, const mesh_t& mesh)
+  {
+    assert(mesh.n_faces == 3);
+    const face_t* faces = scene->faces + mesh.first_idx;
+    return math::tetrahedron_volume(faces);
+  }
+
+  float mesh_volume(const scene_t* scene, int mesh_idx)
+  {
+    return mesh_volume(scene, scene->meshes[mesh_idx]);
   }
 
   float build_meshes_areas(const scene_t* scene, float** areas)

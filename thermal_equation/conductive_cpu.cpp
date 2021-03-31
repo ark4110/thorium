@@ -19,6 +19,8 @@
 #include "../math/triangle.h"
 #include "../math/operations.h"
 #include <cstdlib>
+#include <cstdio>
+#include <assert.h>
 #include <vector>
 
 namespace conductive_equation
@@ -169,15 +171,19 @@ namespace conductive_equation
 
     unsigned char lp[3];
     unsigned char rp[3];
-    if (math::decode_vertex_mapping(vertex_mapping, lp, rp) < 2)
+    int n_points = math::decode_vertex_mapping(vertex_mapping, lp, rp);
+    if (n_points < 2)
       return 0;
+
+    const bool edge_contact = n_points == 2;
 
     subject::scene_t* scene = param->system->scene;
     const math::vec3* mesh_centers = param->system->mesh_centers;
 
     const subject::face_t& l_face = scene->faces[l];
-    float edge_length = norm(l_face.points[lp[0]] - l_face.points[lp[1]]);
-    math::vec3 median = (l_face.points[lp[0]] + l_face.points[lp[1]]) / 2.f;
+    math::vec3 median = edge_contact ? ((l_face.points[lp[0]] + l_face.points[lp[1]]) / 2.f)
+            : math::triangle_center(l_face);
+
     const math::vec3& l_center = mesh_centers[l_mesh_idx];
     float l_dist = norm(median - l_center);
 
@@ -186,9 +192,25 @@ namespace conductive_equation
 
     const subject::material_t& l_matertial = mesh_material(scene, l_mesh_idx);
     const subject::material_t& r_matertial = mesh_material(scene, r_mesh_idx);
-    
-    float thickness = std::fminf(l_matertial.shell.thickness, r_matertial.shell.thickness);
-    float area = thickness * edge_length;
+
+    float area = 0;
+    if (edge_contact)
+    {
+      float thickness = std::fminf(l_matertial.shell.thickness, r_matertial.shell.thickness);
+      float edge_length = norm(l_face.points[lp[0]] - l_face.points[lp[1]]);
+      area = thickness * edge_length;
+    }
+    else
+    {
+      if (l_matertial.shell.thickness > 0 || r_matertial.shell.thickness > 0)
+      {
+        fprintf(stderr, "Area contact of not solid objects.\n");
+        assert(false);
+      }
+
+      area = math::triangle_area(l_face);
+    }
+
     float conductivity_resistance = (l_dist / l_matertial.shell.thermal_conductivity + r_dist / r_matertial.shell.thermal_conductivity) / area;
 
     float l_temp = param->task->temperatures[l_mesh_idx];

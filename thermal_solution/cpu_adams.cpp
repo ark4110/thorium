@@ -124,7 +124,8 @@ namespace cpu_adams
       double power_balance = task->absorption[m] - task->emission[m];
       const subject::shell_properties_t& shell = mesh_material(system->scene, m).shell;
       /// @todo Precalculate areas and store with mesh (required for form_factors, sb_ff_te and here).
-      const float C = mesh_area(system->scene, m) * shell.thickness * shell.density * shell.heat_capacity;
+      const float volume = shell.thickness > 0 ? (mesh_area(system->scene, m) * shell.thickness) : mesh_volume(system->scene, m);
+      const float C = volume * shell.density * shell.heat_capacity;
       energy[m] = (float)(power_balance / C);
     }
 
