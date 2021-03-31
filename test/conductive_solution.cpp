@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with thorium.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <math/rod.h>
 #include "gtest/gtest.h"
 
 #include "math/operations.h"
@@ -224,5 +225,148 @@ TEST_F(TetrahedronConductiveSolution, ReachBalance)
   ASSERT_LE(Task->n_step, 500);
   float currentEnergy = CalculateEnergy(Task->temperatures);
   ASSERT_NEAR(1.f, currentEnergy / initialEnergy, 0.001f);
+}
+
+namespace
+{
+  struct TetrahedronRod
+  {
+    TetrahedronRod(int count)
+    {
+      math::rod_t cube = subject::rod_cube();
+      math::tetrahedron_t tetras[6];
+      math::rod_to_six_tetrahedrons(cube, tetras);
+
+      std::vector<math::face_t> left_faces(24);
+      for (int i = 0; i != 6; ++i)
+        math::tetrahedron_build_faces(tetras[i], left_faces.data() + i * 4);
+
+      std::vector<math::face_t> right_faces = left_faces;
+      for (auto &f: right_faces)
+      {
+
+        for (auto &p: f.points)
+          p.x = 2 - p.x;
+      }
+
+      for (int i = 0; i != count; ++i)
+      {
+        auto &source = (i % 2 == 0) ? left_faces : right_faces;
+        Faces.insert(Faces.end(), source.begin(), source.end());
+
+        for (auto &f: source)
+          for (auto &p: f.points)
+            p.x += 2;
+
+        for (int mi = 0; mi != 6; ++mi)
+        {
+          subject::mesh_t mesh = {};
+          mesh.first_idx = i * 6 * 4 + mi * 4;
+          mesh.n_faces = 4;
+          mesh.material_idx = 0;
+          Meshes.push_back(mesh);
+        }
+      }
+    }
+
+    std::vector<subject::face_t> Faces;
+    std::vector<subject::mesh_t> Meshes;
+  };
+
+  struct TetrahedronRodConductiveSolution
+          : TetrahedronRod,
+            public Test
+  {
+    TetrahedronRodConductiveSolution()
+            : TetrahedronRod(11)
+    {
+      Materials[0] = subject::material_Al(0);
+      Materials[0].front = {};
+      Materials[0].rear = {};
+
+      Scene = {(int) Faces.size(), Faces.data(),
+               (int) Meshes.size(), Meshes.data(),
+               1, Materials};
+
+      conductive_equation::params_t params;
+      Equation = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &params);
+
+      SolutionParams = {1, &Equation};
+      System = thermal_solution::system_create(THERMAL_SOLUTION_CPU_ADAMS, &SolutionParams);
+
+      for (size_t mi = 0; mi != Meshes.size(); ++mi)
+      {
+        float element_index = (int)mi - (int)Meshes.size() / 2;
+        Temperatures.push_back(300 + element_index);
+      }
+
+      Task = thermal_solution::task_create(Scene.n_meshes);
+      Task->time_delta = 0.1f;
+    }
+
+    ~TetrahedronRodConductiveSolution()
+    {
+      thermal_solution::task_free(Task);
+      thermal_solution::system_free(System);
+      thermal_equation::system_free(Equation);
+    }
+
+    std::pair<float, float> CalculateEnergy(const float* temperatures) const
+    {
+      double volume_acc = 0;
+      double energy_acc = 0;
+      for (size_t mi = 0; mi != Meshes.size(); ++mi)
+      {
+        auto meshStat = CalculateMeshEnergy(mi, temperatures);
+        volume_acc += meshStat.first;
+        energy_acc += meshStat.second;
+      }
+
+      return {volume_acc, energy_acc};
+    }
+
+    std::pair<float, float> CalculateMeshEnergy(int mi, const float* temperatures) const
+    {
+      math::tetrahedron_t tetra;
+      math::tetrahedron_build_from_faces(Faces.data() + 4 * mi, tetra.points);
+      float volume = math::tetrahedron_volume(tetra);
+
+      return {volume, volume * temperatures[mi]};
+    }
+
+    thermal_equation::system_t *Equation;
+    thermal_solution::params_t SolutionParams;
+    thermal_solution::system_t *System;
+    subject::material_t Materials[1];
+    subject::scene_t Scene;
+    std::vector<float> Temperatures;
+    thermal_solution::task_t *Task;
+  };
+}
+
+TEST_F(TetrahedronRodConductiveSolution, ReachBalance)
+{
+  using namespace thermal_solution;
+  Task->time_delta = 20;
+
+  const auto initialState = CalculateEnergy(Temperatures.data());
+  int r = 0;
+  host_scene_finalize(&Scene);
+  r = system_set_scene(System, &Scene, Temperatures.data());
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  r = system_calculate(System, Task);
+  ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  while (Task->n_step < 50000 && fabsf(Task->temperatures[Meshes.size() - 1] - Task->temperatures[0]) > 0.01)
+  {
+    r = system_calculate(System, Task);
+    ASSERT_EQ(THERMAL_SOLUTION_OK, r);
+  }
+  auto currentState = CalculateEnergy(Task->temperatures);
+  ASSERT_NEAR(1.f, currentState.second / initialState.second, 0.001f);
+
+  float avgEnergy = initialState.second / initialState.first;
+
+  auto beginState = CalculateMeshEnergy(0, Task->temperatures);
+  ASSERT_NEAR(beginState.second / beginState.first, avgEnergy, 0.001f);
 }
 

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../math/types.h"
+#include "../math/rod.h"
 #include "system.h"
 
 namespace subject
@@ -31,4 +32,6 @@ namespace subject
   material_t material_Al(float thickness);
 
   material_t material_absolute_absorbance();
+
+  math::rod_t rod_cube();
 }
