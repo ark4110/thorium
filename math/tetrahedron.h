@@ -28,5 +28,12 @@ namespace math
   int tetrahedron_build_from_faces(const triangle_t *faces, vec3 *vertices);
   void tetrahedron_build_faces(const tetrahedron_t &object, triangle_t *faces);
   float tetrahedron_volume(const vec3 *vertices);
+  float tetrahedron_volume(const tetrahedron_t& object);
   float tetrahedron_volume(const triangle_t *faces);
+
+  /**
+   @brief Check if two tetrahedrons has adjacent face
+   @note Suboptimal, for tests only.
+   */
+  bool tetrahedron_has_adjacent_face(const tetrahedron_t& l, const tetrahedron_t& r);
 }

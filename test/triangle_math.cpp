@@ -19,6 +19,7 @@
 #include <math/operations.h>
 #include <math/triangle.h>
 #include <math/tetrahedron.h>
+#include <math/rod.h>
 
 #include <algorithm>
 #include <float.h>
@@ -190,5 +191,52 @@ TEST(TetrahedronVolume, FacesPermutation)
         }
       }
     }
+  }
+}
+
+namespace
+{
+  const math::rod_t rod_cube = {{
+                              {0, 0, 0},
+                              {1, 0, 0},
+                              {0, 1, 0},
+                              {0, 0, 1},
+                              {0, 1, 1},
+                              {1, 1, 0},
+                              {1, 1, 1},
+                              {1, 0, 1}
+                      }};
+}
+
+TEST(RodToSixTetrahedronSplit, PreserveVolume)
+{
+  math::tetrahedron_t tetras[6];
+  math::rod_to_six_tetrahedrons(rod_cube, tetras);
+
+  float volume = 0;
+  for (int ti = 0; ti != 6; ++ti)
+    volume += math::tetrahedron_volume(tetras[ti]);
+
+  EXPECT_NEAR(volume, 1.f, 0.000001);
+}
+
+TEST(RodSixTetrahedronSplit, HasTwoAdjacentFaces)
+{
+  math::tetrahedron_t tetras[6];
+  math::rod_to_six_tetrahedrons(rod_cube, tetras);
+
+  for (int i = 0; i != 6; ++i)
+  {
+    int adjacent = 0;
+    for (int j = 0; j != 6; ++j)
+    {
+      if (i == j)
+        continue;
+
+      if (tetrahedron_has_adjacent_face(tetras[i], tetras[j]))
+        ++adjacent;
+    }
+
+      EXPECT_EQ(adjacent, 2);
   }
 }

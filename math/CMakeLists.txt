@@ -14,6 +14,8 @@ set(SOURCE_FILES
   triangle.cpp
   triangle.h
   tetrahedron.h
-  tetrahedron.cpp)
+  tetrahedron.cpp
+  rod.h
+  rod.cpp)
 
 add_library(math STATIC ${SOURCE_FILES})

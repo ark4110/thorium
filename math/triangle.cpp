@@ -23,6 +23,7 @@
 #include "mat.h"
 #include <cmath>
 #include <float.h>
+#include <cstdio>
 #include "Miniball.hpp"
 
 namespace math
