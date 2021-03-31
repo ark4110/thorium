@@ -19,6 +19,7 @@
 #include <math/operations.h>
 #include <math/triangle.h>
 
+#include <algorithm>
 #include <float.h>
 
 using namespace testing;
@@ -129,3 +130,64 @@ TEST(HasAdjacentEdge, AcceptMultipleCommonEdges)
   EXPECT_TRUE(triangle_has_adjacent_edge(t1, t2));
 }
 
+TEST(TetrahedronVolume, SimpleVolume1)
+{
+  math::tetrahedron_t test_tetra = {{{1, 0, 0},
+                                            {1, 0, 1},
+                                            {1, 1, 1},
+                                            {0, 0, 1}}};
+  float volume = tetrahedron_volume(test_tetra.points);
+  EXPECT_NEAR(volume, 1.f / 6.f, 0.00001);
+}
+
+TEST(TetrahedronVolume, SimpleVolume2)
+{
+  math::tetrahedron_t test_tetra = {{{0, 0, 0},
+                                            {1, 0, 0},
+                                            {0, 1, 0},
+                                            {0, 0, 1}}};
+  float volume = tetrahedron_volume(test_tetra.points);
+  EXPECT_NEAR(volume, 1.f / 6.f, 0.00001);
+}
+
+TEST(TetrahedronVolume, FromFaces)
+{
+  math::tetrahedron_t test_tetra = {{{0, 0, 0},
+                                            {1, 0, 0},
+                                            {0, 1, 0},
+                                            {0, 0, 1}}};
+  math::face_t faces[4];
+  tetrahedron_build_faces(test_tetra, faces);
+  float volume = tetrahedron_volume(faces);
+  EXPECT_NEAR(volume, 1.f / 6.f, 0.00001);
+}
+
+TEST(TetrahedronVolume, FacesPermutation)
+{
+  math::tetrahedron_t test_tetra = {{{0, 0, 0},
+                                            {1, 0, 0},
+                                            {0, 1, 0},
+                                            {0, 0, 1}}};
+  math::face_t faces[4];
+  tetrahedron_build_faces(test_tetra, faces);
+
+  for (int fi0 = 0; fi0 != 6; ++fi0)
+  {
+    std::next_permutation(faces[0].points, faces[0].points + 3);
+    for (int fi1 = 0; fi1 != 6; ++fi1)
+    {
+      std::next_permutation(faces[1].points, faces[1].points + 3);
+      for (int fi2 = 0; fi2 != 6; ++fi2)
+      {
+        std::next_permutation(faces[2].points, faces[2].points + 3);
+        for (int fi3 = 0; fi3 != 6; ++fi3)
+        {
+          std::next_permutation(faces[3].points, faces[3].points + 3);
+
+          float volume = tetrahedron_volume(faces);
+          EXPECT_NEAR(volume, 1.f / 6.f, 0.00001);
+        }
+      }
+    }
+  }
+}

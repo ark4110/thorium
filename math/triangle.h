@@ -57,14 +57,14 @@ namespace math
 
   /**
     @brief Find triangle vertex closest to point.
-    @return -1 if point is not close enought, vertex index (0-2) otherwise.
+    @return -1 if point is not close enough, vertex index (0-2) otherwise.
   */
   int triangle_find_adjacent_vertex(const triangle_t& t, const vec3& p);
 
   /**
     @brief Find triangle vertex closest to point.
     @param triangle_scale 1/triangle specific size.
-    @return -1 if point is not close enought, vertex index (0-2) otherwise.
+    @return -1 if point is not close enough, vertex index (0-2) otherwise.
   */
   int triangle_find_adjacent_vertex(const triangle_t& t, const vec3& p, float triangle_scale);
 
@@ -81,8 +81,8 @@ namespace math
   int make_vertex_mapping_23(char p2, char p3);
 
   /**
-    @brief Decode verticies mapping.
-    @return Count of encoded verticies.
+    @brief Decode vertices mapping.
+    @return Count of encoded vertices.
     @todo Support mapping of single vertex.
   */
   int decode_vertex_mapping(int vertex_mapping, unsigned char*lp, unsigned char* rp);
@@ -144,4 +144,14 @@ namespace math
 
   triangle_t triangle_translate(triangle_t triangle, vec3 translation);
   triangle_t triangle_rotate(triangle_t triangle, vec3 from, vec3 to);
+
+  struct tetrahedron_t
+  {
+    vec3 points[4];
+  };
+
+  int tetrahedron_build_from_faces(const triangle_t* faces, vec3* vertices);
+  void tetrahedron_build_faces(const tetrahedron_t& object, triangle_t* faces);
+  float tetrahedron_volume(const vec3* vertices);
+  float tetrahedron_volume(const triangle_t* faces);
 }
