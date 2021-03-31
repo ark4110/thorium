@@ -412,7 +412,7 @@ namespace subject
 
   float mesh_volume(const scene_t* scene, const mesh_t& mesh)
   {
-    assert(mesh.n_faces == 3);
+    assert(mesh.n_faces == 4);
     const face_t* faces = scene->faces + mesh.first_idx;
     return math::tetrahedron_volume(faces);
   }
