@@ -144,14 +144,4 @@ namespace math
 
   triangle_t triangle_translate(triangle_t triangle, vec3 translation);
   triangle_t triangle_rotate(triangle_t triangle, vec3 from, vec3 to);
-
-  struct tetrahedron_t
-  {
-    vec3 points[4];
-  };
-
-  int tetrahedron_build_from_faces(const triangle_t* faces, vec3* vertices);
-  void tetrahedron_build_faces(const tetrahedron_t& object, triangle_t* faces);
-  float tetrahedron_volume(const vec3* vertices);
-  float tetrahedron_volume(const triangle_t* faces);
 }

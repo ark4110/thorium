@@ -18,6 +18,7 @@
 
 #include "math/operations.h"
 #include "math/triangle.h"
+#include "math/tetrahedron.h"
 #include "emission/system.h"
 #include "form_factors/system.h"
 #include "thermal_solution/system.h"

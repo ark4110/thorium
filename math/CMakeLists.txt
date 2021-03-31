@@ -13,6 +13,7 @@ set(SOURCE_FILES
   three_way_compare.h
   triangle.cpp
   triangle.h
-)
+  tetrahedron.h
+  tetrahedron.cpp)
 
 add_library(math STATIC ${SOURCE_FILES})

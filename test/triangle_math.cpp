@@ -18,6 +18,7 @@
 
 #include <math/operations.h>
 #include <math/triangle.h>
+#include <math/tetrahedron.h>
 
 #include <algorithm>
 #include <float.h>

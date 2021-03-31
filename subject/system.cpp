@@ -21,6 +21,7 @@
 #include "system.h"
 #include "../math/operations.h"
 #include "../math/triangle.h"
+#include "../math/tetrahedron.h"
 #include "../math/mat.h"
 #include "../cuda_misc/cuda_scene_engine.h"
 #include <stdlib.h>
