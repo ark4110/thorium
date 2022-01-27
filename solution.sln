@@ -16,9 +16,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gtest-md", "ext\gtest\msvc\gtest-md.vcxproj", "{C8F6C172-56F2-4E76-B5FA-C3B423B31BE8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ray_caster", "ray_caster\ray_caster.vcxproj", "{0730886B-2DF9-40DC-914C-07E6A22AA7B4}"
-	ProjectSection(ProjectDependencies) = postProject
-		{4DA00107-D1F2-4370-9BCF-0A22D5A899F1} = {4DA00107-D1F2-4370-9BCF-0A22D5A899F1}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "math", "math\math.vcxproj", "{4DE00AF7-2632-4A7B-981A-9411663D4048}"
 EndProject

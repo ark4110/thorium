@@ -16,7 +16,7 @@
 
 
 #include "cuda_scene_engine.h"
-#include "../cuda_check_errors.h"
+#include "../cuda_misc/cuda_check_errors.h"
 
 namespace cuda_scene_engine
 {

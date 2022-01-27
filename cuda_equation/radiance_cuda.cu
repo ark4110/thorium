@@ -21,6 +21,7 @@
 #include "../math/operations.h"
 #include "../math/ray.h"
 #include "../thermal_equation/radiance_cpu.h"
+#include "../cuda_misc/cuda_check_errors.h"
 #include <float.h>
 #include <cmath>
 #include <random>
@@ -33,7 +34,6 @@
 #include <map>
 #include <thrust/system/cuda/vector.h>
 
-#include <helper_cuda.h>
 namespace {
 #include <curand_mtgp32_host.h>
 #include <curand_mtgp32dc_p_11213.h>

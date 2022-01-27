@@ -23,7 +23,7 @@
 #include "../math/mat.h"
 #include "../math/ray.h"
 #include "../cuda_misc/cuda_data_util.cuh"
-#include "../cuda_check_errors.h"
+#include "../cuda_misc/cuda_check_errors.h"
 #include <float.h>
 #include <random>
 #include <cmath>

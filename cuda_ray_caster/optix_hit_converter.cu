@@ -17,8 +17,9 @@
 #include "optix_hit_converter.h"
 #include "optix_hit_converter.cuh"
 #include <stdlib.h>
-#include <helper_cuda.h>
 #include <cuda_runtime_api.h>
+#include "../cuda_misc/cuda_math.cuh"
+#include "../cuda_misc/cuda_check_errors.h"
 #include "../math/operations.h"
 #include "../math/triangle.h"
 #include "../cuda_misc/cuda_math.cuh"
