@@ -43,6 +43,120 @@ namespace obj_import
     int indices[3];
   };
 
+  int parse_material(std::istream& stream, std::string header, unsigned& line, std::vector<subject::material_t>& materials, std::map<std::string, int>& library)
+  {
+    std::map<std::string, bool> known_unknown_attributes = {
+            {"Ns", true},
+            {"Ka", true},
+            {"Kd", true},
+            {"Ks", true},
+            {"Ke", true},
+            {"Ni", true},
+            {"d", true},
+            {"illum", true}
+    };
+
+    if (strncmp("newmtl", header.c_str(), 6) != 0)
+    {
+      fprintf(stderr, "Failed to parse newmtl at line %d\n", line);
+      return -OBJ_IMPORT_FORMAT_ERROR;
+    }
+
+    std::string name = header.substr(7);
+
+    subject::material_t m = subject::material_t();
+
+    if (name.length() >= sizeof(m.name))
+    {
+      fprintf(stderr, "Material name '%s' is too long at line %d\n", name.c_str(), line);
+      return -OBJ_IMPORT_FORMAT_ERROR;
+    }
+
+    strncpy(m.name, name.c_str(), ::min(sizeof(m.name), name.length()));
+
+    typedef std::map<std::string, float*> MaterialPropertiesMap;
+    MaterialPropertiesMap materialProperties;
+    materialProperties["shell.density"] = &m.shell.density;
+    materialProperties["shell.heat_capacity"] = &m.shell.heat_capacity;
+    materialProperties["shell.thermal_conductivity"] = &m.shell.thermal_conductivity;
+    materialProperties["shell.thickness"] = &m.shell.thickness;
+    materialProperties["front.specular_reflectance"] = &m.front.optical.specular_reflectance;
+    materialProperties["front.diffuse_reflectance"] = &m.front.optical.diffuse_reflectance;
+    materialProperties["front.absorbance"] = &m.front.optical.absorbance;
+    materialProperties["front.transmittance"] = &m.front.optical.transmittance;
+    materialProperties["front.emissivity"] = &m.front.emission.emissivity;
+    materialProperties["rear.specular_reflectance"] = &m.rear.optical.specular_reflectance;
+    materialProperties["rear.diffuse_reflectance"] = &m.rear.optical.diffuse_reflectance;
+    materialProperties["rear.absorbance"] = &m.rear.optical.absorbance;
+    materialProperties["rear.transmittance"] = &m.rear.optical.transmittance;
+    materialProperties["rear.emissivity"] = &m.rear.emission.emissivity;
+
+    typedef std::set<std::string> StringSet;
+    StringSet parsedParameters;
+
+    std::string str;
+    while (getline(stream, str) && parsedParameters.size() != materialProperties.size())
+    {
+      ++line;
+      if (str == "")
+        break;
+
+      if (str[0] == '#')
+        continue;
+
+      std::string::size_type pos = str.find_first_of(" \t");
+      if (pos + 1 >= str.length())
+      {
+        fprintf(stderr, "Invalid material definition format at line %d\n", line);
+        return -OBJ_IMPORT_FORMAT_ERROR;
+      }
+
+      std::string propertyName = str.substr(0, pos);
+      std::string propertyValue = str.substr(pos + 1);
+
+      MaterialPropertiesMap::const_iterator found = materialProperties.find(propertyName);
+      if (found == materialProperties.end())
+      {
+        bool& known = known_unknown_attributes[propertyName];
+        if (!known)
+        {
+          known = true;
+          fprintf(stderr, "Skip unknown material property '%s'. First at line %d\n", propertyName.c_str(), line);
+        }
+        continue;
+      }
+
+      if (sscanf(propertyValue.c_str(), "%f", found->second) != 1)
+      {
+        fprintf(stderr, "Failed to parse material '%s' value '%s' at line %d\n", propertyName.c_str(), propertyValue.c_str(), line);
+        return -OBJ_IMPORT_MATERIAL_INVALID_PARAMETER_VALUE;
+      }
+
+      parsedParameters.insert(propertyName);
+    }
+
+    if (parsedParameters.size() != materialProperties.size())
+    {
+      std::string missingProperties;
+      for (MaterialPropertiesMap::const_iterator checkName = materialProperties.begin(); checkName != materialProperties.end(); ++checkName)
+      {
+        if (parsedParameters.find(checkName->first) == parsedParameters.end())
+        {
+          missingProperties += missingProperties.empty() ? "" : ", ";
+          missingProperties += "'" + checkName->first + "'";
+        }
+      }
+
+      fprintf(stderr, "Not enough (%zu) material parameters for material '%s' at line %d, missing properties are %s\n", materialProperties.size() - parsedParameters.size(), name.c_str(), line, missingProperties.c_str());
+      return -OBJ_IMPORT_MATERIAL_NOT_ENOUGH_PARAMETERS;
+    }
+
+    materials.push_back(m);
+    library[name] = (int)(materials.size() - 1);
+
+    return 0;
+  }
+
   int material_lib(const char* filename, std::vector<subject::material_t>& materials, std::map<std::string, int>& library)
   {
     std::ifstream file(filename);
@@ -55,8 +169,6 @@ namespace obj_import
     std::string str;
     unsigned line = 0;
 
-    std::map<std::string, bool> known_unknown_attributes = { {"Ns", true}, {"Ka", true}, {"Kd", true}, {"Ks", true}, {"Ke", true}, {"Ni", true}, {"d", true}, {"illum", true} };
-
     while (getline(file, str))
     {
       ++line;
@@ -67,106 +179,12 @@ namespace obj_import
 
       switch (str[0])
       {
-      case 'n':
-      {
-        if (strncmp("newmtl", str.c_str(), 6) != 0)
+        case 'n':
         {
-          fprintf(stderr, "Failed to parse newmtl at line %d\n", line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
+          if (int r = parse_material(file, str, line, materials, library))
+            return r;
         }
-
-        std::string name = str.substr(7);
-
-        subject::material_t m = subject::material_t();
-
-        if (name.length() >= sizeof(m.name))
-        {
-          fprintf(stderr, "Material name '%s' is too long at line %d\n", name.c_str(), line);
-          return -OBJ_IMPORT_FORMAT_ERROR;
-        }
-
-        strncpy(m.name, name.c_str(), ::min(sizeof(m.name), name.length()));
-
-        typedef std::map<std::string, float*> MaterialPropertiesMap;
-        MaterialPropertiesMap materialProperties;
-        materialProperties["shell.density"] = &m.shell.density;
-        materialProperties["shell.heat_capacity"] = &m.shell.heat_capacity;
-        materialProperties["shell.thermal_conductivity"] = &m.shell.thermal_conductivity;
-        materialProperties["shell.thickness"] = &m.shell.thickness;
-        materialProperties["front.specular_reflectance"] = &m.front.optical.specular_reflectance;
-        materialProperties["front.diffuse_reflectance"] = &m.front.optical.diffuse_reflectance;
-        materialProperties["front.absorbance"] = &m.front.optical.absorbance;
-        materialProperties["front.transmittance"] = &m.front.optical.transmittance;
-        materialProperties["front.emissivity"] = &m.front.emission.emissivity;
-        materialProperties["rear.specular_reflectance"] = &m.rear.optical.specular_reflectance;
-        materialProperties["rear.diffuse_reflectance"] = &m.rear.optical.diffuse_reflectance;
-        materialProperties["rear.absorbance"] = &m.rear.optical.absorbance;
-        materialProperties["rear.transmittance"] = &m.rear.optical.transmittance;
-        materialProperties["rear.emissivity"] = &m.rear.emission.emissivity;
-
-        typedef std::set<std::string> StringSet;
-        StringSet parsedParameters;
-
-        while (getline(file, str) && parsedParameters.size() != materialProperties.size())
-        {
-          ++line;
-          if (str == "")
-            break;
-
-          if (str[0] == '#')
-            continue;
-
-          std::string::size_type pos = str.find_first_of(" \t");
-          if (pos + 1 >= str.length())
-          {
-            fprintf(stderr, "Invalid material definition format at line %d\n", line);
-            return -OBJ_IMPORT_FORMAT_ERROR;
-          }
-
-          std::string propertyName = str.substr(0, pos);
-          std::string propertyValue = str.substr(pos + 1);
-
-          MaterialPropertiesMap::const_iterator found = materialProperties.find(propertyName);
-          if (found == materialProperties.end())
-          {
-            bool& known = known_unknown_attributes[propertyName];
-            if (!known)
-            {
-              known = true;
-              fprintf(stderr, "Skip unknown material property '%s'. First at line %d\n", propertyName.c_str(), line);
-            }
-            continue;
-          }
-
-          if (sscanf(propertyValue.c_str(), "%f", found->second) != 1)
-          {
-            fprintf(stderr, "Failed to parse material '%s' value '%s' at line %d\n", propertyName.c_str(), propertyValue.c_str(), line);
-            return -OBJ_IMPORT_MATERIAL_INVALID_PARAMETER_VALUE;
-          }
-
-          parsedParameters.insert(propertyName);
-        }
-
-        if (parsedParameters.size() != materialProperties.size())
-        {
-          std::string missingProperties;
-          for (MaterialPropertiesMap::const_iterator checkName = materialProperties.begin(); checkName != materialProperties.end(); ++checkName)
-          {
-            if (parsedParameters.find(checkName->first) == parsedParameters.end())
-            {
-              missingProperties += missingProperties.empty() ? "" : ", ";
-              missingProperties += "'" + checkName->first + "'";
-            }
-          }
-
-          fprintf(stderr, "Not enough (%zu) material parameters for material '%s' at line %d, missing properties are %s\n", materialProperties.size() - parsedParameters.size(), name.c_str(), line, missingProperties.c_str());
-          return -OBJ_IMPORT_MATERIAL_NOT_ENOUGH_PARAMETERS;
-        }
-
-        materials.push_back(m);
-        library[name] = (int)(materials.size() - 1);
-      }
-      break;
+          break;
       }
     }
 
@@ -503,7 +521,20 @@ namespace obj_import
           return r;
         }
       }
-      break;     
+      break;
+
+      case 'n':
+      {
+        if (strncmp("newmtl", str.c_str(), 6) != 0)
+        {
+          fprintf(stderr, "Failed to parse newmtl at line %d\n", line);
+          return -OBJ_IMPORT_FORMAT_ERROR;
+        }
+
+        if (int r = parse_material(file, str, line, materials, material2IndexMap))
+          return r;
+      }
+      break;
 
       default:
         fprintf(stderr, "Unknown directive '%s' at line %d\n", str.c_str(), line);
