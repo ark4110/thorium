@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
 
   if ((r = obj_import::scene(input_scene, scene)) != OBJ_IMPORT_OK)
   {
-    fprintf(stderr, "Failed to load scene %s with error code %d", input_scene, r);
+    fprintf(stderr, "Failed to load scene %s with error code %d\n", input_scene, r);
     return r;
   }
 
@@ -121,7 +121,10 @@ int main(int argc, char* argv[])
   
   r = obj_import::task(input_task, scene, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
   if (r < 0)
+  {
+    fprintf(stderr, "\n");
     return r;
+  }
   const int n_meshes_loaded = r;
 
   if (task->current_time == 0)
@@ -279,7 +282,7 @@ int main(int argc, char* argv[])
 
   if ((r = system_set_scene(solution, scene, task->temperatures)) < 0)
   {
-    printf("Failed to set thermal solution scene.");
+    printf("Failed to set thermal solution scene.\n");
     return r;
   }
 
