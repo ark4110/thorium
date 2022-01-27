@@ -150,12 +150,16 @@ namespace optix_ray_caster
 
     if (rtpModelCreate(system->context, &system->model) != RTP_SUCCESS)
       return -RAY_CASTER_ERROR;
-    /*if (rtpModelSetTriangles(system->model, 0, system->vertices) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;
-    if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;
-    if (rtpModelFinish(system->model) != RTP_SUCCESS)
-      return -RAY_CASTER_ERROR;*/
+
+    if (false)
+    {
+      if (rtpModelSetTriangles(system->model, 0, system->vertices) != RTP_SUCCESS)
+        return -RAY_CASTER_ERROR;
+      if (rtpModelUpdate(system->model, RTP_MODEL_HINT_NONE) != RTP_SUCCESS)
+        return -RAY_CASTER_ERROR;
+      if (rtpModelFinish(system->model) != RTP_SUCCESS)
+        return -RAY_CASTER_ERROR;
+    }
     
     bool force_cpu = system->context_type == RTP_CONTEXT_TYPE_CPU;
     if (system->converter_state)

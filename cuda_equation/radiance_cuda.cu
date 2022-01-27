@@ -173,14 +173,25 @@ namespace radiance_equation_cuda
 
     int r = 0;
     if ((r = system_set_scene(system->params.ray_caster, ray_caster_scene)) < 0)
+    {
+      fprintf(stderr, "Failed to set ray caster scene.\n");
       return r;
+    }
 
     if ((r = system_update(system->params.ray_caster)) < 0)
+    {
+      fprintf(stderr, "Failed to update system ray caster.\n");
       return r;
+    }
 
     for (int e = 0; e != system->params.n_emitters; ++e)
+    {
       if ((r = system_set_scene(system->params.emitters[e], scene)) < 0)
+      {
+        fprintf(stderr, "Failed to set emitter %d.\n", e);
         return r;
+      }
+    }
 
     context_t& host_context = system->host_context;
 

@@ -145,10 +145,15 @@ namespace naive_cuda_ray_caster
 
     const int max_concurrent_rays = (int)pow(2, ceil(log2(16384.f * 1024 / (system->n_faces + 1023))));
 
-    thrust::device_vector<float> distances(max_concurrent_rays);
-    thrust::device_vector<int> indices(max_concurrent_rays);
-    thrust::host_vector<float> h_distance;
-    thrust::host_vector<int> h_indices;
+    float* distances;
+    int* indices;
+    checkCudaErrors(cudaMalloc(&distances, sizeof(float) * max_concurrent_rays));
+    checkCudaErrors(cudaMalloc(&indices, sizeof(int) * max_concurrent_rays));
+    std::shared_ptr<float> d_distances(distances, cudaFree);
+    std::shared_ptr<int> d_indices(indices, cudaFree);
+
+    std::vector<float> h_distance(max_concurrent_rays);
+    std::vector<int> h_indices(max_concurrent_rays);
 
     bb_ray_t* d_rays;
     // Allocating Cuda arrays by blocks
@@ -163,7 +168,6 @@ namespace naive_cuda_ray_caster
       checkCudaErrors(cudaDeviceSynchronize());
     }
 
-    
     for (int t = 0; t < task->n_tasks;)
     {
       int n_rays = t + max_concurrent_rays < task->n_tasks ? max_concurrent_rays : task->n_tasks - t;
@@ -172,12 +176,12 @@ namespace naive_cuda_ray_caster
       int shared_size = n_tpb * sizeof(distance_reduce_step_t);
       dim3 threads(1, n_tpb);
       dim3 grid(n_rays, 1);
-      cast_scene_faces_with_reduction << <grid, threads, shared_size >> >(system->faces, system->n_faces, d_rays + t, thrust::raw_pointer_cast(indices.data()), thrust::raw_pointer_cast(distances.data()));
+      cast_scene_faces_with_reduction << <grid, threads, shared_size >> >(system->faces, system->n_faces, d_rays + t, d_indices.get(), d_distances.get());
       checkCudaErrors(cudaPeekAtLastError());
       checkCudaErrors(cudaDeviceSynchronize());
 
-      h_distance = distances;
-      h_indices = indices;
+      checkCudaErrors(cudaMemcpy(h_distance.data(), d_distances.get(), 4 * max_concurrent_rays, cudaMemcpyDefault));
+      checkCudaErrors(cudaMemcpy(h_indices.data(), d_indices.get(), 4 * max_concurrent_rays, cudaMemcpyDefault));
 
       for (int j = 0; j != n_rays; ++j)
       {

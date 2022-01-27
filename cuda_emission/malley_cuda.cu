@@ -32,7 +32,7 @@
 
 #include <helper_cuda.h>
 
-#include "../ext/cub/cub/cub.cuh"
+#include <cub/cub.cuh>
 
 namespace {
 #include <curand_mtgp32_host.h>
