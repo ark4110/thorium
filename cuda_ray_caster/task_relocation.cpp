@@ -16,7 +16,7 @@
 
 #include "task_relocation.h"
 #include <cuda_runtime_api.h>
-#include <helper_cuda.h>
+#include "../cuda_check_errors.h"
 
 namespace cuda_task_relocation
 {

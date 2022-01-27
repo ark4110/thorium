@@ -53,7 +53,7 @@ namespace naive_cuda_ray_caster
     system->n_faces = 0;
     system->faces = 0;
     const char* argv[] = { "" };
-    system->dev_id = findCudaDevice(1, (const char **)argv);
+    system->dev_id = 1;
     cudaDeviceProp deviceProp;
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, system->dev_id));
     //system->n_tpb = deviceProp.maxThreadsPerBlock;
