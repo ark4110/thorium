@@ -20,5 +20,17 @@ include_directories(
   )
 
 add_library(cuda_ray_caster STATIC ${SOURCE_FILES})
+set_target_properties(cuda_ray_caster PROPERTIES CUDA_ARCHITECTURES ${Thorium_CUDA_Compute_Config})
+set_target_properties(cuda_ray_caster PROPERTIES CUDA_STANDARD 20)
 
-target_compile_options(cuda_ray_caster PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-gencode ${Thorium_CUDA_Compute_Config}>)
+if (CMAKE_BUILD_TYPE MATCHES Release)
+  target_compile_options(cuda_ray_caster PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+          --generate-line-info
+          >)
+endif()
+
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  target_compile_options(cuda_ray_caster PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
+          -G
+          >)
+endif()

@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
+set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 project (Thorium CXX CUDA)
-
-set(CMAKE_MODULE_PATH
-	"${CMAKE_SOURCE_DIR}/ext/optix/CMake"
-  ${CMAKE_MODULE_PATH}
-  )
-
-set(OptiX_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ext/optix")
 
 if(MSVC)
 	# For the moment, suppress all warnings when building with MSVC on Windows
@@ -20,23 +14,33 @@ if(MSVC)
 	endif()
 endif()
 
-find_package(CUDA  REQUIRED)
+find_package(CUDA REQUIRED)
+
+include_directories(ext/optix/include)
+find_library(optix_prime_LIBRARY
+		NAMES optix_prime
+		PATHS ext/optix/lib64)
+find_path(OptiX_INCLUDE
+  NAMES optix.h
+  PATHS ext/optix/include
+  NO_DEFAULT_PATH
+  )
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(".")
 include_directories("${CMAKE_SOURCE_DIR}/ext/cuda_samples/common/inc")
 include_directories("${CUDA_INCLUDE_DIRS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -march=native -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast")
+#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast")
 
 #set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 
-set(Thorium_CUDA_Compute_Config arch=compute_61,code=sm_61)
+set(Thorium_CUDA_Compute_Config "61")
+set(CUDA_ARCHITECTURES ${Thorium_CUDA_Compute_Config})
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-lineinfo -gencode arch=compute_61,code=sm_61)
-find_package(OptiX REQUIRED)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -G --generate-line-info)
 
 #find_package(OpenMP)
 #if (OPENMP_FOUND)
