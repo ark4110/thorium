@@ -2,9 +2,24 @@ from collections import defaultdict
 import sys
 
 
+def normalize(s):
+    pcs = s.split('.')
+    if len(pcs) == 1:
+        return s
+    if pcs[-1][0] == '+':
+        pcs[-1] = 'e' + pcs[-1]
+    elif pcs[-1][0] == '-':
+        pcs[-1] = 'e' + pcs[-1]
+    return '.'.join(pcs)
+
+    
 def parse_float(s):
     s = s.strip()
-    return float(s) if s else 0.0
+    try:
+        return float(s) if s else 0.0
+    except ValueError:
+        s = normalize(s)
+        return float(s)
 
 
 def parse_int(s):
