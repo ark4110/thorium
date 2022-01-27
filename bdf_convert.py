@@ -2,9 +2,24 @@ from collections import defaultdict
 import sys
 
 
+def normalize(s):
+    pcs = s.split('.')
+    if len(pcs) == 1:
+        return s
+    if pcs[-1][0] == '+':
+        pcs[-1] = 'e' + pcs[-1]
+    elif pcs[-1][0] == '-':
+        pcs[-1] = 'e' + pcs[-1]
+    return '.'.join(pcs)
+
+    
 def parse_float(s):
     s = s.strip()
-    return float(s) if s else 0.0
+    try:
+        return float(s) if s else 0.0
+    except ValueError:
+        s = normalize(s)
+        return float(s)
 
 
 def parse_int(s):
@@ -42,13 +57,14 @@ class Bdf2Obj(object):
         self.tops = dict()
         self.materials = defaultdict(Material)
         
-    def write_obj(self, filename):
+    def write_parsed(self, obj_filename, mtl_filename):
         self._flatten()
-        with open(filename, 'wb') as f:
+        with open(obj_filename, 'wb') as f:
+            f.write(b'mtllib %s\n' % mtl_filename.encode())
             self._write_vertices(f)
-            self._write_materials(f)
             self._write_meshes(f)
-            
+        with open(mtl_filename, 'wb') as f:
+            self._write_materials(f)            
                 
     def _write_vertices(self, f):
         vertices = sorted(self.vertices.items(), key=lambda x: x[0])
@@ -66,7 +82,6 @@ class Bdf2Obj(object):
             material.thickness = thickness
             
             self._write_material(f, material)            
-            
     
     def _write_material(self, f, material):
         f.write(b'newmtl %s\n' % material.name.encode())
@@ -266,11 +281,12 @@ def main():
     bdf = sys.argv[1]
     top = sys.argv[2]
     obj = sys.argv[3]
+    mtl = sys.argv[4]
     parser = Bdf2Obj()
     parser.parse_bdf(bdf)
     parser.parse_top(top)
     parser.validate()
-    parser.write_obj(obj)
+    parser.write_parsed(obj, mtl)
 
 
 if __name__ == "__main__":

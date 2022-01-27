@@ -22,7 +22,7 @@
 #pragma once
 
 #include "../ray_caster/system.h"
-#include <helper_math.h>
+#include "../cuda_misc/cuda_math.cuh"
 
 namespace naive_cuda_ray_caster
 {

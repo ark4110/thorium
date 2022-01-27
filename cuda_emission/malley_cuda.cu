@@ -23,14 +23,13 @@
 #include "../math/mat.h"
 #include "../math/ray.h"
 #include "../cuda_misc/cuda_data_util.cuh"
+#include "../cuda_misc/cuda_check_errors.h"
 #include <float.h>
 #include <random>
 #include <cmath>
 #include <limits>
 #include <stdlib.h>
 #include <cstring>
-
-#include <helper_cuda.h>
 
 #include <cub/cub.cuh>
 

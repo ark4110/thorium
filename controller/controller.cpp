@@ -31,7 +31,7 @@
 #include "../emission/parallel_rays_cpu.h"
 #include "../import_export/obj_export.h"
 #include "../cuda_misc/cuda_util.h"
-#include <helper_timer.h>
+#include <chrono>
 #include <iostream>
 #include <cstring>
 #include <time.h>
@@ -286,10 +286,7 @@ int main(int argc, char* argv[])
     return r;
   }
 
-  StopWatchInterface *hTimer;
-  sdkCreateTimer(&hTimer);
-  sdkResetTimer(&hTimer);
-  sdkStartTimer(&hTimer);
+  auto start = std::chrono::high_resolution_clock::now();
 
   float prev_report_time = time;
   for (int step = 0; step < n_steps; ++step)
@@ -334,9 +331,8 @@ int main(int argc, char* argv[])
     binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
   }
   
-  sdkStopTimer(&hTimer);
-  double cpuTime = 1.0e-3 * sdkGetTimerValue(&hTimer);
-  printf("#Done in %fs. Per step %fs\n\n", cpuTime, cpuTime / n_steps);
+  auto duration = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
+  printf("#Done in %fs. Per step %fs\n\n", duration, duration / n_steps);
 
   if (result_name[0] != '-')
     fclose(result_file);

@@ -19,7 +19,6 @@
 #include "../subject/system.h"
 #include "../cuda_misc/cuda_math.cuh"
 #include <curand_kernel.h>
-#include <helper_math.h>
 #include <float.h>
 
 namespace cuda_parallel_rays_emission

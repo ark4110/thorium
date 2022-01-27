@@ -16,8 +16,84 @@
 
 #pragma once
 
-#include <helper_math.h>
+//#include <helper_math.h>
+#include <cmath>
 #include <float.h>
+
+__device__ inline float3 operator*(float3 v, float r)
+{
+    return { v.x * r, v.y * r, v.z * r };
+}
+
+__device__ inline float3 operator*(float r, float3 v)
+{
+    return { v.x * r, v.y * r, v.z * r };
+}
+
+__device__ inline float dot(float3 a, float3 b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+__device__ inline float3 operator*(float3 a, float3 b)
+{
+    return { a.x * b.x, a.y * b.y, a.z * b.z };
+}
+
+__device__ inline float3 operator/(float3 a, float3 b)
+{
+    return { a.x / b.x, a.y / b.y, a.z / b.z };
+}
+
+__device__ inline float3 cross(float3 a, float3 b)
+{
+    return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x };
+}
+
+__device__ inline float3 operator+(float3 a, float3 b)
+{
+    return { a.x + b.x, a.y + b.y, a.z + b.z };
+}
+
+__device__ inline float3 operator+=(float3& a, float3 b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+}
+
+__device__ inline float3 operator-(float3 a, float3 b)
+{
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
+}
+
+__device__ inline float3 operator-=(float3& a, float3 b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    a.z -= b.z;
+}
+
+__device__ inline float3 normalize(float3 v)
+{
+    float rnorm = rsqrtf(dot(v, v));
+    return v * rnorm;
+}
+
+__device__ inline float3 fminf(float3 a, float3 b)
+{
+    return { fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z) };
+}
+
+__device__ inline float3 fmaxf(float3 a, float3 b)
+{
+    return { fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z) };
+}
+
+__device__ inline float3 make_float3(float v)
+{
+    return { v, v, v };
+}
 
 namespace cuda_math
 {

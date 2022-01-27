@@ -20,7 +20,7 @@
 #include "../cuda_misc/cuda_math.cuh"
 #include "../cuda_emission/malley_cuda.cuh"
 #include <curand_kernel.h>
-#include <helper_math.h>
+#include "../cuda_misc/cuda_check_errors.h"
 
 namespace radiance_equation_cuda
 {

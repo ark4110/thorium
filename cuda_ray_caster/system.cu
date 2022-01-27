@@ -24,8 +24,8 @@
 
 #include "../math/triangle.h"
 
-#include <helper_cuda.h>
-#include <helper_math.h>
+#include "../cuda_misc/cuda_check_errors.h"
+#include "../cuda_misc/cuda_math.cuh"
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
 
@@ -52,8 +52,7 @@ namespace naive_cuda_ray_caster
     system->scene = 0;
     system->n_faces = 0;
     system->faces = 0;
-    const char* argv[] = { "" };
-    system->dev_id = findCudaDevice(1, (const char **)argv);
+    system->dev_id = 1;
     cudaDeviceProp deviceProp;
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, system->dev_id));
     //system->n_tpb = deviceProp.maxThreadsPerBlock;

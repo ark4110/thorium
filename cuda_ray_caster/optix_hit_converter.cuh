@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <helper_math.h>
-
 namespace optix_hit_converter
 {
   struct face_t

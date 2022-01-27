@@ -22,14 +22,13 @@
 #include "../math/triangle.h"
 #include "../math/mat.h"
 #include "../math/ray.h"
+#include "../cuda_misc/cuda_check_errors.h"
 #include <float.h>
 #include <random>
 #include <cmath>
 #include <limits>
 #include <stdlib.h>
 #include <cstring>
-
-#include <helper_cuda.h>
 
 namespace {
 #include <curand_mtgp32_host.h>
@@ -99,8 +98,7 @@ namespace cuda_parallel_rays_emission
 
     system->kernel_params = 0;
 
-    const char* argv[] = { "" };
-    int device_id = findCudaDevice(1, (const char **)argv);
+    int device_id = 1;
     cudaDeviceProp deviceProp;
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
     system->n_tpb = deviceProp.maxThreadsPerBlock;
