@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cuda_check_errors.h" />
     <ClInclude Include="cuda_math.cuh" />
     <ClInclude Include="cuda_scene_engine.cuh" />
     <ClInclude Include="cuda_scene_engine.h" />
