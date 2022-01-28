@@ -23,6 +23,8 @@
     <ClCompile Include="operations.cpp" />
     <ClCompile Include="quaternion.cpp" />
     <ClCompile Include="ray.cpp" />
+    <ClCompile Include="rod.cpp" />
+    <ClCompile Include="tetrahedron.cpp" />
     <ClCompile Include="three_way_compare.cpp" />
     <ClCompile Include="triangle.cpp" />
   </ItemGroup>
@@ -31,6 +33,8 @@
     <ClInclude Include="operations.h" />
     <ClInclude Include="quaternion.h" />
     <ClInclude Include="ray.h" />
+    <ClInclude Include="rod.h" />
+    <ClInclude Include="tetrahedron.h" />
     <ClInclude Include="three_way_compare.h" />
     <ClInclude Include="triangle.h" />
     <ClInclude Include="types.h" />

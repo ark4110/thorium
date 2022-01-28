@@ -317,12 +317,12 @@ namespace
       double energy_acc = 0;
       for (size_t mi = 0; mi != Meshes.size(); ++mi)
       {
-        auto meshStat = CalculateMeshEnergy(mi, temperatures);
+        auto meshStat = CalculateMeshEnergy((int)mi, temperatures);
         volume_acc += meshStat.first;
         energy_acc += meshStat.second;
       }
 
-      return {volume_acc, energy_acc};
+      return {(float)volume_acc, (float)energy_acc};
     }
 
     std::pair<float, float> CalculateMeshEnergy(int mi, const float* temperatures) const
