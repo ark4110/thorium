@@ -178,6 +178,19 @@ namespace conductive_equation
     const bool edge_contact = n_points == 2;
 
     subject::scene_t* scene = param->system->scene;
+
+    const subject::material_t& l_material = mesh_material(scene, l_mesh_idx);
+    const subject::material_t& r_material = mesh_material(scene, r_mesh_idx);
+
+    if (edge_contact && (l_material.shell.thickness == 0 || r_material.shell.thickness))
+      return 0;
+    if (!edge_contact && (l_material.shell.thickness > 0 || r_material.shell.thickness > 0))
+    {
+      fprintf(stderr, "Area contact of not solid objects.\n");
+      assert(false);
+      return -1;
+    }
+
     const math::vec3* mesh_centers = param->system->mesh_centers;
 
     const subject::face_t& l_face = scene->faces[l];
@@ -185,38 +198,29 @@ namespace conductive_equation
             : math::triangle_center(l_face);
 
     const math::vec3& l_center = mesh_centers[l_mesh_idx];
-    float l_dist = norm(median - l_center);
+    double l_dist = norm(median - l_center);
 
     const math::vec3& r_center = mesh_centers[r_mesh_idx];
-    float r_dist = norm(median - r_center);
-
-    const subject::material_t& l_matertial = mesh_material(scene, l_mesh_idx);
-    const subject::material_t& r_matertial = mesh_material(scene, r_mesh_idx);
+    double r_dist = norm(median - r_center);
 
     float area = 0;
     if (edge_contact)
     {
-      float thickness = std::fminf(l_matertial.shell.thickness, r_matertial.shell.thickness);
+      float thickness = std::fminf(l_material.shell.thickness, r_material.shell.thickness);
       float edge_length = norm(l_face.points[lp[0]] - l_face.points[lp[1]]);
       area = thickness * edge_length;
     }
     else
     {
-      if (l_matertial.shell.thickness > 0 || r_matertial.shell.thickness > 0)
-      {
-        fprintf(stderr, "Area contact of not solid objects.\n");
-        assert(false);
-      }
-
       area = math::triangle_area(l_face);
     }
 
-    float conductivity_resistance = (l_dist / l_matertial.shell.thermal_conductivity + r_dist / r_matertial.shell.thermal_conductivity) / area;
+    double conductivity_resistance = (l_dist / l_material.shell.thermal_conductivity + r_dist / r_material.shell.thermal_conductivity) / area;
 
     float l_temp = param->task->temperatures[l_mesh_idx];
     float r_temp = param->task->temperatures[r_mesh_idx];
 
-    float flow = (r_temp - l_temp) / conductivity_resistance;
+    double flow = (r_temp - l_temp) / conductivity_resistance;
     if (flow > 0)
     {
       param->task->absorption[l_mesh_idx] += flow;

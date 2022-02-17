@@ -268,8 +268,9 @@ namespace radiance_equation_cuda
         decision = hit_absorb;
       }
       else if (hit_dice < optical.absorbance + optical.specular_reflectance)
+      {
         decision = hit_reflect;
-      else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
+      } else if (hit_dice < optical.absorbance + optical.specular_reflectance + optical.diffuse_reflectance)
       {
         if (hit_front)
           decision = hit_diffuse_front;
@@ -277,7 +278,9 @@ namespace radiance_equation_cuda
           decision = hit_diffuse_rear;
       }
       else
+      {
         decision = hit_transmit;
+      }
 
       ++counts[decision];
       hit_decision[ray_idx] = decision;
@@ -765,7 +768,9 @@ namespace radiance_equation_cuda
       checkCudaErrors(cudaMemcpy(h_mesh_power, system->host_context.mesh_power_d, n_meshes * sizeof(double),
                                  cudaMemcpyDeviceToHost));
       for (int i = 0; i != n_meshes; ++i)
-        task->absorption[i] += (float)h_mesh_power[i];
+      {
+        task->absorption[i] += (subject::mesh_emission_t) h_mesh_power[i];
+      }
       free(h_mesh_power);
 
     }

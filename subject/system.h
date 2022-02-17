@@ -26,6 +26,8 @@
 
 namespace subject
 {
+  typedef double mesh_emission_t;
+
   /// @brief Face (polygon) type
   typedef math::triangle_t face_t;
   

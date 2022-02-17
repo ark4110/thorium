@@ -33,14 +33,13 @@ include_directories("${CUDA_INCLUDE_DIRS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -march=native -Wall")
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast")
 
-#set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 
-set(Thorium_CUDA_Compute_Config "61")
+set(Thorium_CUDA_Compute_Config "61;70;86")
 set(CUDA_ARCHITECTURES ${Thorium_CUDA_Compute_Config})
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -G --generate-line-info)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; --generate-line-info)
 
 #find_package(OpenMP)
 #if (OPENMP_FOUND)

@@ -25,11 +25,13 @@
 
 namespace thermal_equation
 {
+  using subject::mesh_emission_t;
+
   struct task_t
   {
     const float* temperatures; ///< Objects temperature array (K). @note Not owned by equation.
-    float* emission; ///< Energy emission array per object (mesh) (W). Equation must add to task values, not set to zero.
-    float* absorption; ///< Energy absorption array per object (mesh) (W). Equation must add to task values, not set to zero.
+    mesh_emission_t* emission; ///< Energy emission array per object (mesh) (W). Equation must add to task values, not set to zero.
+    mesh_emission_t* absorption; ///< Energy absorption array per object (mesh) (W). Equation must add to task values, not set to zero.
   };
 
   task_t* task_create(subject::scene_t* scene);

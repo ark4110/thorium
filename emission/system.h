@@ -31,6 +31,8 @@
 /// @todo Rename "emission" to "radiance"
 namespace emission
 {
+  using subject::mesh_emission_t;
+
   /**
    * @brief Task representation for given scene (@see task_create).
    *
@@ -58,7 +60,7 @@ namespace emission
       @todo In general case emission is not related to objects. Move it to black body emission?
       @detail Owned by client.
     */
-    float* mesh_emission;
+    mesh_emission_t * mesh_emission;
 
     /**
       @brief Rays count emitted by mesh.

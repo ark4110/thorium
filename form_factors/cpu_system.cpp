@@ -34,13 +34,14 @@
 
 namespace cpu_form_factors
 {
+  using subject::mesh_emission_t;
   /// @brief Extended base system_t (C-style polymorphism)
   struct cpu_system_t : form_factors::system_t
   {
     subject::scene_t* scene;
 
     float* mesh_temperatures;
-    float* mesh_emission;
+    mesh_emission_t* mesh_emission;
 
     emission::system_t* emitter;
     ray_caster::system_t* caster;
@@ -93,7 +94,7 @@ namespace cpu_form_factors
     if ((r = emission::system_set_scene(system->emitter, system->scene)) < 0)
       return r;
 
-    system->mesh_emission = (float*)realloc(system->mesh_emission, n_meshes * sizeof(float));
+    system->mesh_emission = (mesh_emission_t *)realloc(system->mesh_emission, n_meshes * sizeof(mesh_emission_t));
     system->mesh_temperatures = (float*)realloc(system->mesh_temperatures, n_meshes * sizeof(float));
     for (int m = 0; m != n_meshes; ++m)
       system->mesh_temperatures[m] = 1000;

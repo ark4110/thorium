@@ -237,26 +237,21 @@ namespace
       math::tetrahedron_t tetras[6];
       math::rod_to_six_tetrahedrons(cube, tetras);
 
-      std::vector<math::face_t> left_faces(24);
+      std::vector<math::face_t> faces(24);
       for (int i = 0; i != 6; ++i)
-        math::tetrahedron_build_faces(tetras[i], left_faces.data() + i * 4);
-
-      std::vector<math::face_t> right_faces = left_faces;
-      for (auto &f: right_faces)
-      {
-
-        for (auto &p: f.points)
-          p.x = 2 - p.x;
-      }
+        math::tetrahedron_build_faces(tetras[i], faces.data() + i * 4);
 
       for (int i = 0; i != count; ++i)
       {
-        auto &source = (i % 2 == 0) ? left_faces : right_faces;
-        Faces.insert(Faces.end(), source.begin(), source.end());
-
-        for (auto &f: source)
-          for (auto &p: f.points)
-            p.x += 2;
+        auto current_faces = faces;
+        bool invert_x = i % 2 != 0;
+        float offset = 1.f * i;
+        for (auto& f: current_faces)
+        {
+            for (auto& p: f.points)
+              p.x = offset + invert_x ? (-p.x + 1) : p.x;
+        }
+        Faces.insert(Faces.end(), current_faces.begin(), current_faces.end());
 
         for (int mi = 0; mi != 6; ++mi)
         {
@@ -277,8 +272,11 @@ namespace
           : TetrahedronRod,
             public Test
   {
+    static const int RodLength = 11;
+    static constexpr float StartTemperature = 300;
+
     TetrahedronRodConductiveSolution()
-            : TetrahedronRod(11)
+            : TetrahedronRod(RodLength)
     {
       Materials[0] = subject::material_Al(0);
       Materials[0].front = {};
@@ -296,8 +294,8 @@ namespace
 
       for (size_t mi = 0; mi != Meshes.size(); ++mi)
       {
-        float element_index = (int)mi - (int)Meshes.size() / 2;
-        Temperatures.push_back(300 + element_index);
+        float element_index = mi / 6;
+        Temperatures.push_back(StartTemperature + element_index);
       }
 
       Task = thermal_solution::task_create(Scene.n_meshes);
@@ -347,9 +345,11 @@ namespace
 TEST_F(TetrahedronRodConductiveSolution, ReachBalance)
 {
   using namespace thermal_solution;
-  Task->time_delta = 20;
+  Task->time_delta = 1;
 
   const auto initialState = CalculateEnergy(Temperatures.data());
+  ASSERT_NEAR(RodLength, initialState.first, 1e-5);
+  ASSERT_NEAR(StartTemperature * RodLength + RodLength * ((float)RodLength - 1) / 2, initialState.second, 1e-5);
   int r = 0;
   host_scene_finalize(&Scene);
   r = system_set_scene(System, &Scene, Temperatures.data());

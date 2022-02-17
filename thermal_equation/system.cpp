@@ -34,9 +34,9 @@ namespace thermal_equation
   {
     task_t* task = (task_t*)malloc(sizeof(task_t));
     task->temperatures = 0;
-    const int mem_size = sizeof(float) * scene->n_meshes;
-    task->emission = (float*)malloc(mem_size);
-    task->absorption = (float*)malloc(mem_size);
+    const int mem_size = sizeof(mesh_emission_t) * scene->n_meshes;
+    task->emission = (mesh_emission_t*)malloc(mem_size);
+    task->absorption = (mesh_emission_t*)malloc(mem_size);
     memset(task->emission, 0, mem_size);
     memset(task->absorption, 0, mem_size);
     return task;

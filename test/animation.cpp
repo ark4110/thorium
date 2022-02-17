@@ -341,8 +341,8 @@ TYPED_TEST(AnimatedPlanesMalleyTest, AbsorptionTest)
   ASSERT_NEAR(diff(static_task->absorption[2], dynamic_task->absorption[2]), 0, 0.001);
 
   // Update to first frame
-  memset(dynamic_task->emission, 0, 3 * sizeof(float));
-  memset(dynamic_task->absorption, 0, 3 * sizeof(float));
+  memset(dynamic_task->emission, 0, 3 * sizeof(subject::mesh_emission_t));
+  memset(dynamic_task->absorption, 0, 3 * sizeof(subject::mesh_emission_t));
   subject::scene_set_frame(this->AnimatedScene, 1);
   thermal_equation::system_update(radiance);
   ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, dynamic_task));
@@ -397,8 +397,8 @@ TYPED_TEST(AnimatedPlanesParallelEmissionTest, AbsorptionTest)
   ASSERT_NEAR(0, dynamic_task->absorption[2], 0.01);
 
   // Update to first frame
-  memset(dynamic_task->emission, 0, 3 * sizeof(float));
-  memset(dynamic_task->absorption, 0, 3 * sizeof(float));
+  memset(dynamic_task->emission, 0, 3 * sizeof(subject::mesh_emission_t));
+  memset(dynamic_task->absorption, 0, 3 * sizeof(subject::mesh_emission_t));
   subject::scene_set_frame(this->AnimatedScene, 1);
   thermal_equation::system_update(radiance);
   ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, dynamic_task));
@@ -407,8 +407,8 @@ TYPED_TEST(AnimatedPlanesParallelEmissionTest, AbsorptionTest)
   ASSERT_NEAR(0, dynamic_task->absorption[1], 0.01);
   ASSERT_NEAR(1, dynamic_task->absorption[2], 0.02);
 
-  memset(dynamic_task->emission, 0, 3 * sizeof(float));
-  memset(dynamic_task->absorption, 0, 3 * sizeof(float));
+  memset(dynamic_task->emission, 0, 3 * sizeof(subject::mesh_emission_t));
+  memset(dynamic_task->absorption, 0, 3 * sizeof(subject::mesh_emission_t));
   subject::scene_set_frame(this->AnimatedScene, 2);
   thermal_equation::system_update(radiance);
   ASSERT_EQ(THERMAL_EQUATION_OK, system_calculate(radiance, dynamic_task));

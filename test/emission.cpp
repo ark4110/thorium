@@ -86,9 +86,10 @@ TYPED_TEST_CASE(MalleyEmission, MalleyEmissionTypes);
 TYPED_TEST(MalleyEmission, AllocateRaycasterTask)
 { 
   auto task = emission::task_create();
-  float b[2] = { 1000.f, 1000.f };
-  task->mesh_emission = b;
-  task->mesh_temperatures = b;
+  subject::mesh_emission_t emissions[2] = { 1000.f, 1000.f };
+  float temperatures[2] = { 1000.f, 1000.f };
+  task->mesh_emission = emissions;
+  task->mesh_temperatures = temperatures;
   system_relocate_task(this->Emitter, task, 0);
   system_calculate(this->Emitter, task);
   ASSERT_TRUE(task->rays != 0);
@@ -98,9 +99,10 @@ TYPED_TEST(MalleyEmission, AllocateRaycasterTask)
 TYPED_TEST(MalleyEmission, ReallocateRaycasterTask)
 {
   auto task = emission::task_create();
-  float b[2] = { 1000.f, 1000.f };
-  task->mesh_emission = b;
-  task->mesh_temperatures = b;
+  subject::mesh_emission_t emissions[2] = { 1000.f, 1000.f };
+  float temperatures[2] = { 1000.f, 1000.f };
+  task->mesh_emission = emissions;
+  task->mesh_temperatures = temperatures;
 
   system_relocate_task(this->Emitter, task, 0);
   system_calculate(this->Emitter, task);
@@ -292,9 +294,10 @@ public:
   float calculate_flux()
   {
     auto task = emission::task_create();
-    float b[2] = { 1000.f, 1000.f };
-    task->mesh_emission = b;
-    task->mesh_temperatures = b;
+    subject::mesh_emission_t emissions[2] = { 1000.f, 1000.f };
+    float temperatures[2] = { 1000.f, 1000.f };
+    task->mesh_emission = emissions;
+    task->mesh_temperatures = temperatures;
     system_calculate(this->Emitter, task);
     system_relocate_task(this->Emitter, task, -1);
 

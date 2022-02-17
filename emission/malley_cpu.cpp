@@ -193,7 +193,7 @@ namespace malley_cpu
       double T = task->mesh_temperatures[m];
       double power_density = (T * T * T * T) * sigma;
       double emission = power_density * mesh_area * (material.front.emission.emissivity + material.rear.emission.emissivity);
-      task->mesh_emission[m] = (float)(emission + task->mesh_emission[m]);
+      task->mesh_emission[m] = (subject::mesh_emission_t)(emission + task->mesh_emission[m]);
     }
   }
 

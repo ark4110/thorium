@@ -33,6 +33,7 @@ using namespace testing;
 
 const float InitialAccuracy = 0.0025f;
 const float CurrentAccuracy = 0.0001f;
+const float SpecularAccuracy = 0.002f;
 
 template <int SceneEngineID, int EquationEngineID, int EmissionEngineID, int RayCasterEngineID>
 struct EnginesConfig
@@ -322,7 +323,7 @@ TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
-  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, SpecularAccuracy) << this->Task->temperatures[0] << " vs " << currentEnergy;
 }
 
 TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
@@ -330,8 +331,8 @@ TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
   using namespace thermal_solution;
   this->Scene->n_faces = 12;
   this->Scene->n_meshes = 1;
-  this->Materials[0].rear.optical.absorbance = 0.5;
-  this->Materials[0].rear.optical.diffuse_reflectance = 0.5;
+  this->Materials[0].rear.optical.absorbance = 0.9;
+  this->Materials[0].rear.optical.diffuse_reflectance = 0.1;
 
   ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
 
@@ -354,7 +355,7 @@ TYPED_TEST(RadianceSolution, DiffuseBoxPreserveEnergy)
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   }
-  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, CurrentAccuracy);
+  ASSERT_NEAR(1.f, this->Task->temperatures[0] / currentEnergy, SpecularAccuracy);
 }
 
 TYPED_TEST(ParallelPlanesSolution, Correct)
