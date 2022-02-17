@@ -234,7 +234,7 @@ namespace cuda_malley_emission
         float a = ray.origin.x;
         float b = ray.origin.y;
         float3 origin = face.points[0] + a * u + b * v;
-        ray = {origin + q_direction * 0.01f, q_direction};
+        ray = {origin + q_direction * 0.0001f, q_direction};
       }
     }
   }
