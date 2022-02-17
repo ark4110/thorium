@@ -612,7 +612,6 @@ namespace radiance_equation_cuda
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
     const int n_missed = ray_caster_task->n_missed;
-    printf("Missed %d\n", ray_caster_task->n_missed);
 
     if ((r = scene_relocate(system->scene, 1)) < 0)
       return r;

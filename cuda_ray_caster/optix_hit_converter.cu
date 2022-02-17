@@ -86,7 +86,6 @@ namespace optix_hit_converter
       for (; ray_idx < n_rays; ray_idx += stride)
       {
         const optix_hit_t hit = hits[ray_idx];
-        printf("optix ray %d hit distance %f triangle %d\n", ray_idx, hit.distance, hit.triangle_id);
 
         if (hit.distance > 0)
         {
