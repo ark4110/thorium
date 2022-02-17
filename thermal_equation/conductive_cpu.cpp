@@ -182,8 +182,11 @@ namespace conductive_equation
     const subject::material_t& l_material = mesh_material(scene, l_mesh_idx);
     const subject::material_t& r_material = mesh_material(scene, r_mesh_idx);
 
+    /// @todo Drop such graph edges.
     if (edge_contact && (l_material.shell.thickness == 0 || r_material.shell.thickness))
       return 0;
+
+    /// @todo Validate during graph build.
     if (!edge_contact && (l_material.shell.thickness > 0 || r_material.shell.thickness > 0))
     {
       fprintf(stderr, "Area contact of not solid objects.\n");
