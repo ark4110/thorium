@@ -337,10 +337,13 @@ namespace radiance_equation_cuda
       float power_buffer = s_power[id];
       int hit_face_buffer = s_hit_face_idx[id];
 
-      int active;
+      int active = 0;
       for (int i = 0; i != hit_interaction_count; ++i)
-        if (i == decision)
-          active = __ballot_sync(0xffffffff, 1);
+      {
+        auto predicate = i == decision;
+        int decision_active = __ballot_sync(0xffffffff, predicate);
+        active = predicate ? decision_active : active;
+      }
 
       int leader = __ffs(active) - 1;
       int warp_offset;
@@ -609,6 +612,7 @@ namespace radiance_equation_cuda
     ray_caster::task_t* ray_caster_task = emission_task->rays;
     const int n_rays = ray_caster_task->n_tasks;
     const int n_missed = ray_caster_task->n_missed;
+    printf("Missed %d\n", ray_caster_task->n_missed);
 
     if ((r = scene_relocate(system->scene, 1)) < 0)
       return r;

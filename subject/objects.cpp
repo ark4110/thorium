@@ -16,6 +16,7 @@
 
 #include "objects.h"
 #include "system.h"
+#include "math/operations.h"
 #include <cstdlib>
 
 namespace subject
@@ -47,6 +48,19 @@ namespace subject
   {
     static math::face_t* faces = unify_object_faces(raw_box_faces, 12);
     return faces;
+  }
+
+  void box(float side, math::vec3 shift, math::face_t* faces)
+  {
+    auto one = box();
+    for (int i = 0; i != 12; ++i)
+    {
+      faces[i] = one[i];
+      for (auto& p: faces[i].points)
+      {
+        p = p * side + shift;
+      }
+    }
   }
 
   math::face_t* plane_grid_faces(float width, float height, int cells_x, int cells_y)

@@ -113,6 +113,12 @@ namespace math
     a.z *= b;
   }
 
+  inline vec3 scale(vec3 a, point_t b)
+  {
+    a *= b;
+    return a;
+  }
+
   inline void operator*=(triangle_t& a, point_t b)
   {
     for(int i = 0; i != 3; ++i)

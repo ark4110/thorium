@@ -52,9 +52,10 @@ namespace optix_hit_converter
     {  
       const optix_hit_t hit = hits[ray_idx];
 
-      if (hit.distance > 0)
+      bool has_hit = hit.distance > 0;
+      int active = __ballot_sync(0xffffffff, has_hit);
+      if (has_hit)
       {
-        int active = __ballot_sync(0xffffffff, 1);
         int leader = __ffs(active) - 1;
         int warp_offset;
         if (lane_id() == leader)
@@ -85,6 +86,7 @@ namespace optix_hit_converter
       for (; ray_idx < n_rays; ray_idx += stride)
       {
         const optix_hit_t hit = hits[ray_idx];
+        printf("optix ray %d hit distance %f triangle %d\n", ray_idx, hit.distance, hit.triangle_id);
 
         if (hit.distance > 0)
         {

@@ -55,7 +55,7 @@ public:
     RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
     
     malley_cpu::params_t emitterParams;
-    emitterParams.n_rays = 1000;
+    emitterParams.n_rays = 1;
     Emitter = emission::system_create(EnginesConfig::EmissionEngine, &emitterParams);
 
     radiance_equation::params_t equationParams = {};
@@ -72,25 +72,15 @@ public:
     Materials[0].front.emission.emissivity = 0;
 
     subject::face_t* faces = (subject::face_t*)calloc(24, sizeof(subject::face_t));
-    memcpy(faces, subject::box(), sizeof(subject::face_t) * 12);
-    memcpy(faces + 12, subject::box(), sizeof(subject::face_t) * 12);
+    subject::box(2, {-1, -1, -1}, faces);
+    subject::box(4, {-2, -2, -2}, faces + 12);
 
-    Scale = 3;
+    Scale0 = 2;
+    Scale1 = 4;
 
-    float factor = 1.f / Scale;
-    float shift_value = 0.5f - factor / 2.f;
-    math::vec3 shift = math::make_vec3(shift_value, shift_value, shift_value);
     for (int f = 0; f != 12; ++f)
     {
       subject::face_t& face = faces[12 + f];
-      face.points[0] *= factor;
-      face.points[1] *= factor;
-      face.points[2] *= factor;
-
-      face.points[0] += shift;
-      face.points[1] += shift;
-      face.points[2] += shift;
-
       triangle_flip_normal(face);
     }
 
@@ -129,7 +119,8 @@ public:
   thermal_equation::system_t* Equation;
   thermal_solution::system_t* System;
   subject::material_t* Materials;
-  float Scale;
+  float Scale0;
+  float Scale1;
   subject::scene_t* Scene;
   float Temperatures[2];
   thermal_solution::task_t* Task;
@@ -269,7 +260,12 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
   ASSERT_EQ(SCENE_ENGINE_OK, system_finalize_scene(this->SceneEngine, this->Scene));
 
   using namespace thermal_solution;
-  const float initialEnergy = this->Temperatures[0] * this->Scale * this->Scale + this->Temperatures[1];
+  auto calculateEnergy = [this]()
+  {
+    return this->Temperatures[0] * this->Scale0 * this->Scale0 + this->Temperatures[1] * this->Scale1 * this->Scale1;
+  };
+
+  float initialEnergy = calculateEnergy();
 
   int r = 0;
   r = system_set_scene(this->System, this->Scene, this->Temperatures);
@@ -282,15 +278,15 @@ TYPED_TEST(RadianceSolution, NestedBoxesPreserveEnergy)
   r = system_calculate(this->System, this->Task);
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
 
-  float resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
+  float resultEnergy = calculateEnergy();
   ASSERT_NEAR(1.f, resultEnergy / initialEnergy, InitialAccuracy);
 
-  const float currentEnergy = this->Temperatures[0] * this->Scale * this->Scale + this->Temperatures[1];
+  const float currentEnergy = calculateEnergy();
   for (int step = 1; step < 42; ++step)
   {
     r = system_calculate(this->System, this->Task);
   }
-  resultEnergy = this->Task->temperatures[0] * this->Scale * this->Scale + this->Task->temperatures[1];
+  resultEnergy = calculateEnergy();
   ASSERT_NEAR(1.f, resultEnergy / currentEnergy, CurrentAccuracy);
 }
 
@@ -318,7 +314,7 @@ TYPED_TEST(RadianceSolution, SpecularBoxPreserveEnergy)
   ASSERT_NEAR(1.f, this->Task->temperatures[0] / initialEnergy, InitialAccuracy);
 
   const float currentEnergy = this->Temperatures[0];
-  for (int step = 1; step < 42; ++step)
+  for (int step = 1; step < 420; ++step)
   {
     r = system_calculate(this->System, this->Task);
     ASSERT_EQ(THERMAL_SOLUTION_OK, r);
