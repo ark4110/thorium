@@ -105,18 +105,20 @@ class Bdf2Obj(object):
     
     def _write_meshes(self, f):
         for mesh, faces in self.meshes_faces.items():
-            name = self._get_mesh_name(mesh)
-            f.write(b'g %s\n' % name.encode())
+            material = self.meshes_materials.get(mesh)
+            material_name = ('mtl_%s' % name).encode()
+            mesh_name = self._get_mesh_name(mesh).encode()
+
+            sorted_faces = sorted(faces)
+            for i, face in enumerate(sorted_faces):
+                f.write(b'g %s_%d\n' % (mesh_name, i))
             
-            material = self.meshes_materials.get(mesh)            
-            if material:
-                material_name = 'mtl_%s' % name
-                f.write(b'usemtl %s\n' % material_name.encode())
+                if material:
+                    f.write(b'usemtl %s\n' % material_name)
             
-            sorted_faces = sorted(faces)            
-            for v in sorted_faces:
-                f.write(b'f %d %d %d\n' % v)
-            f.write(b'\n')
+                for v in face:
+                    f.write(b'f %d %d %d\n' % v)
+                f.write(b'\n')
                 
     def _flatten(self):
         remap = dict()
