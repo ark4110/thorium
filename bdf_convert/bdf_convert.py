@@ -1,32 +1,7 @@
 import argparse
 import logging
-import math
 from collections import defaultdict
-
-
-def cross(a, b):
-    return (
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0])
-
-
-def dot(a, b):
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-
-def vector_minus(a, b):
-    return (
-        a[0] - b[0],
-        a[1] - b[1],
-        a[2] - b[2])
-
-
-def triangle_area(a, b, c):
-    v = vector_minus(b, a)
-    w = vector_minus(c, a)
-    n = cross(v, w)
-    return math.sqrt(dot(n, n)) / 2
+from vector_math import triangle_area, tetrahedron_volume
 
 
 def normalize_exp_sgn(s, sgn):
@@ -181,8 +156,14 @@ class Bdf2Obj(object):
         failed = False
         for mesh, elements in self.meshes_elements.items():
             for element_index, faces in elements:
+                points = set(v for face in faces for v in face)
+                is_tetrahedron = len(points) == 4
+                if is_tetrahedron:
+                    points = [self.vertices[p] for p in points]
+                    volume = tetrahedron_volume(*points)
+                    if volume < 1e-9:
+                        logging.error('Mesh %d tetrahedron element %d has degenerative volume %e' % (mesh, element_index, volume))
                 for face in faces:
-
                     vertices = []
                     for v in face:
                         vertex = self.vertices.get(v)
@@ -192,7 +173,7 @@ class Bdf2Obj(object):
                             failed = True
                     area = triangle_area(*vertices)
                     if area < 1e-6:
-                        logging.error('Mesh %d element %d face has degenerative area %f' % (mesh, element_index, area))
+                        logging.error('Mesh %d element %d face has degenerative area %e' % (mesh, element_index, area))
                     if failed:
                         raise RuntimeError('Model validation failed')
 
