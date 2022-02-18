@@ -215,6 +215,7 @@ namespace subject
   float mesh_area(const scene_t* scene, int mesh_idx);
   float mesh_volume(const scene_t* scene, const mesh_t& mesh);
   float mesh_volume(const scene_t* scene, int mesh_idx);
+  float mesh_C(const scene_t* scene, int mesh_idx);
 
   /// @brief Calculate areas for all meshes.
   /// @return Total area.

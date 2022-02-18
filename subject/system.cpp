@@ -423,6 +423,15 @@ namespace subject
     return mesh_volume(scene, scene->meshes[mesh_idx]);
   }
 
+  float mesh_C(const scene_t* scene, int mesh_idx)
+  {
+    const subject::material_t& material = mesh_material(scene, mesh_idx);
+    const double volume = material.shell.thickness > 0
+            ? (mesh_area(scene, mesh_idx) * material.shell.thickness)
+            : mesh_volume(scene, mesh_idx);
+    return volume * material.shell.density * material.shell.heat_capacity;
+  }
+
   float build_meshes_areas(const scene_t* scene, float** areas)
   {
     *areas = (float*)realloc(*areas, sizeof(float) * scene->n_meshes);
