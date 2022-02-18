@@ -104,6 +104,35 @@ namespace conductive_equation
     math::vec3* mesh_centers;
   };
 
+  double calculate_alpha(const subject::scene_t* scene, double R, int l_mesh, int r_mesh)
+  {
+    auto c1 = mesh_C(scene, l_mesh);
+    auto c2 = mesh_C(scene, r_mesh);
+    return 1. / R * (c1 + c2) / c1 / c2;
+  }
+
+  /**
+   * dF(t)/dt=F(t)
+   * https://www.wolframalpha.com/input?i=dF%28t%29%2Fdt%3DF%28t%29
+   *
+   * F'(t) is a Dawson function
+   * expansion at 0
+   * https://www.wolframalpha.com/input?i=1%2F2+e%5E%28-t%5E2%29+sqrt%28%CF%80%29+erfi%28t%29
+   */
+  double dawson(double t)
+  {
+    auto c1 = 1.;
+    auto c3 = -2. / 3;
+    auto c5 = 4. / 15;
+    auto c7 = -8. / 105;
+    auto t1 = t;
+    auto t3 = pow(t, 3);
+    auto t5 = pow(t, 5);
+    auto t7 = pow(t, 7);
+    // Remove o(t7)?
+    return c1 * t1 + c3 * t3 + c5 * t5 + c7 * t7;
+  }
+
   int init(cpu_system_t* system, params_t* params)
   {
     system->params = *params;
@@ -224,12 +253,30 @@ namespace conductive_equation
     float r_temp = param->task->temperatures[r_mesh_idx];
 
     double flow = (r_temp - l_temp) / conductivity_resistance;
+    assert(!std::isnan(flow) && !std::isinf(flow) && "bad value detected");
+
+    const int steps = param->system->params.integrations_steps;
+    auto step = param->system->params.step;
+    double dt = step / steps;
+    auto l_rC = 1. / mesh_C(scene, l_mesh_idx);
+    auto r_rC = 1. / mesh_C(scene, r_mesh_idx);
+    double integrated_flow = 0;
+    for (int i = 0; i != steps; ++i)
+    {
+      auto dQ = flow * dt;
+      integrated_flow += dQ;
+      l_temp += dQ * l_rC;
+      r_temp -= dQ * r_rC;
+      flow = (r_temp - l_temp) / conductivity_resistance;
+    }
+    flow = integrated_flow / step;
+
     if (flow > 0)
     {
       param->task->absorption[l_mesh_idx] += flow;
       param->task->emission[r_mesh_idx] += flow;
     }
-    else
+    else if (flow < 0)
     {
       param->task->emission[l_mesh_idx] += -flow;
       param->task->absorption[r_mesh_idx] += -flow;

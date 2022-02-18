@@ -21,11 +21,14 @@
 #pragma once
 
 #include "../thermal_equation/system.h"
+#include <cmath>
 
 namespace conductive_equation
 {
   struct params_t
   {
+    float step = NAN;
+    float integrations_steps = 10;
   };
 
   thermal_equation::system_t* system_create();
