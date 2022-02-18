@@ -98,7 +98,7 @@ namespace cuda_parallel_rays_emission
 
     system->kernel_params = 0;
 
-    int device_id = 1;
+    int device_id = 0;
     cudaDeviceProp deviceProp;
     checkCudaErrors(cudaGetDeviceProperties(&deviceProp, device_id));
     system->n_tpb = deviceProp.maxThreadsPerBlock;
