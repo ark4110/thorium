@@ -16,7 +16,7 @@
 
 #include "objects.h"
 #include "system.h"
-#include "math/operations.h"
+#include "../math/operations.h"
 #include <cstdlib>
 
 namespace subject
