@@ -256,20 +256,23 @@ namespace conductive_equation
     assert(!std::isnan(flow) && !std::isinf(flow) && "bad value detected");
 
     const int steps = param->system->params.integrations_steps;
-    auto step = param->system->params.step;
-    double dt = step / steps;
-    auto l_rC = 1. / mesh_C(scene, l_mesh_idx);
-    auto r_rC = 1. / mesh_C(scene, r_mesh_idx);
-    double integrated_flow = 0;
-    for (int i = 0; i != steps; ++i)
+    if (steps > 1)
     {
-      auto dQ = flow * dt;
-      integrated_flow += dQ;
-      l_temp += dQ * l_rC;
-      r_temp -= dQ * r_rC;
-      flow = (r_temp - l_temp) / conductivity_resistance;
+      auto step = param->system->params.step;
+      double dt = step / steps;
+      auto l_rC = 1. / mesh_C(scene, l_mesh_idx);
+      auto r_rC = 1. / mesh_C(scene, r_mesh_idx);
+      double integrated_flow = 0;
+      for (int i = 0; i != steps; ++i)
+      {
+        auto dQ = flow * dt;
+        integrated_flow += dQ;
+        l_temp += dQ * l_rC;
+        r_temp -= dQ * r_rC;
+        flow = (r_temp - l_temp) / conductivity_resistance;
+      }
+      flow = integrated_flow / step;
     }
-    flow = integrated_flow / step;
 
     if (flow > 0)
     {

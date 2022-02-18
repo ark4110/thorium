@@ -772,7 +772,9 @@ namespace radiance_equation_cuda
                                  cudaMemcpyDeviceToHost));
       for (int i = 0; i != n_meshes; ++i)
       {
-        task->absorption[i] += (subject::mesh_emission_t) h_mesh_power[i];
+        auto power = h_mesh_power[i];
+        assert(!std::isnan(power) && !std::isinf(power) && "bad value detected");
+        task->absorption[i] += (subject::mesh_emission_t) power;
       }
       free(h_mesh_power);
 

@@ -34,7 +34,10 @@ class ConductiveSourceSink
 public:
   ConductiveSourceSink()
   {
-    conductive_equation::params_t conductivityParams;
+    float step = 1.f;
+    conductive_equation::params_t conductivityParams = {};
+    conductivityParams.step = step;
+
     Equations[0] = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &conductivityParams);
 
     Sources[0].mesh_idx = 0;
@@ -66,7 +69,7 @@ public:
       Temperatures[i] = 300;
 
     Task = thermal_solution::task_create(Scene.n_meshes);
-    Task->time_delta = 1.f;
+    Task->time_delta = step;
   }
 
   ~ConductiveSourceSink()

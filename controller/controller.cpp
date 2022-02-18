@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
   const char* input_task = 0;
   const char* result_name = "-";
 #if !(defined _WIN32 && !defined _WIN64)
-  int type = RAY_CASTER_OPTIX;
+  int type = RAY_CASTER_OPTIX_CPU;
 #else
   int type = RAY_CASTER_NAIVE_CPU;
 #endif
@@ -246,7 +246,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  conductive_equation::params_t conductiveParams;
+  conductive_equation::params_t conductiveParams = {};
+  conductiveParams.step = task->time_delta;
   equations[1] = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &conductiveParams);
   if (!equations[1])
   {

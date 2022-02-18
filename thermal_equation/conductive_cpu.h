@@ -28,7 +28,7 @@ namespace conductive_equation
   struct params_t
   {
     float step = NAN;
-    float integrations_steps = 10;
+    float integrations_steps = 1;
   };
 
   thermal_equation::system_t* system_create();

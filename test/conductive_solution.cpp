@@ -37,7 +37,11 @@ namespace
   public:
     ConductiveSolution()
     {
-      conductive_equation::params_t params;
+      float step = 1;
+
+      conductive_equation::params_t params = {};
+      params.step = step;
+
       Equation = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &params);
 
       SolutionParams = {1, &Equation};
@@ -58,7 +62,7 @@ namespace
       Temperatures[0] = 300.f;
 
       Task = thermal_solution::task_create(Scene.n_meshes);
-      Task->time_delta = 1.f;
+      Task->time_delta = step;
     }
 
     ~ConductiveSolution()
@@ -140,7 +144,11 @@ namespace
   public:
     TetrahedronConductiveSolution()
     {
-      conductive_equation::params_t params;
+      float step = 0.1;
+
+      conductive_equation::params_t params = {};
+      params.step = step;
+
       Equation = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &params);
 
       SolutionParams = {1, &Equation};
@@ -174,7 +182,7 @@ namespace
       Temperatures[1] = 310.f;
 
       Task = thermal_solution::task_create(Scene.n_meshes);
-      Task->time_delta = 0.1f;
+      Task->time_delta = step;
     }
 
     ~TetrahedronConductiveSolution()
@@ -278,6 +286,8 @@ namespace
     TetrahedronRodConductiveSolution()
             : TetrahedronRod(RodLength)
     {
+      float step = 0.1;
+
       Materials[0] = subject::material_Al(0);
       Materials[0].front = {};
       Materials[0].rear = {};
@@ -286,7 +296,8 @@ namespace
                (int) Meshes.size(), Meshes.data(),
                1, Materials};
 
-      conductive_equation::params_t params;
+      conductive_equation::params_t params = {};
+      params.step = step;
       Equation = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &params);
 
       SolutionParams = {1, &Equation};
@@ -299,7 +310,7 @@ namespace
       }
 
       Task = thermal_solution::task_create(Scene.n_meshes);
-      Task->time_delta = 0.1f;
+      Task->time_delta = step;
     }
 
     ~TetrahedronRodConductiveSolution()

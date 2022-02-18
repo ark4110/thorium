@@ -20,15 +20,13 @@
 */
 
 #include "malley_cpu.h"
-#include "../ray_caster/system.h"
 #include "../math/operations.h"
 #include "../math/triangle.h"
 #include "../math/mat.h"
 #include "../math/ray.h"
-#include <float.h>
+#include <assert.h>
 #include <random>
 #include <cmath>
-#include <limits>
 #include <stdlib.h>
 #include <cstring>
 
@@ -193,6 +191,7 @@ namespace malley_cpu
       double T = task->mesh_temperatures[m];
       double power_density = (T * T * T * T) * sigma;
       double emission = power_density * mesh_area * (material.front.emission.emissivity + material.rear.emission.emissivity);
+      assert(!std::isnan(emission) && !std::isinf(emission) && "bad value detected");
       task->mesh_emission[m] = (subject::mesh_emission_t)(emission + task->mesh_emission[m]);
     }
   }

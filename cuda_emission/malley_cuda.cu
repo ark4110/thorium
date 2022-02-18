@@ -175,6 +175,23 @@ namespace cuda_malley_emission
       float weight_density = T; // some empirical distribution function of temperature
       float power_density = sigma * (T * T * T * T);
 
+      if (false)
+      if (isnan(power_density) || isinf(power_density))
+      {
+        printf("Malley emission got bad power density:"
+               "  mesh %d\n"
+               "  face %d area %f\n"
+               "  temperature %f\n"
+               "  power density %f\n"
+               "\n",
+               mesh_idx,
+               face_idx, area,
+               T,
+               power_density
+        );
+        __trap();
+      }
+
       front_weight[face_idx] = weight_density * front_potential;
       rear_weight[face_idx] = weight_density * rear_potential;
       front_emission[face_idx] = power_density * front_potential;
