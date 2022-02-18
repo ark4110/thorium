@@ -1,6 +1,32 @@
 import argparse
 import logging
+import math
 from collections import defaultdict
+
+
+def cross(a, b):
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0])
+
+
+def dot(a, b):
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+
+def vector_minus(a, b):
+    return (
+        a[0] - b[0],
+        a[1] - b[1],
+        a[2] - b[2])
+
+
+def triangle_area(a, b, c):
+    v = vector_minus(b, a)
+    w = vector_minus(c, a)
+    n = cross(v, w)
+    return math.sqrt(dot(n, n)) / 2
 
 
 def normalize_exp_sgn(s, sgn):
@@ -152,15 +178,23 @@ class Bdf2Obj(object):
         self.meshes_elements = new_meshes
 
     def validate(self):
+        failed = False
         for mesh, elements in self.meshes_elements.items():
-            for _, faces in elements:
-                for v0, v1, v2 in faces:
-                    if v0 not in self.vertices:
-                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v0))
-                    if v1 not in self.vertices:
-                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v1))
-                    if v2 not in self.vertices:
-                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v2))
+            for element_index, faces in elements:
+                for face in faces:
+
+                    vertices = []
+                    for v in face:
+                        vertex = self.vertices.get(v)
+                        vertices.append(vertex)
+                        if vertex is None:
+                            logging.error('Missing mesh %d element %d vertex %d' % (mesh, element_index, v))
+                            failed = True
+                    area = triangle_area(*vertices)
+                    if area < 1e-6:
+                        logging.error('Mesh %d element %d face has degenerative area %f' % (mesh, element_index, area))
+                    if failed:
+                        raise RuntimeError('Model validation failed')
 
     def parse_top(self, filename):
         with open(filename) as f:
@@ -207,8 +241,7 @@ class Bdf2Obj(object):
             emissivity=emissivity,
         )
         self.tops[index] = top
-        
-        
+
     def parse_bdf(self, filename):
         with open(filename) as f:
             lines = [x for x in f.read().split('\n')]
