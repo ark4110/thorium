@@ -1,15 +1,31 @@
+import argparse
+import logging
 from collections import defaultdict
-import sys
+
+
+def normalize_exp_sgn(s, sgn):
+    pcs = s.split(sgn)
+    if len(pcs) == 1:
+        return s
+    if pcs[0][-1] != 'e' or pcs[0][-1] != 'E':
+        pcs[0] += 'e'
+    return sgn.join(pcs)
+
+
+def normalize_exp(s):
+    if '+' in s:
+        return normalize_exp_sgn(s, '+')
+    elif '-' in s:
+        return normalize_exp_sgn(s, '-')
+    else:
+        return s
 
 
 def normalize(s):
     pcs = s.split('.')
     if len(pcs) == 1:
         return s
-    if pcs[-1][0] == '+':
-        pcs[-1] = 'e' + pcs[-1]
-    elif pcs[-1][0] == '-':
-        pcs[-1] = 'e' + pcs[-1]
+    pcs[-1] = normalize_exp(pcs[-1])
     return '.'.join(pcs)
 
     
@@ -49,7 +65,7 @@ class Material(object):
         
 class Bdf2Obj(object):
     def __init__(self):
-        self.meshes_faces = defaultdict(set)
+        self.meshes_elements = defaultdict(list)
         self.vertices = dict()
         self.meshes_names = dict()
         self.meshes_materials = dict()
@@ -104,20 +120,17 @@ class Bdf2Obj(object):
         return self.meshes_names.get(index, 'mesh_%d' % index)
     
     def _write_meshes(self, f):
-        for mesh, faces in self.meshes_faces.items():
+        for mesh, elements in self.meshes_elements.items():
             material = self.meshes_materials.get(mesh)
-            material_name = ('mtl_%s' % name).encode()
             mesh_name = self._get_mesh_name(mesh).encode()
+            material_name = b'mtl_%s' % mesh_name
 
-            sorted_faces = sorted(faces)
-            for i, face in enumerate(sorted_faces):
-                f.write(b'g %s_%d\n' % (mesh_name, i))
-            
+            for element_index, element in elements:
+                f.write(b'g %s_%d\n' % (mesh_name, element_index))
                 if material:
                     f.write(b'usemtl %s\n' % material_name)
-            
-                for v in face:
-                    f.write(b'f %d %d %d\n' % v)
+                for face in element:
+                    f.write(b'f %d %d %d\n' % face)
                 f.write(b'\n')
                 
     def _flatten(self):
@@ -125,26 +138,29 @@ class Bdf2Obj(object):
         for index, _ in self.vertices.items():
             new_index = 1 + len(remap)
             remap[index] = new_index
-        new_meshes = dict()                
-        for mesh, faces in self.meshes_faces.items():
-            reindexed_faces = set()
-            for v0, v1, v2 in faces:
-                reindexed_face = (remap[v0], remap[v1], remap[v2])
-                reindexed_faces.add(reindexed_face)
-            new_meshes[mesh] = reindexed_faces
-        self.meshes_faces = new_meshes
-            
+        new_meshes = defaultdict(list)
+        for mesh, elements in self.meshes_elements.items():
+            new_elements = list()
+            for element_index, element in elements:
+                new_element = list()
+                for v0, v1, v2 in element:
+                    new_face = (remap[v0], remap[v1], remap[v2])
+                    new_element.append(new_face)
+                new_element = list(sorted(new_element))
+                new_elements.append((element_index, new_element))
+            new_meshes[mesh] = new_elements
+        self.meshes_elements = new_meshes
 
     def validate(self):
-        for mesh, faces in self.meshes_faces.items():
-            for v0, v1, v2 in faces:
-                if v0 not in self.vertices:
-                    raise KeyError('Missing mesh %d vertice %d' % (mesh, v0))
-                if v1 not in self.vertices:
-                    raise KeyError('Missing mesh %d vertice %d' % (mesh, v1))
-                if v2 not in self.vertices:
-                    raise KeyError('Missing mesh %d vertice %d' % (mesh, v2))
-                        
+        for mesh, elements in self.meshes_elements.items():
+            for _, faces in elements:
+                for v0, v1, v2 in faces:
+                    if v0 not in self.vertices:
+                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v0))
+                    if v1 not in self.vertices:
+                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v1))
+                    if v2 not in self.vertices:
+                        raise KeyError('Missing mesh %d vertex %d' % (mesh, v2))
 
     def parse_top(self, filename):
         with open(filename) as f:
@@ -218,11 +234,15 @@ class Bdf2Obj(object):
                 self.parse_cquad4(line)
             elif line.startswith('CTRIA3'):
                 self.parse_ctria3(line)
+            elif line.startswith('CTETRA'):
+                self.parse_ctetra(line)
             elif line.startswith('GRID*'):
                 grid_line = line
                 continue
             elif line.startswith('PSHELL'):
                 active_mesh = self.parse_pshell(line)
+            elif line.startswith('PSOLID'):
+                active_mesh = self.parse_psolid(line)
             elif line.startswith('MAT1'):
                 index = self.parse_mat1(line, active_material_name)
                 active_material_name = None
@@ -243,52 +263,85 @@ class Bdf2Obj(object):
         self.mesh_thickness[index] = thickness
         self.meshes_materials[index] = material
         return index
-                
+
+    def parse_psolid(self, line):
+        index = parse_int(line[9:17])
+        material = parse_int(line[17:24])
+        self.mesh_thickness[index] = 0
+        self.meshes_materials[index] = material
+        return index
+
     def parse_grid(self, l0, l1):
         index = parse_int(l0[9:17])
         x = parse_float(l0[40:56])
         y = parse_float(l0[56:72])
         z = parse_float(l1[7:24])
         self.vertices[index] = (x, y, z)
-                
+
+    def parse_ctetra(self, line):
+        index = parse_int(line[9:17])
+        mesh = parse_int(line[17:25])
+        v = [
+            parse_int(line[25:33]),
+            parse_int(line[33:41]),
+            parse_int(line[41:49]),
+            parse_int(line[49:57])
+        ]
+
+        faces = [
+            (v[0], v[1], v[2]),
+            (v[0], v[2], v[3]),
+            (v[0], v[3], v[1]),
+            (v[1], v[3], v[2]),
+        ]
+        self._add_mesh_element(mesh, index, faces)
+
     def parse_cquad4(self, line):
         index = parse_int(line[9:17])
         mesh = parse_int(line[17:25])
-        vert0 = parse_int(line[25:33])
-        vert1 = parse_int(line[33:41])
-        vert2 = parse_int(line[41:49])
-        vert3 = parse_int(line[49:57])
+        v = [
+            parse_int(line[25:33]),
+            parse_int(line[33:41]),
+            parse_int(line[41:49]),
+            parse_int(line[49:57])
+        ]
 
-        face0 = (vert0, vert1, vert2)
-        face1 = (vert0, vert2, vert3)
-        self._add_mesh_face(mesh, face0)
-        self._add_mesh_face(mesh, face1)
-        
+        faces = [
+            (v[0], v[1], v[2]),
+            (v[0], v[2], v[3]),
+        ]
+        self._add_mesh_element(mesh, index, faces)
+
     def parse_ctria3(self, line):
         index = parse_int(line[9:17])
         mesh = parse_int(line[17:25])
-        vert0 = parse_int(line[25:33])
-        vert1 = parse_int(line[33:41])
-        vert2 = parse_int(line[41:49])
+        v = [
+            parse_int(line[25:33]),
+            parse_int(line[33:41]),
+            parse_int(line[41:49]),
+            ]
         
-        face0 = (vert0, vert1, vert2)
-        self._add_mesh_face(mesh, face0)
+        faces = [(v[0], v[1], v[2])]
+        self._add_mesh_element(mesh, index, faces)
         
-    def _add_mesh_face(self, mesh, face):
-        #print('Add mesh %d face' % mesh, face)
-        self.meshes_faces[mesh].add(face)
+    def _add_mesh_element(self, mesh, element_index, element):
+        logging.debug('Add mesh element', mesh, element)
+        self.meshes_elements[mesh].append((element_index, element))
 
 
 def main():
-    bdf = sys.argv[1]
-    top = sys.argv[2]
-    obj = sys.argv[3]
-    mtl = sys.argv[4]
+    parser = argparse.ArgumentParser(description='DBF to Thorium obj converter')
+    parser.add_argument('bdf', type=str, help='Input Patran bdf filename')
+    parser.add_argument('top', type=str, help='Thorium thermo-optical properties filename')
+    parser.add_argument('obj', type=str, help='Output scene .obj filename')
+    parser.add_argument('mtl', type=str, help='Output materials databse .mtl filename')
+    args = parser.parse_args()
+
     parser = Bdf2Obj()
-    parser.parse_bdf(bdf)
-    parser.parse_top(top)
+    parser.parse_bdf(args.bdf)
+    parser.parse_top(args.top)
     parser.validate()
-    parser.write_parsed(obj, mtl)
+    parser.write_parsed(args.obj, args.mtl)
 
 
 if __name__ == "__main__":
