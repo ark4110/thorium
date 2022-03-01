@@ -242,7 +242,7 @@ class Bdf2Obj(object):
             elif line.startswith('$ Material Record'):
                 active_material_name = line.split(' ')[4]
             elif grid_line:
-                self.parse_grid(grid_line, line)
+                self.parse_grid_start(grid_line, line)
                 grid_line = None
             elif line.startswith('CQUAD4'):
                 self.parse_cquad4(line)
@@ -253,6 +253,8 @@ class Bdf2Obj(object):
             elif line.startswith('GRID*'):
                 grid_line = line
                 continue
+            elif line.startswith('GRID'):
+                self.parse_grid(line)
             elif line.startswith('PSHELL'):
                 active_mesh = self.parse_pshell(line)
             elif line.startswith('PSOLID'):
@@ -285,7 +287,14 @@ class Bdf2Obj(object):
         self.meshes_materials[index] = material
         return index
 
-    def parse_grid(self, l0, l1):
+    def parse_grid(self, line):
+        index = parse_int(line[9:17])
+        x = parse_float(line[24:32])
+        y = parse_float(line[32:40])
+        z = parse_float(line[40:48])
+        self.vertices[index] = (x, y, z)
+
+    def parse_grid_star(self, l0, l1):
         index = parse_int(l0[9:17])
         x = parse_float(l0[40:56])
         y = parse_float(l0[56:72])
