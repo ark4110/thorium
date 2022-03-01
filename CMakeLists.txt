@@ -42,7 +42,6 @@ set(LIBPREDICT_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/ext/libpredict/include")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories("${CUDA_INCLUDE_DIRS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -march=native -Wall")
 
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 #set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -101,7 +100,6 @@ add_library(thorium_cuda
     	cuda_ray_caster/optix_hit_converter.cuh
     	cuda_ray_caster/optix_hit_converter.cu
 		)
-set_target_properties(thorium_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(thorium_cuda PROPERTIES CUDA_STANDARD 20)
 target_compile_options(thorium_cuda PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:
         --use_fast_math
