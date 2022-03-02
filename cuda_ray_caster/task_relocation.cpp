@@ -16,6 +16,7 @@
 
 #include "task_relocation.h"
 #include <cuda_runtime_api.h>
+#include <cmath>
 #include "../cuda_misc/cuda_check_errors.h"
 
 namespace cuda_task_relocation
@@ -81,7 +82,7 @@ namespace cuda_task_relocation
     rtask.relocate = &relocate_task;
     
     rtask.n_tasks = task->n_tasks + n_rays;
-    const int align_factor = 1024 * 128;
+    const int align_factor = pow(2, ceil(log(n_rays)/log(2))) / 2;
     int n_alloc = (rtask.n_tasks + align_factor - 1) & -align_factor;
     rtask.n_reserved = n_alloc;
 
