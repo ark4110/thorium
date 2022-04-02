@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include "test_scene.h"
 #include "ray_caster/system.h"
+#include "cuda_ray_caster/optix_system.h"
 #include "math/operations.h"
 #include "math/triangle.h"
 
@@ -40,6 +41,9 @@ public:
   {
     SceneSystem = subject::system_create(EngineConfig::SceneID);
     System = system_create(EngineConfig::RayCasterID);
+
+    if (EngineConfig::RayCasterID == RAY_CASTER_OPTIX)
+      optix_ray_caster::print_version();
   }
 
   ~RayCaster()
