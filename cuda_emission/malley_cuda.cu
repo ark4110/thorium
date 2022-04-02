@@ -345,7 +345,7 @@ namespace cuda_malley_emission
 
     scene_ctx_t scene_ctx = make_scene_ctx(system->scene);
 
-    cudaMemcpy(system->mesh_temperature, task->mesh_temperatures, sizeof(float) * n_meshes, cudaMemcpyHostToDevice);
+    checkCudaErrors(cudaMemcpy(system->mesh_temperature, task->mesh_temperatures, sizeof(float) * n_meshes, cudaMemcpyHostToDevice));
 
     // Calculate face weights
     auto g = system->calculate_weights_grid;
@@ -353,9 +353,10 @@ namespace cuda_malley_emission
       system->mesh_temperature,
       system->face_front_weight, system->face_rear_weight,
       system->face_front_emission, system->face_rear_emission);
+    checkCudaErrors(cudaGetLastError());
 
-    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_weight, &system->reduce_result_float[0], n_faces);
-    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_weight, &system->reduce_result_float[1], n_faces);
+    checkCudaErrors(cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_weight, &system->reduce_result_float[0], n_faces));
+    checkCudaErrors(cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_weight, &system->reduce_result_float[1], n_faces));
 
     // Calculate rays count
     g = system->calculate_rays_count_grid;
@@ -363,16 +364,17 @@ namespace cuda_malley_emission
       system->reduce_result_float,
       system->face_front_weight, system->face_rear_weight,
       system->face_front_rays_count, system->face_rear_rays_count);
+    checkCudaErrors(cudaGetLastError());
 
     if (task->mesh_rays_emitted)
       update_mesh_rays_emitted(system, task);
 
     // Calculate total rays count
-    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, &system->reduce_result_int[0], n_faces);
-    cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, &system->reduce_result_int[1], n_faces);
+    checkCudaErrors(cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, &system->reduce_result_int[0], n_faces));
+    checkCudaErrors(cub::DeviceReduce::Sum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, &system->reduce_result_int[1], n_faces));
 
     int n_rays_count[2];
-    cudaMemcpyAsync(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost, system->memcpy_stream);
+    checkCudaErrors(cudaMemcpyAsync(n_rays_count, system->reduce_result_int, 2 * sizeof(int), cudaMemcpyDeviceToHost, system->memcpy_stream));
 
     // Grow task
     int n_upper_bound = system->params.n_rays + 4 * n_faces;
@@ -381,8 +383,9 @@ namespace cuda_malley_emission
     // Generate random
     random_ctx_t random_ctx = make_random_ctx(system);
     generate_malley_random << <system->n_mtgp_blocks, 256 >> > (random_ctx, system->reduce_result_int, (ray_t*)task->rays->ray + n_input_rays);
+    checkCudaErrors(cudaGetLastError());
 
-    cudaStreamSynchronize(system->memcpy_stream);
+    checkCudaErrors(cudaStreamSynchronize(system->memcpy_stream));
     int n_front_rays = n_rays_count[0];
     int n_rear_rays = n_rays_count[1];
     int n_real_rays = n_front_rays + n_rear_rays;
@@ -394,10 +397,12 @@ namespace cuda_malley_emission
       system->face_front_rays_count,
       system->face_front_emission
       );
+    checkCudaErrors(cudaGetLastError());
     scale_emission << <g.grid(n_faces), g.block(n_faces) >> > (n_faces,
       system->face_rear_rays_count,
       system->face_rear_emission
       );
+    checkCudaErrors(cudaGetLastError());
 
     const int n_emit_block_size = 64;
     // Emit rays
@@ -413,11 +418,12 @@ namespace cuda_malley_emission
         (ray_t*)task->rays->ray + n_input_rays,
         task->rays->power + n_input_rays
         );
+      checkCudaErrors(cudaGetLastError());
     }
     if (n_rear_rays)
     {
       int n_block_size = std::min(1024, (n_rear_rays / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
-      cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces);
+      checkCudaErrors(cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces));
       emit_malley_rays<false> << <n_faces, n_block_size>> > (scene_ctx,
         system->face_rear_rays_count,
         system->face_rays_offset,
@@ -426,6 +432,7 @@ namespace cuda_malley_emission
         (ray_t*)task->rays->ray + n_input_rays,
         task->rays->power + n_input_rays
         );
+      checkCudaErrors(cudaGetLastError());
     }
 
     // Update mesh emission

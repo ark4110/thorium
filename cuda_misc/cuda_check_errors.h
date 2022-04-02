@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <stdlib.h>
+#include <assert.h>
 #include <cuda_runtime_api.h>
 
 static const char* _cudaGetErrorEnum(cudaError_t error) {
@@ -14,6 +15,7 @@ void check(T result, char const* const func, const char* const file,
     if (result) {
         fprintf(stderr, "CUDA error at %s:%d code=%d(%s) \"%s\" \n", file, line,
             static_cast<unsigned int>(result), _cudaGetErrorEnum(result), func);
+        assert(false);
         exit(-1);
     }
 }
