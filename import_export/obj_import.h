@@ -26,6 +26,7 @@
 #include "../emission/parallel_rays_cpu.h"
 #include "../emission/planet_emission.h"
 #include "../ballistics/libpredict_tle.h"
+#include "text_coords.h"
 
 namespace obj_import
 {

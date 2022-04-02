@@ -43,6 +43,8 @@ namespace subject
     free(scene->meshes);
     free(scene->materials);
 
+    free(scene->vertex_to_mesh_offsets);
+    free(scene->vertex_to_mesh_index);
     free(scene->face_areas);
     free(scene->face_normals);
     free(scene->face_to_mesh);

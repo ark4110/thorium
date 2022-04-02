@@ -151,6 +151,10 @@ namespace subject
     animation_t* animation;
     int n_blind_faces;
 
+    int n_vertices;
+    int* vertex_to_mesh_offsets;
+    int* vertex_to_mesh_index;
+
     void(*free_data)(scene_t*);
     int(*relocate)(scene_t*, int device);
     int(*set_frame)(scene_t*, int n_frame);
@@ -178,6 +182,8 @@ namespace subject
     int n_solar_rays;
     float frame_time_scale; ///< Seconds per frame.
     float duration;
+
+    const char* heatmap_coordinates_filename;
   };
 
 #define SCENE_ENGINE_HOST 0

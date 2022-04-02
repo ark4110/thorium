@@ -556,6 +556,27 @@ namespace obj_import
     scene->meshes = (subject::mesh_t *)malloc(sizeof(subject::mesh_t) * scene->n_meshes);
     int n_current_mesh = 0;
 
+    std::vector<std::vector<int>> vertex_to_mesh(vertices.size());
+
+    auto add_mesh = [&n_current_face, &n_current_mesh, &loaded_faces, &scene, &vertices, &vertex_to_mesh](subject::mesh_t& mesh)
+    {
+      int mesh_first_idx = n_current_face;
+      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
+      {
+        idx_face_t idx_face = loaded_faces[f];
+        scene->faces[n_current_face++] = {
+                vertices[idx_face.indices[0]],
+                vertices[idx_face.indices[1]],
+                vertices[idx_face.indices[2]]
+        };
+
+        for (auto vertex_idx: idx_face.indices)
+          vertex_to_mesh[vertex_idx].push_back(n_current_mesh);
+      }
+      mesh.first_idx = mesh_first_idx;
+      scene->meshes[n_current_mesh++] = mesh;
+    };
+
     // Write not animated geometry
     for (auto& mesh_iter : meshes)
     {
@@ -564,18 +585,7 @@ namespace obj_import
         continue;
 
       subject::mesh_t& mesh = mesh_iter.second;
-      int mesh_first_idx = n_current_face;
-      for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
-      {
-        idx_face_t idx_face = loaded_faces[f];
-        scene->faces[n_current_face++] = {
-          vertices[idx_face.indices[0]],
-          vertices[idx_face.indices[1]],
-          vertices[idx_face.indices[2]]
-        };
-      }
-      mesh.first_idx = mesh_first_idx;
-      scene->meshes[n_current_mesh++] = mesh;
+      add_mesh(mesh);
     }
 
     if (scene->animation)
@@ -601,19 +611,7 @@ namespace obj_import
         }
 
         subject::mesh_t& mesh = found->second;
-
-        int mesh_first_idx = n_current_face;
-        for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
-        {
-          idx_face_t idx_face = loaded_faces[f];
-          scene->faces[n_current_face++] = {
-            vertices[idx_face.indices[0]],
-            vertices[idx_face.indices[1]],
-            vertices[idx_face.indices[2]]
-          };
-        }
-        mesh.first_idx = mesh_first_idx;
-        scene->meshes[n_current_mesh++] = mesh;
+        add_mesh(mesh);
       }
 
       scene->animation->groups[current_group++].n_length = n_current_face - n_group_start_face;
@@ -637,6 +635,22 @@ namespace obj_import
     else
     {
       memcpy(scene->materials, materials.data(), sizeof(subject::material_t) * scene->n_materials);
+    }
+
+    // Generate vertex -> mesh mapping
+    {
+      std::vector<int> offsets(1, 0);
+      for (const auto& vertex_meshes: vertex_to_mesh)
+        offsets.push_back(vertex_meshes.size() + offsets.back());
+      std::vector<int> index;
+      index.reserve(offsets.back());
+      for (const auto& vertex_meshes: vertex_to_mesh)
+        index.insert(index.end(), vertex_meshes.begin(), vertex_meshes.end());
+      scene->n_vertices = vertices.size();
+      scene->vertex_to_mesh_offsets = (int*)malloc(offsets.size() * sizeof(int));
+      scene->vertex_to_mesh_index = (int*)malloc(index.size() * sizeof(int));
+      memcpy(scene->vertex_to_mesh_offsets, offsets.data(), offsets.size() * sizeof(int));
+      memcpy(scene->vertex_to_mesh_index, index.data(), index.size() * sizeof(int));
     }
 
     return OBJ_IMPORT_OK;
@@ -692,6 +706,17 @@ namespace obj_import
 
       actions["emission_rays_count"] = { [&](const char* line) { return sscanf(line, "%d", &simulation_params->n_emission_rays) == 1; },
         [&]() { fprintf(stderr, "Emission rays count %d\n", simulation_params->n_emission_rays); }
+      };
+
+      actions["heatmap_coordinates_filename"] = {
+              [&](const char* line) {
+                static std::vector<char> filename(4096);
+                simulation_params->heatmap_coordinates_filename = filename.data();
+                return sscanf(line, "%s", filename.data()) == 1;
+              },
+              [&]() {
+                fprintf(stderr, "Heatmap coordinates %s\n", simulation_params->heatmap_coordinates_filename);
+              }
       };
 
       actions["tle_orbit"] = { [&](const char* line) {

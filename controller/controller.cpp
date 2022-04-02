@@ -33,6 +33,7 @@
 #include "../cuda_misc/cuda_util.h"
 #include <chrono>
 #include <iostream>
+#include <vector>
 #include <cstring>
 #include <time.h>
 
@@ -53,7 +54,7 @@ int main(int argc, char* argv[])
   const char* input_task = 0;
   const char* result_name = "-";
 #if !(defined _WIN32 && !defined _WIN64)
-  int type = RAY_CASTER_OPTIX_CPU;
+  int type = RAY_CASTER_OPTIX;
 #else
   int type = RAY_CASTER_NAIVE_CPU;
 #endif
@@ -316,12 +317,19 @@ int main(int argc, char* argv[])
         return 1;
       }
       binary_output ? obj_export::task_binary(result_file, scene->n_meshes, task) : obj_export::task(result_file, scene, task, predictor ? &prediction : 0);
-      
+
       task->time_delta = temp;
 
       time -= report_interval;
       prev_report_time = time;
     }
+  }
+
+  if (simulation_params->heatmap_coordinates_filename)
+  {
+    std::vector<float> heatmap_coords(scene->n_vertices);
+    texture_coordinates::generate(scene, task->temperatures, heatmap_coords.data());
+    texture_coordinates::dump(simulation_params->heatmap_coordinates_filename, scene->n_vertices, heatmap_coords.data());
   }
 
   if (prev_report_time != time)

@@ -15,3 +15,11 @@
 // along with thorium.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
+
+#include "subject/system.h"
+
+namespace texture_coordinates
+{
+  void generate(const subject::scene_t* scene, const float* temperatures, float* coordinates);
+  int dump(const char* filename, int n_vertices, const float* coordinates);
+}
