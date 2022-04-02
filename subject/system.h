@@ -149,11 +149,6 @@ namespace subject
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
     animation_t* animation;
-    int n_blind_faces;
-
-    int n_vertices;
-    int* vertex_to_mesh_offsets;
-    int* vertex_to_mesh_index;
 
     void(*free_data)(scene_t*);
     int(*relocate)(scene_t*, int device);
@@ -163,14 +158,20 @@ namespace subject
     math::vec3* face_normals;    
     int* face_to_mesh; ///< Face to its mesh index.
     int* face_animation_group; ///< Index of face animation group.
-    int* blind_faces;
-    face_graph_index_t* face_graph;
     float* mesh_areas;
     float* mesh_visible_areas;
     int* mesh_material; ///< Mesh material index without indirection.
     math::sphere_t* bsphere; ///< Scene bounding sphere. @note Not relocated.
 
     face_t* base_faces; ///< Faces without transformation applied.
+
+    int n_blind_faces;
+    face_graph_index_t* face_graph;
+    int* blind_faces;
+
+    int n_vertices;
+    int* vertex_to_mesh_offsets;
+    int* vertex_to_mesh_index;
   };
 
   /// @brief Simulation task parameters.
