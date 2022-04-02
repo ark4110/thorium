@@ -31,6 +31,7 @@
 #include "../emission/parallel_rays_cpu.h"
 #include "../import_export/obj_export.h"
 #include "../cuda_misc/cuda_util.h"
+#include "../cuda_ray_caster/optix_system.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
@@ -55,6 +56,7 @@ int main(int argc, char* argv[])
   const char* result_name = "-";
 #if !(defined _WIN32 && !defined _WIN64)
   int type = RAY_CASTER_OPTIX;
+  optix_ray_caster::print_version();
 #else
   int type = RAY_CASTER_NAIVE_CPU;
 #endif

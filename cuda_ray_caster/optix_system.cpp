@@ -57,6 +57,13 @@ namespace optix_ray_caster
     }
   }
 
+  void print_version()
+  {
+    const char* version;
+    rtpGetVersionString(&version);
+    fprintf(stderr, "%s\n", version);
+  }
+
   int init(system_t* system)
   {
     system->scene = 0;

@@ -31,6 +31,7 @@ include_directories(ext/libpredict/include)
 find_library(optix_prime_LIBRARY
 		NAMES optix_prime
 		PATHS ext/optix/lib64)
+message(${optix_prime_LIBRARY})
 find_path(OptiX_INCLUDE
 		NAMES optix.h
 		PATHS ext/optix/include

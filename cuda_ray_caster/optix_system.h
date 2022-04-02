@@ -24,6 +24,8 @@
 
 namespace optix_ray_caster
 {
+  void print_version();
+
   /// @todo Pass params using init().
   ray_caster::system_t* system_create(bool use_cpu);
 }
