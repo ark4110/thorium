@@ -170,9 +170,7 @@ namespace conductive_equation
   {
     system->scene = scene;
 
-    subject::face_graph_index_t* raw_graph = subject::face_graph_index_create(scene->faces, scene->n_faces);
-    system->graph = face_graph_mesh_edges_cache(scene->face_to_mesh, raw_graph);
-    face_graph_index_free(raw_graph);
+    system->graph = face_graph_mesh_edges_cache(scene->face_to_mesh, scene->face_graph);
 
     system->mesh_centers = (math::vec3*) calloc(scene->n_meshes, sizeof(math::vec3));
     for (int m = 0; m != scene->n_meshes; ++m)

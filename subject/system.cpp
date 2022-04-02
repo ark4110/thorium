@@ -47,6 +47,7 @@ namespace subject
     free(scene->face_normals);
     free(scene->face_to_mesh);
     free(scene->face_animation_group);
+    face_graph_index_free(scene->face_graph);
     free(scene->mesh_material);
     free(scene->mesh_areas);
     free(scene->bsphere);
@@ -146,6 +147,7 @@ namespace subject
     build_face_normals(scene, &scene->face_normals);
     build_face_to_mesh_index(scene, &scene->face_to_mesh);    
     build_face_animation_group_index(scene, &scene->face_animation_group);
+    scene->face_graph = face_graph_index_create(scene->faces, scene->n_faces);
     build_mesh_material_index(scene, &scene->mesh_material);
     build_meshes_areas(scene, &scene->mesh_areas);
     build_scene_bounding_sphere(scene);

@@ -114,6 +114,29 @@ namespace subject
   };
 
   /**
+    @brief Face graph walker callback.
+    @param current_idx Zero-based face index.
+    @param leaf_idx Zero-based face adjacent to current face. -1 if there are no adjacent faces to current face.
+    @param vertex_mapping Mapping of adjacent vertices (see math::triangle_find_adjacent_vertices()) . Current face is 'left'.
+    @param have_more Signal if there are more adjacent faces.
+    @param param Data passed to initial walk() function.
+    @return 0 to continue, >0 to stop iteration, <0 for error.
+  */
+  typedef int(*face_graph_walker)(int current_idx, int leaf_idx, int vertex_mapping, bool have_more, void* param);
+
+  /**
+    @brief Walk face graph.
+    @note Algorithm complexity is ~N^2, there N is faces count.
+  */
+  int face_walk_graph_n2c(const face_t* faces, int n_faces, face_graph_walker walker, void* param);
+
+  struct face_graph_index_t
+  {
+    int(*walk_func)(const face_graph_index_t* system, face_graph_walker walker, void* param);
+    void(*free_data)(face_graph_index_t* system);
+  };
+
+  /**
     @brief Scene representation.
     @note Must be binary compatible with ray caster scene.
   */
@@ -135,6 +158,7 @@ namespace subject
     math::vec3* face_normals;    
     int* face_to_mesh; ///< Face to its mesh index.
     int* face_animation_group; ///< Index of face animation group.
+    face_graph_index_t* face_graph;
     float* mesh_areas;
     int* mesh_material; ///< Mesh material index without indirection.
     math::sphere_t* bsphere; ///< Scene bounding sphere. @note Not relocated.
@@ -245,28 +269,6 @@ namespace subject
 
   const material_t& mesh_material(const scene_t* scene, int mesh_idx);
 
-  /**
-    @brief Face graph walker callback.
-    @param current_idx Zero-based face index.
-    @param leaf_idx Zero-based face adjacent to current face. -1 if there are no adjacent faces to current face.
-    @param vertex_mapping Mapping of adjacent vertices (see math::triangle_find_adjacent_vertices()) . Current face is 'left'.
-    @param have_more Signal if there are more adjacent faces.
-    @param param Data passed to initial walk() function.
-    @return 0 to continue, >0 to stop iteration, <0 for error.
-  */
-  typedef int(*face_graph_walker)(int current_idx, int leaf_idx, int vertex_mapping, bool have_more, void* param);
-
-  /**
-    @brief Walk face graph.
-    @note Algorithm complexity is ~N^2, there N is faces count.
-  */
-  int face_walk_graph_n2c(const face_t* faces, int n_faces, face_graph_walker walker, void* param);
-
-  struct face_graph_index_t
-  {
-    int(*walk_func)(const face_graph_index_t* system, face_graph_walker walker, void* param);
-    void(*free_data)(face_graph_index_t* system);
-  };
 
   face_graph_index_t* face_graph_index_create(const face_t* faces, int n_faces);
   void face_graph_index_free(face_graph_index_t* index);
