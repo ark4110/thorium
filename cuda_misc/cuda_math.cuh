@@ -55,11 +55,12 @@ __device__ inline float3 operator+(float3 a, float3 b)
     return { a.x + b.x, a.y + b.y, a.z + b.z };
 }
 
-__device__ inline float3 operator+=(float3& a, float3 b)
+__device__ inline float3& operator+=(float3& a, float3 b)
 {
     a.x += b.x;
     a.y += b.y;
     a.z += b.z;
+    return a;
 }
 
 __device__ inline float3 operator-(float3 a, float3 b)
@@ -67,11 +68,12 @@ __device__ inline float3 operator-(float3 a, float3 b)
     return { a.x - b.x, a.y - b.y, a.z - b.z };
 }
 
-__device__ inline float3 operator-=(float3& a, float3 b)
+__device__ inline float3& operator-=(float3& a, float3 b)
 {
     a.x -= b.x;
     a.y -= b.y;
     a.z -= b.z;
+    return a;
 }
 
 __device__ inline float3 normalize(float3 v)
