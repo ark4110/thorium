@@ -123,6 +123,8 @@ add_library(thorium_lib
 		import_export/obj_export.h
 		import_export/obj_import.cpp
 		import_export/obj_import.h
+		import_export/text_coords.h
+		import_export/text_coords.cpp
 		form_factors/cpu_system.h
 		form_factors/cpu_system.cpp
 		form_factors/system.h
