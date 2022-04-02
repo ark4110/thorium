@@ -647,10 +647,14 @@ namespace obj_import
       for (const auto& vertex_meshes: vertex_to_mesh)
         index.insert(index.end(), vertex_meshes.begin(), vertex_meshes.end());
       scene->n_vertices = vertices.size();
+      scene->vertices = (math::vec3*)malloc(vertices.size() * sizeof(math::vec3));
       scene->vertex_to_mesh_offsets = (int*)malloc(offsets.size() * sizeof(int));
       scene->vertex_to_mesh_index = (int*)malloc(index.size() * sizeof(int));
+      scene->faces_indices = (int*)malloc(loaded_faces.size() * 3 * sizeof(int));
+      memcpy(scene->vertices, vertices.data(), vertices.size() * sizeof(math::vec3));
       memcpy(scene->vertex_to_mesh_offsets, offsets.data(), offsets.size() * sizeof(int));
       memcpy(scene->vertex_to_mesh_index, index.data(), index.size() * sizeof(int));
+      memcpy(scene->faces_indices, loaded_faces.data(), loaded_faces.size() * 3 * sizeof(int));
     }
 
     return OBJ_IMPORT_OK;

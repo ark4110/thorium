@@ -1,6 +1,9 @@
 #include "text_coords.h"
 #include <cstdio>
 #include <cfloat>
+#include <vector>
+#include <algorithm>
+#include "ext/tinycolormap/include/tinycolormap.hpp"
 
 namespace texture_coordinates
 {
@@ -21,6 +24,7 @@ namespace texture_coordinates
     float min;
     float max;
     find_min_max(scene, temperatures, min, max);
+    fprintf(stderr, "Scene min/max temperatures %f/%f.\n", min, max);
     const float scale = 1.f / (max - min);
 
     for (int vi = 0; vi != scene->n_vertices; ++vi)
@@ -57,5 +61,65 @@ namespace texture_coordinates
     }
 
     fclose(f);
+    return 0;
+  }
+
+  struct rgb_t
+  {
+    float r;
+    float g;
+    float b;
+  };
+
+  rgb_t ratio_to_rgb(float ratio)
+  {
+    auto r = tinycolormap::GetColor(ratio, tinycolormap::ColormapType::Hot);
+    return {(float)r.r(), (float)r.g(), (float)r.b()};
+  }
+
+  void dump_rgb_vertices(FILE* out, const subject::scene_t* scene, const float* ratios)
+  {
+    for (int vi = 0; vi != scene->n_vertices; ++vi)
+    {
+      auto coords = scene->vertices[vi];
+      auto rgb = ratio_to_rgb(ratios[vi]);
+      fprintf(out, "v %f %f %f %f %f %f\n", coords.x, coords.y, coords.z, rgb.r, rgb.g, rgb.b);
+    }
+  }
+
+  void dump_meshes(FILE* out, const subject::scene_t* scene)
+  {
+    for (int mi = 0; mi != scene->n_meshes; ++mi)
+    {
+      const auto& mesh = scene->meshes[mi];
+      fprintf(out, "g %s\n", mesh.name);
+      for (int fi = 0; fi != mesh.n_faces; ++fi)
+      {
+        int face_idx = mesh.first_idx + fi;
+        const int* face_vertices = scene->faces_indices + 3 * face_idx;
+        fprintf(out, "f %d %d %d\n", 1 + face_vertices[0], 1 + face_vertices[1], 1 + face_vertices[2]);
+      }
+      fprintf(out, "\n");
+    }
+  }
+
+  int dump_scene_with_colors(const char* filename, const subject::scene_t* scene, const float* temperatures)
+  {
+    FILE* f = fopen(filename, "wb");
+    if (!f)
+    {
+      fprintf(stderr, "Failed to open %s.\n", filename);
+      return -1;
+    }
+
+    std::vector<float> ratio(scene->n_vertices);
+    generate(scene, temperatures, ratio.data());
+    dump_rgb_vertices(f, scene, ratio.data());
+    fprintf(f, "\n");
+
+    dump_meshes(f, scene);
+
+    fclose(f);
+    return 0;
   }
 }

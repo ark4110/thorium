@@ -43,8 +43,6 @@ namespace subject
     free(scene->meshes);
     free(scene->materials);
 
-    free(scene->vertex_to_mesh_offsets);
-    free(scene->vertex_to_mesh_index);
     free(scene->face_areas);
     free(scene->face_normals);
     free(scene->face_to_mesh);
@@ -59,6 +57,11 @@ namespace subject
     free(scene->base_faces);
 
     animation_free(scene->animation);
+
+    free(scene->vertices);
+    free(scene->vertex_to_mesh_offsets);
+    free(scene->vertex_to_mesh_index);
+    free(scene->faces_indices);
   }
   
   void scene_free(scene_t* scene)

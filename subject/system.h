@@ -170,8 +170,10 @@ namespace subject
     int* blind_faces;
 
     int n_vertices;
+    math::vec3* vertices;
     int* vertex_to_mesh_offsets;
     int* vertex_to_mesh_index;
+    int* faces_indices;
   };
 
   /// @brief Simulation task parameters.
