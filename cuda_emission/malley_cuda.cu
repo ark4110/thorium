@@ -408,7 +408,7 @@ namespace cuda_malley_emission
     // Emit rays
     if (n_front_rays)
     {
-      int n_block_size = std::min(1024, (n_front_rays / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
+      int n_block_size = std::min(1024, ((n_front_rays + n_faces - 1) / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
       cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_front_rays_count, system->face_rays_offset, n_faces);
       emit_malley_rays<true> << <n_faces, n_block_size >> > (scene_ctx,
         system->face_front_rays_count,
@@ -422,7 +422,7 @@ namespace cuda_malley_emission
     }
     if (n_rear_rays)
     {
-      int n_block_size = std::min(1024, (n_rear_rays / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
+      int n_block_size = std::min(1024, ((n_rear_rays + n_faces - 1) / n_faces + n_emit_block_size - 1) & -n_emit_block_size);
       checkCudaErrors(cub::DeviceScan::ExclusiveSum(system->reduce_buffer, system->reduce_buffer_size, system->face_rear_rays_count, system->face_rays_offset, n_faces));
       emit_malley_rays<false> << <n_faces, n_block_size>> > (scene_ctx,
         system->face_rear_rays_count,

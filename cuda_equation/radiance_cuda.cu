@@ -109,7 +109,7 @@ namespace radiance_equation_cuda
     {
       host_context.n_rays_alloc = align_rays_count(n_rays);
       if (host_context.hit_decision)
-        cudaFree(host_context.hit_decision);
+        checkCudaErrors(cudaFree(host_context.hit_decision));
       checkCudaErrors(cudaMalloc(&host_context.hit_decision, sizeof(char) * host_context.n_rays_alloc));
       sync = true;
     }
@@ -140,17 +140,17 @@ namespace radiance_equation_cuda
 
     contex_free_scene(&system->host_context);
 
-    cudaFree(system->host_context.HSGenR);
-    cudaFree(system->host_context.HSGenTheta);
-    cudaFree(system->host_context.PhiloxGenDecision);
-    cudaFree(system->host_context.hit_decision);
+    checkCudaErrors(cudaFree(system->host_context.HSGenR));
+    checkCudaErrors(cudaFree(system->host_context.HSGenTheta));
+    checkCudaErrors(cudaFree(system->host_context.PhiloxGenDecision));
+    checkCudaErrors(cudaFree(system->host_context.hit_decision));
 
     system->host_context = {};
 
-    cudaFree(system->device_context);
+    checkCudaErrors(cudaFree(system->device_context));
     system->device_context = 0;
 
-    cudaFree(system->kernel_params);
+    checkCudaErrors(cudaFree(system->kernel_params));
     system->kernel_params = 0;
 
     free(system->face_to_mesh_index);
