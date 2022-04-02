@@ -2,6 +2,8 @@
 #include "../subject/operations.h"
 #include "../math/mat.h"
 #include "../math/triangle.h"
+#include "math/tetrahedron.h"
+#include "subject/objects.h"
 #include <memory>
 
 namespace testing
@@ -76,6 +78,22 @@ namespace testing
     ray_caster::face_t* faces = (ray_caster::face_t*)malloc(n_faces * sizeof(ray_caster::face_t));
     faces[0] = make_floor_face1();
     faces[1] = make_floor_face2();
+
+    return MakeSceneFromFaces(engine, n_faces, faces);
+  }
+
+  subject::scene_t* MakeTetraCube(subject::system_t* engine)
+  {
+    const int n_tetras = 6;
+    const int n_faces = 24;
+
+    math::rod_t cube = subject::rod_cube();
+    math::tetrahedron_t tetras[n_tetras];
+    math::rod_to_six_tetrahedrons(cube, tetras);
+
+    math::face_t* faces = (math::face_t*)malloc(n_faces * sizeof(math::face_t));
+    for (int i = 0; i != n_tetras; ++i)
+      math::tetrahedron_build_faces(tetras[i], faces + i * 4);
 
     return MakeSceneFromFaces(engine, n_faces, faces);
   }

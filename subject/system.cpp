@@ -47,6 +47,7 @@ namespace subject
     free(scene->face_normals);
     free(scene->face_to_mesh);
     free(scene->face_animation_group);
+    free(scene->blind_faces);
     face_graph_index_free(scene->face_graph);
     free(scene->mesh_material);
     free(scene->mesh_areas);
@@ -138,6 +139,30 @@ namespace subject
     free(task);
   }
 
+  int build_blind_faces_walker(int current_idx, int leaf_idx, int vertex_mapping, bool have_more, void* param)
+  {
+    scene_t* scene = static_cast<scene_t*>(param);
+    if (leaf_idx == -1)
+        return 0;
+
+      unsigned char lp[3];
+      unsigned char rp[3];
+      if (math::decode_vertex_mapping(vertex_mapping, lp, rp) != 3)
+        return 0;
+
+      scene->blind_faces[current_idx] = 1;
+      scene->blind_faces[leaf_idx] = 1;
+
+      return 0;
+  }
+
+  int build_blind_faces(scene_t* scene)
+  {
+     scene->blind_faces = (int*)realloc(scene->blind_faces, sizeof(int) * scene->n_faces);
+     memset(scene->blind_faces, 0, sizeof(int) * scene->n_faces);
+     face_graph_walk_index(scene->face_graph, &build_blind_faces_walker, scene);
+  }
+
   int host_scene_finalize(scene_t* scene)
   { 
     if (int r = host_scene_sort_groups(scene))
@@ -147,10 +172,15 @@ namespace subject
     build_face_normals(scene, &scene->face_normals);
     build_face_to_mesh_index(scene, &scene->face_to_mesh);    
     build_face_animation_group_index(scene, &scene->face_animation_group);
-    scene->face_graph = face_graph_index_create(scene->faces, scene->n_faces);
     build_mesh_material_index(scene, &scene->mesh_material);
     build_meshes_areas(scene, &scene->mesh_areas);
     build_scene_bounding_sphere(scene);
+
+    if (scene->face_graph)
+      face_graph_index_free(scene->face_graph);
+    scene->face_graph = face_graph_index_create(scene->faces, scene->n_faces);
+    if (int r = build_blind_faces(scene))
+      return r;
 
     if (scene->animation && scene->animation->groups)
     {

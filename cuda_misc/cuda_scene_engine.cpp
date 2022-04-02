@@ -101,6 +101,9 @@ namespace cuda_scene_engine
     checkCudaErrors(cudaMalloc((void**)&target->face_to_mesh, sizeof(int) * source->n_faces));
     checkCudaErrors(cudaMemcpy(target->face_to_mesh, source->face_to_mesh, sizeof(int) * source->n_faces, cudaMemcpyHostToDevice));
 
+    checkCudaErrors(cudaMalloc((void**)&target->blind_faces, sizeof(int) * source->n_faces));
+    checkCudaErrors(cudaMemcpy(target->blind_faces, source->blind_faces, sizeof(int) * source->n_faces, cudaMemcpyHostToDevice));
+
     checkCudaErrors(cudaMalloc((void**)&target->mesh_material, sizeof(int) * source->n_meshes));
     checkCudaErrors(cudaMemcpy(target->mesh_material, source->mesh_material, sizeof(int) * source->n_meshes, cudaMemcpyHostToDevice));
 
@@ -139,6 +142,7 @@ namespace cuda_scene_engine
       cudaFree(target->face_to_mesh);
       cudaFree(target->face_areas);
       cudaFree(target->face_normals);
+      cudaFree(target->blind_faces);
       cudaFree(target->mesh_material);
       cudaFree(target->mesh_areas);
       cudaFree(target->base_faces);

@@ -158,6 +158,7 @@ namespace subject
     math::vec3* face_normals;    
     int* face_to_mesh; ///< Face to its mesh index.
     int* face_animation_group; ///< Index of face animation group.
+    int* blind_faces;
     face_graph_index_t* face_graph;
     float* mesh_areas;
     int* mesh_material; ///< Mesh material index without indirection.

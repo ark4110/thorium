@@ -111,6 +111,84 @@ TYPED_TEST(MalleyEmission, ReallocateRaycasterTask)
   ASSERT_EQ(8, task->rays->n_tasks);
 }
 
+template <typename EngineType>
+class BlindMalleyEmission : public Test
+{
+public:
+  BlindMalleyEmission()
+  {
+    SceneSystem = subject::system_create(EngineType::SceneID);
+
+    malley_cpu::params_t params;
+    params.n_rays = 1;
+    Emitter = emission::system_create(EngineType::EmissionID, &params);
+
+    Scene = MakeTetraCube(SceneSystem);
+
+    subject::material_t solid = subject::black_body();
+    solid.shell.thickness = 0;
+    solid.rear.emission.emissivity = 0;
+    AddMaterial(Scene, solid);
+
+    int material_idx = 0;
+    for (int i = 0; i != 6; ++i)
+      AddMesh(Scene, { i * 4, 4, material_idx });
+
+    system_finalize_scene(SceneSystem, Scene);
+
+    system_set_scene(this->Emitter, Scene);
+  }
+
+  ~BlindMalleyEmission()
+  {
+    system_free(Emitter);
+    scene_free(Scene);
+    system_free(SceneSystem);
+  }
+
+  subject::system_t* SceneSystem;
+  emission::system_t* Emitter;
+  subject::scene_t* Scene;
+};
+
+TYPED_TEST_CASE(BlindMalleyEmission, MalleyEmissionTypes);
+
+TYPED_TEST(BlindMalleyEmission, NotBlindFacesArea)
+{
+  int n_not_blind = 0;
+  double area = 0;
+  const subject::scene_t* scene = this->Scene;
+  for (int fi = 0; fi != scene->n_faces; ++fi)
+  {
+    if (!scene->blind_faces[fi])
+    {
+      ++n_not_blind;
+      area += scene->face_areas[fi];
+    }
+  }
+
+  ASSERT_EQ(12, n_not_blind);
+  ASSERT_NEAR(6.f, 6, 1e-5f);
+}
+
+TYPED_TEST(BlindMalleyEmission, EmissionPower)
+{
+  auto task = emission::task_create();
+  const subject::scene_t* scene = this->Scene;
+  std::vector<subject::mesh_emission_t> emissions(scene->n_meshes, 1000.f);
+  std::vector<float> temperatures(scene->n_meshes, 1000.f);
+  task->mesh_emission = emissions.data();
+  task->mesh_temperatures = temperatures.data();
+
+  system_relocate_task(this->Emitter, task, 0);
+  system_calculate(this->Emitter, task);
+
+  ASSERT_TRUE(task->rays != 0);
+  ASSERT_EQ(12, task->rays->n_tasks);
+
+  emission::task_free(task);
+}
+
 template <typename EnginesConfig>
 class ParallelEmission : public Test
 {

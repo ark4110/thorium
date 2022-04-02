@@ -118,6 +118,7 @@ namespace cuda_malley_emission
     const int* face_to_mesh;
     const float* face_area;
     const float3* face_normal;
+    const int* blind_faces;
     const int* mesh_material;
     const subject::material_t* materials;
   };
@@ -130,6 +131,7 @@ namespace cuda_malley_emission
     r.face_to_mesh = scene->face_to_mesh;
     r.face_area = scene->face_areas;
     r.face_normal = (const float3*)scene->face_normals;
+    r.blind_faces = scene->blind_faces;
     r.mesh_material = scene->mesh_material;
     r.materials = scene->materials;
     return r;
@@ -164,6 +166,7 @@ namespace cuda_malley_emission
 
     for (; face_idx < s.n_faces; face_idx += stride)
     {
+      bool is_blind = s.blind_faces[face_idx];
       int mesh_idx = s.face_to_mesh[face_idx];
       float area = s.face_area[face_idx];
       int mesh_material_idx = s.mesh_material[mesh_idx];
@@ -172,7 +175,7 @@ namespace cuda_malley_emission
       float rear_potential = area * material.rear.emission.emissivity;
 
       float T = temperatures[mesh_idx];
-      float weight_density = T; // some empirical distribution function of temperature
+      float weight_density = is_blind ? 0.f : T; // some empirical distribution function of temperature
       float power_density = sigma * (T * T * T * T);
 
       if (false)

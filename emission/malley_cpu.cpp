@@ -122,8 +122,10 @@ namespace malley_cpu
       const subject::mesh_t& mesh = scene->meshes[m];
       for (int f = mesh.first_idx; f != mesh.first_idx + mesh.n_faces; ++f)
       {
-        const float front = front_density * face_areas[f];
-        const float rear = rear_density * face_areas[f];
+        const bool is_blind = scene->blind_faces[f];
+        const float weight = is_blind ? 0.f : face_areas[f];
+        const float front = front_density * weight;
+        const float rear = rear_density * weight;
         total += front + rear;
         weights[f * 2] = front;
         weights[f * 2 + 1] = rear;

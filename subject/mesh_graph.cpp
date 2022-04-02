@@ -318,7 +318,8 @@ namespace subject
 
   void face_graph_index_free(face_graph_index_t* index)
   {
-    index->free_data(index);
+    if (index)
+      index->free_data(index);
   }
 
   int face_graph_walk_index(const face_graph_index_t* index, face_graph_walker walker, void* param)

@@ -17,11 +17,9 @@
 #include <math/rod.h>
 #include "gtest/gtest.h"
 
-#include "math/operations.h"
 #include "math/triangle.h"
 #include "math/tetrahedron.h"
 #include "emission/system.h"
-#include "form_factors/system.h"
 #include "thermal_solution/system.h"
 #include "thermal_equation/system.h"
 #include "thermal_equation/conductive_cpu.h"
