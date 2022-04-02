@@ -3,10 +3,45 @@
 #include <cfloat>
 #include <vector>
 #include <algorithm>
+#include <map>
 #include "ext/tinycolormap/include/tinycolormap.hpp"
 
 namespace texture_coordinates
 {
+  tinycolormap::ColormapType parse_colormap_name(const char* name_)
+  {
+    using tinycolormap::ColormapType;
+    static const std::map<std::string, tinycolormap::ColormapType> types =
+            {
+                    {"parula", ColormapType::Parula},
+                    {"heat", ColormapType::Heat},
+                    {"jet", ColormapType::Jet},
+                    {"turbo", ColormapType::Turbo},
+                    {"hot", ColormapType::Hot},
+                    {"gray", ColormapType::Gray},
+                    {"magma", ColormapType::Magma},
+                    {"inferno", ColormapType::Inferno},
+                    {"plasma", ColormapType::Plasma},
+                    {"viridis", ColormapType::Viridis},
+                    {"cividis", ColormapType::Cividis},
+                    {"github", ColormapType::Github},
+                    {"cubehelix", ColormapType::Cubehelix}
+            };
+
+    std::string name(name_);
+    for (char& c: name)
+      c = std::tolower(c);
+
+    auto found = types.find(name);
+    if (found == types.end())
+    {
+      fprintf(stderr, "Can't find colormap %s. Using default Heat colormap.\n", name_);
+      return ColormapType::Heat;
+    }
+
+    return found->second;
+  }
+
   void find_min_max(const subject::scene_t* scene, const float* temperatures, float& min, float& max)
   {
     min = FLT_MAX;
@@ -77,13 +112,13 @@ namespace texture_coordinates
     return {(float)r.r(), (float)r.g(), (float)r.b()};
   }
 
-  void dump_rgb_vertices(FILE* out, const subject::scene_t* scene, const float* ratios)
+  void dump_rgb_vertices(FILE* out, const subject::scene_t* scene, const float* ratios, tinycolormap::ColormapType colormap)
   {
     for (int vi = 0; vi != scene->n_vertices; ++vi)
     {
       auto coords = scene->vertices[vi];
-      auto rgb = ratio_to_rgb(ratios[vi]);
-      fprintf(out, "v %f %f %f %f %f %f\n", coords.x, coords.y, coords.z, rgb.r, rgb.g, rgb.b);
+      auto rgb = tinycolormap::GetColor(ratios[vi], colormap);
+      fprintf(out, "v %f %f %f %f %f %f\n", coords.x, coords.y, coords.z, rgb.r(), rgb.g(), rgb.b());
     }
   }
 
@@ -103,7 +138,7 @@ namespace texture_coordinates
     }
   }
 
-  int dump_scene_with_colors(const char* filename, const subject::scene_t* scene, const float* temperatures)
+  int dump_scene_with_colors(const char* filename, const char* colormap_name, const subject::scene_t* scene, const float* temperatures)
   {
     FILE* f = fopen(filename, "wb");
     if (!f)
@@ -112,9 +147,11 @@ namespace texture_coordinates
       return -1;
     }
 
+    auto colormap = parse_colormap_name(colormap_name);
+
     std::vector<float> ratio(scene->n_vertices);
     generate(scene, temperatures, ratio.data());
-    dump_rgb_vertices(f, scene, ratio.data());
+    dump_rgb_vertices(f, scene, ratio.data(), colormap);
     fprintf(f, "\n");
 
     dump_meshes(f, scene);

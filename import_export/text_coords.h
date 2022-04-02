@@ -22,5 +22,5 @@ namespace texture_coordinates
 {
   void generate(const subject::scene_t* scene, const float* temperatures, float* coordinates);
   int dump(const char* filename, int n_vertices, const float* coordinates);
-  int dump_scene_with_colors(const char* filename, const subject::scene_t* scene, const float* temperatures);
+  int dump_scene_with_colors(const char* filename, const char* colormap, const subject::scene_t* scene, const float* temperatures);
 }

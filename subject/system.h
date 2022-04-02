@@ -186,7 +186,8 @@ namespace subject
     float frame_time_scale; ///< Seconds per frame.
     float duration;
 
-    const char* heatmap_coordinates_filename;
+    const char* heatmap_colormap_name;
+    const char* heatmap_filename;
   };
 
 #define SCENE_ENGINE_HOST 0

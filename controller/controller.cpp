@@ -327,13 +327,17 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (simulation_params->heatmap_coordinates_filename)
+  if (simulation_params->heatmap_filename)
   {
     //std::vector<float> heatmap_coords(scene->n_vertices);
     //texture_coordinates::generate(scene, task->temperatures, heatmap_coords.data());
     //texture_coordinates::dump(simulation_params->heatmap_coordinates_filename, scene->n_vertices, heatmap_coords.data());
 
-    texture_coordinates::dump_scene_with_colors(simulation_params->heatmap_coordinates_filename, scene, task->temperatures);
+    texture_coordinates::dump_scene_with_colors(
+            simulation_params->heatmap_filename,
+            simulation_params->heatmap_colormap_name,
+            scene,
+            task->temperatures);
   }
 
   if (prev_report_time != time)

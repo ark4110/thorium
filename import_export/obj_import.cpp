@@ -712,14 +712,17 @@ namespace obj_import
         [&]() { fprintf(stderr, "Emission rays count %d\n", simulation_params->n_emission_rays); }
       };
 
-      actions["heatmap_coordinates_filename"] = {
+      actions["heatmap"] = {
               [&](const char* line) {
-                static std::vector<char> filename(4096);
-                simulation_params->heatmap_coordinates_filename = filename.data();
-                return sscanf(line, "%s", filename.data()) == 1;
+                std::vector<char> colormap_name(4096);
+                std::vector<char> filename(4096);
+                auto success = sscanf(line, "%s %s", colormap_name.data(), filename.data()) == 2;
+                simulation_params->heatmap_colormap_name = strdup(colormap_name.data());
+                simulation_params->heatmap_filename = strdup(filename.data());
+                return success;
               },
               [&]() {
-                fprintf(stderr, "Heatmap coordinates %s\n", simulation_params->heatmap_coordinates_filename);
+                fprintf(stderr, "Heatmap colormap '%s' to %s\n", simulation_params->heatmap_colormap_name, simulation_params->heatmap_filename);
               }
       };
 
