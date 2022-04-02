@@ -51,6 +51,7 @@ namespace subject
     face_graph_index_free(scene->face_graph);
     free(scene->mesh_material);
     free(scene->mesh_areas);
+    free(scene->mesh_visible_areas);
     free(scene->bsphere);
 
     free(scene->base_faces);
@@ -150,6 +151,7 @@ namespace subject
       if (math::decode_vertex_mapping(vertex_mapping, lp, rp) != 3)
         return 0;
 
+      ++scene->n_blind_faces;
       scene->blind_faces[current_idx] = 1;
       scene->blind_faces[leaf_idx] = 1;
 
@@ -173,7 +175,6 @@ namespace subject
     build_face_to_mesh_index(scene, &scene->face_to_mesh);    
     build_face_animation_group_index(scene, &scene->face_animation_group);
     build_mesh_material_index(scene, &scene->mesh_material);
-    build_meshes_areas(scene, &scene->mesh_areas);
     build_scene_bounding_sphere(scene);
 
     if (scene->face_graph)
@@ -181,6 +182,7 @@ namespace subject
     scene->face_graph = face_graph_index_create(scene->faces, scene->n_faces);
     if (int r = build_blind_faces(scene))
       return r;
+    build_meshes_areas(scene, &scene->mesh_areas, &scene->mesh_visible_areas);
 
     if (scene->animation && scene->animation->groups)
     {
@@ -438,9 +440,29 @@ namespace subject
     return (float)area;
   }
 
+  bool is_solid_mesh(const scene_t* scene, int mesh_idx)
+  {
+    const material_t& material = scene->materials[scene->mesh_material[mesh_idx]];
+    return material.shell.thickness == 0;
+  }
+
   float mesh_area(const scene_t* scene, int mesh_idx)
   {
     return mesh_area(scene, scene->meshes[mesh_idx]);
+  }
+
+  float mesh_visible_area(const scene_t* scene, int mesh_idx)
+  {
+    double acc = 0;
+    const mesh_t mesh = scene->meshes[mesh_idx];
+    for (int i = 0; i != mesh.n_faces; ++i)
+    {
+      int face_idx = mesh.first_idx + i;
+      bool is_blind = scene->blind_faces[face_idx];
+      acc += is_blind ? 0.f : scene->face_areas[face_idx];
+    }
+
+    return acc;
   }
 
   float mesh_volume(const scene_t* scene, const mesh_t& mesh)
@@ -464,9 +486,10 @@ namespace subject
     return volume * material.shell.density * material.shell.heat_capacity;
   }
 
-  float build_meshes_areas(const scene_t* scene, float** areas)
+  float build_meshes_areas(const scene_t* scene, float** areas, float** visible_areas)
   {
     *areas = (float*)realloc(*areas, sizeof(float) * scene->n_meshes);
+    *visible_areas = (float*)realloc(*visible_areas, sizeof(float) * scene->n_meshes);
 
     float total_area = 0;
     const int n_meshes = scene->n_meshes;
@@ -475,6 +498,9 @@ namespace subject
       float area = mesh_area(scene, m);
       total_area += area;
       (*areas)[m] = area;
+
+      float visible_area = is_solid_mesh(scene, m) ? mesh_visible_area(scene, m) : area;
+      (*visible_areas)[m] = visible_area;
     }
 
     return total_area;

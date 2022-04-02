@@ -149,6 +149,7 @@ namespace subject
     int n_materials; ///< Total number of materials.
     material_t* materials; ///< Materials array.
     animation_t* animation;
+    int n_blind_faces;
 
     void(*free_data)(scene_t*);
     int(*relocate)(scene_t*, int device);
@@ -161,6 +162,7 @@ namespace subject
     int* blind_faces;
     face_graph_index_t* face_graph;
     float* mesh_areas;
+    float* mesh_visible_areas;
     int* mesh_material; ///< Mesh material index without indirection.
     math::sphere_t* bsphere; ///< Scene bounding sphere. @note Not relocated.
 
@@ -245,7 +247,7 @@ namespace subject
   /// @brief Calculate areas for all meshes.
   /// @return Total area.
   /// @detail Reallocate target areas array memory.
-  float build_meshes_areas(const scene_t* scene, float** areas); 
+  float build_meshes_areas(const scene_t* scene, float** areas, float** visible_areas);
 
   /// @brief Calculate areas for all faces.
   /// @detail Reallocate target areas array memory.

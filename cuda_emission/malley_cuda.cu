@@ -176,7 +176,7 @@ namespace cuda_malley_emission
 
       float T = temperatures[mesh_idx];
       float weight_density = is_blind ? 0.f : T; // some empirical distribution function of temperature
-      float power_density = sigma * (T * T * T * T);
+      float power_density = sigma * powf(T, 4);
 
       if (false)
       if (isnan(power_density) || isinf(power_density))
@@ -222,7 +222,11 @@ namespace cuda_malley_emission
     int stride = gridDim.x * blockDim.x;
 
     for (; face_idx < n_faces; face_idx += stride)
-      emission[face_idx] /= (float)rays_count[face_idx];
+    {
+      auto n_rays = rays_count[face_idx];
+      auto& face_emission = emission[face_idx];
+      face_emission = n_rays != 0 ? (face_emission / (float)n_rays) : face_emission;
+    }
   }
 
   template <bool front_emission>

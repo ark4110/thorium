@@ -173,18 +173,27 @@ TYPED_TEST(BlindMalleyEmission, NotBlindFacesArea)
 
 TYPED_TEST(BlindMalleyEmission, EmissionPower)
 {
+  const float sigma = 5.670400e-8f;
+  float T = 300;
+  float expected_power = 6 * sigma * powf(T, 4);
+
   auto task = emission::task_create();
   const subject::scene_t* scene = this->Scene;
-  std::vector<subject::mesh_emission_t> emissions(scene->n_meshes, 1000.f);
-  std::vector<float> temperatures(scene->n_meshes, 1000.f);
+  std::vector<subject::mesh_emission_t> emissions(scene->n_meshes, 0);
+  std::vector<float> temperatures(scene->n_meshes, T);
   task->mesh_emission = emissions.data();
   task->mesh_temperatures = temperatures.data();
 
   system_relocate_task(this->Emitter, task, 0);
   system_calculate(this->Emitter, task);
 
+  double total_emission = 0;
+  for (int m = 0; m != 6; ++m)
+    total_emission += task->mesh_emission[m];
+
   ASSERT_TRUE(task->rays != 0);
   ASSERT_EQ(12, task->rays->n_tasks);
+  ASSERT_NEAR(expected_power, total_emission, 1e-2);
 
   emission::task_free(task);
 }

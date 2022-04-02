@@ -189,9 +189,9 @@ namespace malley_cpu
     for (int m = 0; m != scene->n_meshes; ++m)
     {
       const subject::material_t& material = mesh_material(scene, m);
-      double mesh_area = scene->mesh_areas[m];
+      double mesh_area = scene->mesh_visible_areas[m];
       double T = task->mesh_temperatures[m];
-      double power_density = (T * T * T * T) * sigma;
+      double power_density = powf(T, 4) * sigma;
       double emission = power_density * mesh_area * (material.front.emission.emissivity + material.rear.emission.emissivity);
       assert(!std::isnan(emission) && !std::isinf(emission) && "bad value detected");
       task->mesh_emission[m] = (subject::mesh_emission_t)(emission + task->mesh_emission[m]);
@@ -231,7 +231,7 @@ namespace malley_cpu
 
       // Mesh radiance properties.
       const float T = task->mesh_temperatures[m];
-      const float power_density = sigma * (T * T * T * T);
+      const float power_density = sigma * powf(T, 4);
       const float front_density = power_density * material.front.emission.emissivity;
       const float rear_density = power_density * material.rear.emission.emissivity;
 

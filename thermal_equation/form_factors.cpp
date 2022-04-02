@@ -37,7 +37,6 @@ namespace form_factors_equation
     params_t params;
 
     subject::scene_t* scene;
-    float* areas;
 
     // @todo Move form factors calculation of process?
     form_factors::system_t* ff_calculator;
@@ -48,7 +47,6 @@ namespace form_factors_equation
   int init(cpu_system_t* system, params_t* params)
   {    
     system->params = *params;
-    system->areas = 0;
     system->scene = 0;
     system->ff_calculator = params->form_factors_calculator;
     system->ff_task = 0;
@@ -60,9 +58,6 @@ namespace form_factors_equation
   int shutdown(cpu_system_t* system)
   {
     system->scene = 0;
-
-    free(system->areas);
-    system->areas = 0;
 
     system->ff_calculator = 0;
     // @todo Looks like it is better to move task ownership to system to avoid such code.
@@ -76,8 +71,6 @@ namespace form_factors_equation
   int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;
-    
-    build_meshes_areas(system->scene, &system->areas);
     
     int r = 0;
     if ((r = form_factors::system_set_scene(system->ff_calculator, scene)) < 0)
@@ -100,11 +93,12 @@ namespace form_factors_equation
   {
     //@todo Note n^2 complexity.
     const int n_meshes = system->scene->n_meshes;
+    const float* emission_areas = system->scene->mesh_visible_areas;
     for (int m = 0; m != n_meshes; ++m)
     {
       const subject::material_t& material = mesh_material(system->scene, m);
       const float T = task->temperatures[m];
-      float power = sigma * (T * T * T * T) * system->areas[m];
+      float power = sigma * powf(T, 4) * emission_areas[m];
       float emission = material.front.emission.emissivity * power + material.rear.emission.emissivity * power;
       task->emission[m] += emission;
       for (int n = 0; n != n_meshes; ++n)
