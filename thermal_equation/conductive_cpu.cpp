@@ -156,16 +156,6 @@ namespace conductive_equation
     return THERMAL_EQUATION_OK;
   }
 
-  math::vec3 mesh_center(const subject::scene_t* scene, int mesh_idx)
-  {
-    const subject::mesh_t& mesh = scene->meshes[mesh_idx];
-    math::vec3 center = triangle_center(scene->faces[mesh.first_idx]);
-    for (int f = 1; f != mesh.n_faces; ++f)
-      center += triangle_center(scene->faces[mesh.first_idx + f]);
-    center /= (float)mesh.n_faces;
-    return center;
-  }
-
   int set_scene(cpu_system_t* system, subject::scene_t* scene)
   {
     system->scene = scene;

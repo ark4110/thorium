@@ -248,6 +248,8 @@ namespace subject
   */
   int host_scene_sort_groups(scene_t* scene);
 
+  math::vec3 mesh_center(int n_faces, const math::face_t* faces);
+  math::vec3 mesh_center(const scene_t* scene, int mesh_idx);
   float mesh_area(const scene_t* scene, const mesh_t& mesh);
   float mesh_area(const scene_t* scene, int mesh_idx);
   float mesh_volume(const scene_t* scene, const mesh_t& mesh);

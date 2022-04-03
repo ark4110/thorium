@@ -437,6 +437,24 @@ namespace subject
     return system->methods->finalize_scene(system, scene);
   }
 
+  math::vec3 mesh_center(int n_faces, const math::face_t* faces)
+  {
+    math::vec3 center = {};
+    for (int f = 0; f != n_faces; ++f)
+    {
+      const auto& face = faces[f];
+      center += face.points[0] + face.points[1] + face.points[2];
+    }
+    center /= (3.f * n_faces);
+    return center;
+  }
+
+  math::vec3 mesh_center(const subject::scene_t* scene, int mesh_idx)
+  {
+    const subject::mesh_t& mesh = scene->meshes[mesh_idx];
+    return mesh_center(mesh.n_faces, scene->faces + mesh.first_idx);
+  }
+
   float mesh_area(const scene_t* scene, const mesh_t& mesh)
   {
     double area = 0;
