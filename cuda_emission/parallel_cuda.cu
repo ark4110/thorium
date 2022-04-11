@@ -161,28 +161,39 @@ namespace cuda_parallel_rays_emission
 
     const float ray_power = params.power * (float(M_PI) * scene_radius * scene_radius) / (float)n_rays;
 
-    curandStateMtgp32* HSGenR = &ctx.HSGenR[blockIdx.x];
-    curandStateMtgp32* HSGenTheta = &ctx.HSGenTheta[blockIdx.x];
+    curandStateMtgp32 HSGenR = ctx.HSGenR[blockIdx.x];
+    curandStateMtgp32 HSGenTheta = ctx.HSGenTheta[blockIdx.x];
 
+    int n_stride = blockDim.x * gridDim.x;
+    int n_iters = (n_rays + n_stride - 1) / n_stride;
     int ray_idx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (; ray_idx < n_rays; ray_idx += blockDim.x * gridDim.x)
+    for (int i = 0; i < n_iters; ++i, ray_idx += n_stride)
     {
-      float r = scene_radius * sqrtf(curand_uniform(HSGenR));
-      float theta = M_2PI * curand_uniform(HSGenTheta);
+      float r = scene_radius * sqrtf(curand_uniform(&HSGenR));
+      float theta = M_2PI * curand_uniform(&HSGenTheta);
 
       float s, c;
       sincosf(theta, &s, &c);
 
-      float3 ray_origin = rotation * make_float3(r * c, r * s, -offset) + scene_origin;
-      rays[ray_idx] = { ray_origin, direction };
-      powers[ray_idx] = ray_power;
+      if (ray_idx < n_rays)
+      {
+        float3 ray_origin = rotation * make_float3(r * c, r * s, -offset) + scene_origin;
+        rays[ray_idx] = {ray_origin, direction};
+        powers[ray_idx] = ray_power;
+      }
     }
+
+    ctx.HSGenR[blockIdx.x] = HSGenR;
+    ctx.HSGenTheta[blockIdx.x] = HSGenTheta;
   }
 
   __global__ void emit_multiple_parallel_rays(context_t ctx, const multi_source_params_t* params, int n_sources, ray_t* rays, float* powers)
   {
     const float3 scene_origin = ctx.scene_origin;
     const float scene_radius = ctx.scene_radius;
+
+    curandStateMtgp32 HSGenR = ctx.HSGenR[blockIdx.x];
+    curandStateMtgp32 HSGenTheta = ctx.HSGenTheta[blockIdx.x];
 
     int source_idx = blockIdx.x;
     for (; source_idx < n_sources; source_idx += gridDim.x)
@@ -197,15 +208,12 @@ namespace cuda_parallel_rays_emission
 
       const float ray_power = param.power * (float(M_PI) * scene_radius * scene_radius) / (float)n_rays;
 
-      curandStateMtgp32* HSGenR = &ctx.HSGenR[blockIdx.x];
-      curandStateMtgp32* HSGenTheta = &ctx.HSGenTheta[blockIdx.x];
+      float r = scene_radius * sqrtf(curand_uniform(&HSGenR));
+      float theta = M_2PI * curand_uniform(&HSGenTheta);
 
       int ray_idx = threadIdx.x;
       for (; ray_idx < n_rays; ray_idx += blockDim.x)
       {
-        float r = scene_radius * sqrtf(curand_uniform(HSGenR));
-        float theta = M_2PI * curand_uniform(HSGenTheta);
-
         float s, c;
         sincosf(theta, &s, &c);
 
@@ -214,6 +222,9 @@ namespace cuda_parallel_rays_emission
         powers[ray_idx + n_rays_offset] = ray_power;
       }
     }
+
+    ctx.HSGenR[blockIdx.x] = HSGenR;
+    ctx.HSGenTheta[blockIdx.x] = HSGenTheta;
   }
 
   int calculate_flat(system_t* system, emission::task_t* task)

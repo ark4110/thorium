@@ -37,6 +37,7 @@ public:
     float step = 1.f;
     conductive_equation::params_t conductivityParams = {};
     conductivityParams.step = step;
+    SceneSystem = subject::system_create(SCENE_ENGINE_HOST);
 
     Equations[0] = thermal_equation::system_create(THERMAL_EQUATION_CONDUCTIVE_CPU, &conductivityParams);
 
@@ -61,14 +62,20 @@ public:
     Faces = subject::plane_grid_faces(1, 1, Dimension, Dimension);
     Meshes = subject::plane_grid_meshes(Dimension, Dimension);
 
-    Scene = { Count * 2, Faces,
-      Count, Meshes,
-      1, Materials };
+    system_create_scene(SceneSystem, &Scene);
+    Scene->n_faces = Count * 2;
+    Scene->faces = Faces;
+    Scene->n_meshes = Count;
+    Scene->meshes = Meshes;
+    Scene->n_materials = 1;
+    Scene->materials = Materials;
+
+    system_finalize_scene(SceneSystem, Scene);
 
     for (int i = 0; i != Count; ++i)
       Temperatures[i] = 300;
 
-    Task = thermal_solution::task_create(Scene.n_meshes);
+    Task = thermal_solution::task_create(Scene->n_meshes);
     Task->time_delta = step;
   }
 
@@ -78,13 +85,16 @@ public:
     thermal_solution::system_free(System);
     for (thermal_equation::system_t** e = Equations; e != Equations + 2; ++e)
       thermal_equation::system_free(*e);
+    subject::system_finalize_scene(SceneSystem, Scene);
     free(Meshes);
     free(Faces);
+    subject::system_free(SceneSystem);
   }
 
   static const int Dimension = 10;
   static const int Count = Dimension * Dimension;
 
+  subject::system_t* SceneSystem;
   heat_source_equation::heat_source_t Sources[2];
   thermal_equation::system_t* Equations[2];
   thermal_solution::params_t SolutionParams;
@@ -92,19 +102,19 @@ public:
   subject::material_t Materials[1];
   subject::face_t* Faces;
   subject::mesh_t* Meshes;
-  subject::scene_t Scene;
+  subject::scene_t* Scene;
   float Temperatures[Count];
   thermal_solution::task_t* Task;
 };
 
-TEST_F(ConductiveSourceSink, DISABLED_DistributeAsTheory)
+TEST_F(ConductiveSourceSink, DistributeAsTheory)
 {
   using namespace thermal_solution;
 
   Task->time_delta = .1f;
 
   int r = 0;
-  r = system_set_scene(System, &Scene, Temperatures);
+  r = system_set_scene(System, Scene, Temperatures);
   float prevTemperature = Temperatures[0];
   ASSERT_EQ(THERMAL_SOLUTION_OK, r);
   r = system_calculate(System, Task);

@@ -59,7 +59,7 @@ public:
     SceneSystem = subject::system_create(EngineType::SceneEngineID);
     Scene = 0;
     malley_cpu::params_t emitter_params;
-    emitter_params.n_rays = 40000;
+    emitter_params.n_rays = 100000;
     Emitter = emission::system_create(EngineType::EmitterID, &emitter_params);
     RayCaster = ray_caster::system_create(EngineType::RayCasterID);
     form_factors::params_t params{ Emitter, RayCaster };

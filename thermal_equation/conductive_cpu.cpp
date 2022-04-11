@@ -235,12 +235,12 @@ namespace conductive_equation
       area = math::triangle_area(l_face);
     }
 
-    double conductivity_resistance = (l_dist / l_material.shell.thermal_conductivity + r_dist / r_material.shell.thermal_conductivity) / area;
+    double r_conductivity_resistance = area / (l_dist / l_material.shell.thermal_conductivity + r_dist / r_material.shell.thermal_conductivity);
 
     float l_temp = param->task->temperatures[l_mesh_idx];
     float r_temp = param->task->temperatures[r_mesh_idx];
 
-    double flow = (r_temp - l_temp) / conductivity_resistance;
+    double flow = (r_temp - l_temp) * r_conductivity_resistance;
     assert(!std::isnan(flow) && !std::isinf(flow) && "bad value detected");
 
     const int steps = param->system->params.integrations_steps;
@@ -257,7 +257,7 @@ namespace conductive_equation
         integrated_flow += dQ;
         l_temp += dQ * l_rC;
         r_temp -= dQ * r_rC;
-        flow = (r_temp - l_temp) / conductivity_resistance;
+        flow = (r_temp - l_temp) * r_conductivity_resistance;
       }
       flow = integrated_flow / step;
     }
