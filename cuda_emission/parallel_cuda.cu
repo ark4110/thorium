@@ -205,18 +205,22 @@ namespace cuda_parallel_rays_emission
 
       const float ray_power = param.power * (float(M_PI) * scene_radius * scene_radius) / (float)n_rays;
 
-      float r = scene_radius * sqrtf(curand_uniform(HSGenR));
-      float theta = M_2PI * curand_uniform(HSGenTheta);
-
+      int n_iters = (n_rays + blockDim.x - 1) / blockDim.x;
       int ray_idx = threadIdx.x;
-      for (; ray_idx < n_rays; ray_idx += blockDim.x)
+      for (int i = 0; i != n_iters; ++i, ray_idx += blockDim.x)
       {
+        float r = scene_radius * sqrtf(curand_uniform(HSGenR));
+        float theta = M_2PI * curand_uniform(HSGenTheta);
+
         float s, c;
         sincosf(theta, &s, &c);
 
-        float3 ray_origin = rotation * make_float3(r * c, r * s, -offset) + scene_origin;
-        rays[ray_idx + n_rays_offset] = { ray_origin, direction };
-        powers[ray_idx + n_rays_offset] = ray_power;
+        if (ray_idx < n_rays)
+        {
+          float3 ray_origin = rotation * make_float3(r * c, r * s, -offset) + scene_origin;
+          rays[ray_idx + n_rays_offset] = {ray_origin, direction};
+          powers[ray_idx + n_rays_offset] = ray_power;
+        }
       }
     }
   }
