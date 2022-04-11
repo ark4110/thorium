@@ -267,10 +267,10 @@ namespace cuda_malley_emission
   {
     const int n_rays = n_rays_counts[0] + n_rays_counts[1];
 
-    curandStateMtgp32 GenA = g.GenA[blockIdx.x];
-    curandStateMtgp32 GenB = g.GenB[blockIdx.x];
-    curandStateMtgp32 GenR = g.GenR[blockIdx.x];
-    curandStateMtgp32 GenTheta = g.GenTheta[blockIdx.x];
+    curandStateMtgp32* GenA = &g.GenA[blockIdx.x];
+    curandStateMtgp32* GenB = &g.GenB[blockIdx.x];
+    curandStateMtgp32* GenR = &g.GenR[blockIdx.x];
+    curandStateMtgp32* GenTheta = &g.GenTheta[blockIdx.x];
 
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int n_stride = gridDim.x * blockDim.x;
@@ -278,10 +278,10 @@ namespace cuda_malley_emission
     int n_iters = (n_rays + n_stride - 1) / n_stride;
     for (int i = 0; i != n_iters; ++i, idx += n_stride)
     {
-      float a = curand_uniform(&GenA);
-      float b = curand_uniform(&GenB);
-      float r = curand_uniform(&GenR);
-      float theta = M_2PI * curand_uniform(&GenTheta);
+      float a = curand_uniform(GenA);
+      float b = curand_uniform(GenB);
+      float r = curand_uniform(GenR);
+      float theta = M_2PI * curand_uniform(GenTheta);
 
       if (a + b > 1)
       {
@@ -300,11 +300,6 @@ namespace cuda_malley_emission
         rays[idx].direction = make_float3(rad * c, rad * s, sqrtf(1 - r));
       }
     }
-
-    g.GenA[blockIdx.x] = GenA;
-    g.GenB[blockIdx.x] = GenB;
-    g.GenR[blockIdx.x] = GenR;
-    g.GenTheta[blockIdx.x] = GenTheta;
   }
 
   __global__ void update_mesh_rays_count(int n_faces, const int* face_to_mesh, const int* face_front_rays_count, const int* face_rear_rays_count, int* mesh_rays_emitted)

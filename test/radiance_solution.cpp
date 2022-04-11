@@ -139,7 +139,7 @@ public:
     RayCaster = ray_caster::system_create(EnginesConfig::RayCasterEngine);
 
     malley_cpu::params_t emitterParams;
-    emitterParams.n_rays = 100000;
+    emitterParams.n_rays = 40000;
     Emitter = emission::system_create(EnginesConfig::EmissionEngine, &emitterParams);
 
     radiance_equation::params_t equationParams = {};
