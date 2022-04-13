@@ -187,6 +187,8 @@ add_library(thorium_lib
 
 add_executable(thorium_engine
 		controller/controller.cpp
+		controller/args.cpp
+		controller/params.cpp
 		)
 # TODO: FIXME
 if(MSVC)

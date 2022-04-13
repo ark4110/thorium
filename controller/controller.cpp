@@ -32,28 +32,23 @@
 #include "../import_export/obj_export.h"
 #include "../cuda_misc/cuda_util.h"
 #include "../cuda_ray_caster/optix_system.h"
+#include "params.h"
 #include <chrono>
 #include <iostream>
 #include <vector>
 #include <cstring>
 #include <time.h>
 
-void PrintUsage()
-{
-  std::cout << "Usage: controller <input scene> <input task> <result output [-]>" << std::endl;
-}
-
 int main(int argc, char* argv[])
 {
-  if (argc < 3)
-  {
-    PrintUsage();
-    return 1;
-  }
+  params_t params = {};
+  arguments_t args;
+  if (int r = args.parse_args(argc, argv))
+    return r;
 
-  const char* input_scene = 0;
-  const char* input_task = 0;
-  const char* result_name = "-";
+  apply_args(args, params);
+  print_params(params);
+
 #if !(defined _WIN32 && !defined _WIN64)
   int type = RAY_CASTER_OPTIX;
   optix_ray_caster::print_version();
@@ -61,24 +56,6 @@ int main(int argc, char* argv[])
   int type = RAY_CASTER_NAIVE_CPU;
 #endif
   bool binary_output = false;
-
-  for (int i = 1; i < argc; ++i)
-  {
-    switch (i)
-    {
-    case 1:
-      input_scene = argv[i];
-      break;
-
-    case 2:
-      input_task = argv[i];
-      break;
-
-    case 3:
-      result_name = argv[i];
-      break;
-    }
-  }
 
   ray_caster::system_t* caster = ray_caster::system_create(type);
   if (!caster)
@@ -102,9 +79,9 @@ int main(int argc, char* argv[])
     return r;
   }
 
-  if ((r = obj_import::scene(input_scene, scene)) != OBJ_IMPORT_OK)
+  if ((r = obj_import::scene(params.scene_filename, scene)) != OBJ_IMPORT_OK)
   {
-    fprintf(stderr, "Failed to load scene %s with error code %d\n", input_scene, r);
+    fprintf(stderr, "Failed to load scene %s with error code %d\n", params.scene_filename, r);
     return r;
   }
 
@@ -122,7 +99,7 @@ int main(int argc, char* argv[])
 
   task->time_delta = 0.1f;
   
-  r = obj_import::task(input_task, scene, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
+  r = obj_import::task(params.task_filename, scene, task, &heatSourceParams, &exterior_emission_params, &planet_emission_params, simulation_params);
   if (r < 0)
   {
     fprintf(stderr, "\n");
@@ -273,7 +250,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  FILE* result_file = result_name[0] == '-' ? stdout : fopen(result_name, "w");
+  FILE* result_file = params.output_filename ? fopen(params.output_filename, "w") : stdout;
 
   float time = 0;
   float temp = task->time_delta;
@@ -351,7 +328,7 @@ int main(int argc, char* argv[])
   auto duration = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - start).count();
   printf("#Done in %fs. Per step %fs\n\n", duration, duration / n_steps);
 
-  if (result_name[0] != '-')
+  if (params.output_filename)
     fclose(result_file);
 
   subject::task_free(simulation_params);
