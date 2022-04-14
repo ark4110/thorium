@@ -114,8 +114,13 @@ namespace math
 
   vec3 triangle_normal(const triangle_t& t)
   {
-    vec3 v0 = t.points[1] - t.points[0];
-    vec3 v1 = t.points[2] - t.points[0];
+    return triangle_normal(t.points);
+  }
+
+  vec3 triangle_normal(const math::vec3* t)
+  {
+    vec3 v0 = t[1] - t[0];
+    vec3 v1 = t[2] - t[0];
     return cross(v0, v1);
   }
 

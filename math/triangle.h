@@ -44,6 +44,7 @@ namespace math
 
   /// @brief Triangle normal (not normalized).
   vec3 triangle_normal(const triangle_t& t);
+  vec3 triangle_normal(const math::vec3* t);
 
   /// @brief Reorder points to flip normal direction.
   void triangle_flip_normal(triangle_t& t);

@@ -30,6 +30,25 @@ namespace math
     return n_found == 3 ? 0 : -1;
   }
 
+  void tetrahedron_build_faces_indices(int *faces)
+  {
+    faces[0] = 0;
+    faces[1] = 1;
+    faces[2] = 2;
+
+    faces[3] = 0;
+    faces[4] = 2;
+    faces[5] = 3;
+
+    faces[6] = 0;
+    faces[7] = 3;
+    faces[8] = 1;
+
+    faces[9] = 1;
+    faces[10] = 3;
+    faces[11] = 2;
+  }
+
   void tetrahedron_build_faces(const tetrahedron_t &object, triangle_t *faces)
   {
     const vec3 *vertices = object.points;
@@ -107,5 +126,74 @@ namespace math
     vec3 out[4];
     const vec3* intersection = std::set_intersection(lp, lp + 4, rp, rp + 4, out, scale_less);
     return (intersection - out) >= 3;
+  }
+
+  bool is_tetra(const int* faces, int(&basis)[4])
+  {
+    int vertices[12];
+    int* v= vertices;
+    for (int fi = 0; fi != 12; ++fi, ++v, ++faces)
+      *v = *faces;
+
+    std::sort(vertices, vertices + 12);
+    auto unique = std::unique(vertices, vertices + 12);
+    if ((unique - vertices) != 4)
+      return false;
+
+    for (int i = 0; i != 4; ++i)
+      basis[i] = vertices[i];
+
+    return true;
+  }
+
+  void swap_normal(int* face)
+  {
+    int t = face[0];
+    face[0] = face[1];
+    face[1] = t;
+  }
+
+  bool tetrahedron_is_outside(const int* face, const int(&basis)[4], const math::vec3* vertices)
+  {
+    int bits = 1 + 2 + 4 + 8;
+    for (int vi = 0; vi != 3; ++vi)
+    {
+      int vertex = face[vi];
+      for (int i = 0; i != 4; ++i)
+        bits ^= (vertex == basis[i]) ? (1 << i) : 0;
+    }
+
+    int found = ffs(bits) - 1;
+    int other = (found + 1) % 4;
+    auto direction = vertices[basis[found]] - vertices[basis[other]];
+
+    math::vec3 base[3] = {vertices[face[0]], vertices[face[1]], vertices[face[2]]};
+    auto normal = math::triangle_normal(base);
+
+    return math::dot(normal, direction) < 0;
+  }
+
+  bool normalize_tetra(int* faces, const int(&basis)[4], const math::vec3* vertices)
+  {
+    bool swapped = false;
+    for (int fi = 0; fi != 4; ++fi, faces += 3)
+    {
+      if (!tetrahedron_is_outside(faces, basis, vertices))
+      {
+        swapped = true;
+        swap_normal(faces);
+      }
+    }
+    return swapped;
+  }
+
+  tetrahedron_t make_simple_tetrahedron()
+  {
+    tetrahedron_t r;
+    r.points[0] = {0, 0, 0};
+    r.points[1] = {0.5f, 0.8660254, 0};
+    r.points[2] = {1, 0, 0};
+    r.points[3] = {0.5, 0.28867513f, 0.81649658f};
+    return r;
   }
 }

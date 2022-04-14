@@ -227,3 +227,29 @@ TEST(RodSixTetrahedronSplit, HasTwoAdjacentFaces)
       EXPECT_EQ(adjacent, 2);
   }
 }
+
+TEST(TetrahedronNormals, Outside)
+{
+  auto tetra = math::make_simple_tetrahedron();
+  int faces[12];
+  math::tetrahedron_build_faces_indices(faces);
+  int basis[4];
+  ASSERT_TRUE(math::is_tetra(faces, basis));
+
+  for (int i = 0; i != 4; ++i)
+    ASSERT_EQ(i, basis[i]);
+
+  int* f = faces;
+  for (int i = 0; i != 4; ++i, f += 3)
+  {
+    ASSERT_TRUE(math::tetrahedron_is_outside(f, basis, tetra.points));
+    swap_normal(f);
+    ASSERT_FALSE(math::tetrahedron_is_outside(f, basis, tetra.points));
+  }
+
+  normalize_tetra(faces, basis, tetra.points);
+
+  f = faces;
+  for (int i = 0; i != 4; ++i, f += 3)
+    ASSERT_TRUE(math::tetrahedron_is_outside(f, basis, tetra.points));
+}

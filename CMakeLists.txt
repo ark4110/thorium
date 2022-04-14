@@ -126,6 +126,8 @@ add_library(thorium_lib
 		import_export/obj_import.h
 		import_export/text_coords.h
 		import_export/text_coords.cpp
+		import_export/normalization.h
+		import_export/normalization.cpp
 		form_factors/cpu_system.h
 		form_factors/cpu_system.cpp
 		form_factors/system.h

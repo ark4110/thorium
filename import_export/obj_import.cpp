@@ -442,8 +442,7 @@ namespace obj_import
         if (current_mesh_name != "")
           meshes[current_mesh_name].n_faces = (int)(loaded_faces.size() - meshes[current_mesh_name].first_idx);
         
-        
-        current_mesh_name = str.substr(2); 
+        current_mesh_name = str.substr(2);
         if (current_mesh_name == "")
         {
           char buf[100];

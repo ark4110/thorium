@@ -31,9 +31,17 @@ namespace math
   float tetrahedron_volume(const tetrahedron_t& object);
   float tetrahedron_volume(const triangle_t *faces);
 
+  void tetrahedron_build_faces_indices(int *faces);
+  tetrahedron_t make_simple_tetrahedron();
+
   /**
    @brief Check if two tetrahedrons has adjacent face
    @note Suboptimal, for tests only.
    */
   bool tetrahedron_has_adjacent_face(const tetrahedron_t& l, const tetrahedron_t& r);
+
+  bool is_tetra(const int* faces, int(&basis)[4]);
+  void swap_normal(int* face);
+  bool tetrahedron_is_outside(const int* face, const int(&basis)[4], const math::vec3* vertices);
+  bool normalize_tetra(int* faces, const int(&basis)[4], const math::vec3* vertices);
 }
