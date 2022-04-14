@@ -148,9 +148,7 @@ namespace math
 
   void swap_normal(int* face)
   {
-    int t = face[0];
-    face[0] = face[1];
-    face[1] = t;
+    std::swap(face[0], face[1]);
   }
 
   bool tetrahedron_is_outside(const int* face, const int(&basis)[4], const math::vec3* vertices)

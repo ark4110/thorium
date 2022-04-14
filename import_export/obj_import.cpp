@@ -22,6 +22,7 @@
 #include "normalization.h"
 #include "../math/operations.h"
 #include "../math/mat.h"
+#include <assert.h>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -547,9 +548,6 @@ namespace obj_import
 
     file.close();
 
-    if (params.normalize_geometry)
-      normalize(scene->n_meshes, scene->meshes, vertices.data(), (int*)loaded_faces.data());
-
     // Triangulation to vertices from face indices.
     scene->n_faces = (int)loaded_faces.size();
     scene->faces = (subject::face_t *)malloc(scene->n_faces * sizeof(subject::face_t));
@@ -558,6 +556,15 @@ namespace obj_import
     scene->n_meshes = ::max(1, (int)meshes.size());
     scene->meshes = (subject::mesh_t *)malloc(sizeof(subject::mesh_t) * scene->n_meshes);
     int n_current_mesh = 0;
+
+    int normalized_count = 0;
+    for (const auto& r: meshes)
+    {
+      const auto& mesh = r.second;
+      normalized_count += normalize(mesh, vertices.data(), (int*)loaded_faces.data());
+    }
+    if (normalized_count)
+      fprintf(stderr, "Normalized %d tetrahedrons from %zu meshes.\n", normalized_count, meshes.size());
 
     std::vector<std::vector<int>> vertex_to_mesh(vertices.size());
 
