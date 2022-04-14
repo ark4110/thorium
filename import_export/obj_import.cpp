@@ -546,7 +546,10 @@ namespace obj_import
     meshes[current_mesh_name].n_faces = (int)loaded_faces.size() - meshes[current_mesh_name].first_idx;
 
     file.close();
-    
+
+    if (params.normalize_geometry)
+      normalize(scene->n_meshes, scene->meshes, vertices.data(), (int*)loaded_faces.data());
+
     // Triangulation to vertices from face indices.
     scene->n_faces = (int)loaded_faces.size();
     scene->faces = (subject::face_t *)malloc(scene->n_faces * sizeof(subject::face_t));
@@ -636,9 +639,6 @@ namespace obj_import
     {
       memcpy(scene->materials, materials.data(), sizeof(subject::material_t) * scene->n_materials);
     }
-
-    if (params.normalize_geometry)
-      normalize(scene->n_meshes, scene->meshes, vertices.data(), (int*)loaded_faces.data());
 
     // Generate vertex -> mesh mapping
     {
