@@ -79,7 +79,9 @@ int main(int argc, char* argv[])
     return r;
   }
 
-  if ((r = obj_import::scene(params.scene_filename, scene)) != OBJ_IMPORT_OK)
+  obj_import::scene_params_t scene_import = {};
+  scene_import.normalize_geometry = params.normalize_tetra;
+  if ((r = obj_import::scene(params.scene_filename, scene, scene_import)) != OBJ_IMPORT_OK)
   {
     fprintf(stderr, "Failed to load scene %s with error code %d\n", params.scene_filename, r);
     return r;

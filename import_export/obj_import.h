@@ -40,13 +40,18 @@ namespace obj_import
 #define OBJ_IMPORT_NOT_SUPPORTED 26
 #define OBJ_IMPORT_OBJECT_NOT_FOUND 27
 
+  struct scene_params_t
+  {
+    bool normalize_geometry = false;
+  };
+
   /**
    * @brief Loads scene from obj-file.
    * @return @see OBJ_IMPORT_OK if ok, @see OBJ_IMPORT_FILE_ERROR if file can not be opened,
    * or @see OBJ_IMPORT_FORMAT_ERROR if there is format errors.
    */
   int scene(const char* filename, subject::scene_t** scene);
-  int scene(const char* filename, subject::scene_t* scene);
+  int scene(const char* filename, subject::scene_t* scene, scene_params_t params = {});
 
   /**
     @brief Load thermal solution task values from file of obj-like format.

@@ -19,6 +19,7 @@
  */
 
 #include "obj_import.h"
+#include "normalization.h"
 #include "../math/operations.h"
 #include "../math/mat.h"
 #include <cstring>
@@ -342,7 +343,7 @@ namespace obj_import
     return basename.substr(0, basename.find_last_of('.')) + ".anim";
   }
 
-  int scene(const char* filename, subject::scene_t* scene)
+  int scene(const char* filename, subject::scene_t* scene, scene_params_t params)
   {
     auto animation_result = animation(get_animation_filename(filename).c_str(), scene);
     if (std::get<0>(animation_result))
@@ -635,6 +636,9 @@ namespace obj_import
     {
       memcpy(scene->materials, materials.data(), sizeof(subject::material_t) * scene->n_materials);
     }
+
+    if (params.normalize_geometry)
+      normalize(scene->n_meshes, scene->meshes, vertices.data(), (int*)loaded_faces.data());
 
     // Generate vertex -> mesh mapping
     {
