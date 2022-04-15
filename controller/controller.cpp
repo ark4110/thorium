@@ -312,11 +312,14 @@ int main(int argc, char* argv[])
     //texture_coordinates::generate(scene, task->temperatures, heatmap_coords.data());
     //texture_coordinates::dump(simulation_params->heatmap_coordinates_filename, scene->n_vertices, heatmap_coords.data());
 
+    texture_coordinates::params_t text_params = {};
+    text_params.only_emission = params.heatmap_only_emission;
     texture_coordinates::dump_scene_with_colors(
             simulation_params->heatmap_filename,
             simulation_params->heatmap_colormap_name,
             scene,
-            task->temperatures);
+            task->temperatures,
+            text_params);
   }
 
   if (prev_report_time != time)

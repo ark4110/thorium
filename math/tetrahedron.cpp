@@ -168,7 +168,8 @@ namespace math
     math::vec3 base[3] = {vertices[face[0]], vertices[face[1]], vertices[face[2]]};
     auto normal = math::triangle_normal(base);
 
-    return math::dot(normal, direction) < 0;
+    auto normal_direction_dot = math::dot(normal, direction);
+    return normal_direction_dot < 0;
   }
 
   bool normalize_tetra(int* faces, const int(&basis)[4], const math::vec3* vertices)

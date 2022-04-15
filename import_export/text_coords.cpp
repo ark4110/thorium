@@ -122,7 +122,7 @@ namespace texture_coordinates
     }
   }
 
-  void dump_meshes(FILE* out, const subject::scene_t* scene)
+  void dump_meshes(FILE* out, const subject::scene_t* scene, params_t params)
   {
     for (int mi = 0; mi != scene->n_meshes; ++mi)
     {
@@ -131,14 +131,17 @@ namespace texture_coordinates
       for (int fi = 0; fi != mesh.n_faces; ++fi)
       {
         int face_idx = mesh.first_idx + fi;
-        const int* face_vertices = scene->faces_indices + 3 * face_idx;
-        fprintf(out, "f %d %d %d\n", 1 + face_vertices[0], 1 + face_vertices[1], 1 + face_vertices[2]);
+        if (params.only_emission && !scene->blind_faces[face_idx])
+        {
+          const int *face_vertices = scene->faces_indices + 3 * face_idx;
+          fprintf(out, "f %d %d %d\n", 1 + face_vertices[0], 1 + face_vertices[1], 1 + face_vertices[2]);
+        }
       }
       fprintf(out, "\n");
     }
   }
 
-  int dump_scene_with_colors(const char* filename, const char* colormap_name, const subject::scene_t* scene, const float* temperatures)
+  int dump_scene_with_colors(const char* filename, const char* colormap_name, const subject::scene_t* scene, const float* temperatures, params_t params)
   {
     FILE* f = fopen(filename, "wb");
     if (!f)
@@ -154,7 +157,7 @@ namespace texture_coordinates
     dump_rgb_vertices(f, scene, ratio.data(), colormap);
     fprintf(f, "\n");
 
-    dump_meshes(f, scene);
+    dump_meshes(f, scene, params);
 
     fclose(f);
     return 0;

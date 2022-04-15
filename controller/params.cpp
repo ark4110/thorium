@@ -26,6 +26,9 @@ void arguments_t::scan_args()
 
   if (int i = find_arg("--normalize-tetra", false))
     normalize_tetra = atoi(argv[i + 1]);
+
+  if (int i = find_arg("--heatmap-only-emission", false))
+    heatmap_only_emssion = atoi(argv[i + 1]);
 }
 
 void arguments_t::print_usage()
@@ -35,6 +38,7 @@ void arguments_t::print_usage()
                   "\t--task task filename\n"
                   "\t--output output filename\n"
                   "\t--normalize-tetra 0 normalize tetrahedrons normals\n"
+                  "\t--heatmap-only-emission 1 dump faces with emission only"
   );
 }
 
@@ -48,6 +52,8 @@ void apply_args(const arguments_t& args, params_t& params)
     params.output_filename = args.output_filename;
   if (args.normalize_tetra != -1)
     params.normalize_tetra = args.normalize_tetra;
+  if (args.heatmap_only_emssion != -1)
+    params.heatmap_only_emission = args.heatmap_only_emssion;
 }
 
 void print_params(const params_t& params)
@@ -57,10 +63,12 @@ void print_params(const params_t& params)
                   "\ttask filename: %s\n"
                   "\toutput: %s\n"
                   "\tnormalize_tetra: %d\n"
+                  "\theatmap_only_emission: %d"
                   "\n",
                   params.scene_filename,
                   params.task_filename,
                   params.output_filename ? params.output_filename : "stdout",
-                  params.normalize_tetra
+                  params.normalize_tetra,
+                  params.heatmap_only_emission
   );
 }

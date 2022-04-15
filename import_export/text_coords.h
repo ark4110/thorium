@@ -20,7 +20,12 @@
 
 namespace texture_coordinates
 {
+  struct params_t
+  {
+    int only_emission = 1;
+  };
+
   void generate(const subject::scene_t* scene, const float* temperatures, float* coordinates);
   int dump(const char* filename, int n_vertices, const float* coordinates);
-  int dump_scene_with_colors(const char* filename, const char* colormap, const subject::scene_t* scene, const float* temperatures);
+  int dump_scene_with_colors(const char* filename, const char* colormap, const subject::scene_t* scene, const float* temperatures, params_t params);
 }
