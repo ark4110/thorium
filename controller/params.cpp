@@ -28,7 +28,7 @@ void arguments_t::scan_args()
     normalize_tetra = atoi(argv[i + 1]);
 
   if (int i = find_arg("--heatmap-only-emission", false))
-    heatmap_only_emssion = atoi(argv[i + 1]);
+    heatmap_only_emission = atoi(argv[i + 1]);
 }
 
 void arguments_t::print_usage()
@@ -52,8 +52,8 @@ void apply_args(const arguments_t& args, params_t& params)
     params.output_filename = args.output_filename;
   if (args.normalize_tetra != -1)
     params.normalize_tetra = args.normalize_tetra;
-  if (args.heatmap_only_emssion != -1)
-    params.heatmap_only_emission = args.heatmap_only_emssion;
+  if (args.heatmap_only_emission != -1)
+    params.heatmap_only_emission = args.heatmap_only_emission;
 }
 
 void print_params(const params_t& params)

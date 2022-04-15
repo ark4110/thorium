@@ -24,7 +24,7 @@ struct arguments_t: base_arg_parser_t
   const char* task_filename = 0;
   const char* output_filename = 0;
   int normalize_tetra = -1;
-  int heatmap_only_emssion = -1;
+  int heatmap_only_emission = -1;
 };
 
 void apply_args(const arguments_t& args, params_t& params);

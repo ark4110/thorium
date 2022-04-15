@@ -131,7 +131,7 @@ namespace texture_coordinates
       for (int fi = 0; fi != mesh.n_faces; ++fi)
       {
         int face_idx = mesh.first_idx + fi;
-        if (params.only_emission && !scene->blind_faces[face_idx])
+        if (!params.only_emission || !scene->blind_faces[face_idx])
         {
           const int *face_vertices = scene->faces_indices + 3 * face_idx;
           fprintf(out, "f %d %d %d\n", 1 + face_vertices[0], 1 + face_vertices[1], 1 + face_vertices[2]);
