@@ -24,6 +24,7 @@
 #include "../math/mat.h"
 #include <assert.h>
 #include <cstring>
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -39,6 +40,67 @@
 
 namespace obj_import
 {
+  namespace {
+    bool is_not_digit(char c)
+    {
+      return !std::isdigit(c);
+    }
+
+    struct numeric_string_compare_t
+    {
+      int numcmp(const char *a, const char *aend, const char *b, const char *bend) const
+      {
+        for (;;) {
+          if (a == aend) {
+            if (b == bend)
+              return 0;
+            return -1;
+          }
+          if (b == bend)
+            return 1;
+          if (*a == *b) {
+            ++a, ++b;
+            continue;
+          }
+          if (!isdigit((unsigned char) *a) || !isdigit((unsigned char) *b))
+            return *a - *b;
+
+          // skip leading zeros in both strings
+          while (*a == '0' && ++a != aend)
+            ;
+          while (*b == '0' && ++b != aend)
+            ;
+
+          // skip to end of the consecutive digits
+          const char *aa = a;
+          while (a != aend && isdigit((unsigned char) *a))
+            ++a;
+          std::ptrdiff_t alen = a - aa;
+
+          const char *bb = b;
+          while (b != bend && isdigit((unsigned char) *b))
+            ++b;
+          std::ptrdiff_t blen = b - bb;
+
+          if (alen != blen)
+            return alen - blen;
+
+          // same number of consecutive digits in both strings
+          while (aa != a) {
+            if (*aa != *bb)
+              return *aa - *bb;
+            ++aa, ++bb;
+          }
+        }
+      }
+
+      bool operator()(const std::string& s1, const std::string& s2) const
+      {
+        return numcmp(s1.data(), s1.data() + s1.size(), s2.data(), s2.data() + s2.size()) < 0;
+      }
+    };
+  }
+
   /// @brief Local structure representing vertex indices for given face (polygon).
   struct idx_face_t
   {
@@ -368,7 +430,7 @@ namespace obj_import
     std::vector<math::vec3> vertices;
     std::vector<idx_face_t> loaded_faces;
     std::string current_mesh_name;
-    std::map<std::string, subject::mesh_t> meshes;
+    std::map<std::string, subject::mesh_t, numeric_string_compare_t> meshes;
     std::vector<subject::material_t> materials;
     typedef std::map<std::string, int> MaterialMap;
     MaterialMap material2IndexMap;

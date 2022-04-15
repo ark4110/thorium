@@ -157,6 +157,15 @@ namespace subject
         return 0;
 
       ++scene->n_blind_faces;
+      if (false)
+      fprintf(stderr, "Blind mesh/face %d (%s)/%d and %d(%s)/%d\n",
+              scene->face_to_mesh[current_idx],
+              scene->meshes[scene->face_to_mesh[current_idx]].name,
+              current_idx,
+              scene->face_to_mesh[leaf_idx],
+              scene->meshes[scene->face_to_mesh[leaf_idx]].name,
+              leaf_idx
+              );
       scene->blind_faces[current_idx] = 1;
       scene->blind_faces[leaf_idx] = 1;
 
