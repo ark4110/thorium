@@ -176,7 +176,7 @@ namespace subject
   {
      scene->blind_faces = (int*)realloc(scene->blind_faces, sizeof(int) * scene->n_faces);
      memset(scene->blind_faces, 0, sizeof(int) * scene->n_faces);
-     face_graph_walk_index(scene->face_graph, &build_blind_faces_walker, scene);
+     return face_graph_walk_index(scene->face_graph, &build_blind_faces_walker, scene);
   }
 
   int host_scene_finalize(scene_t* scene)
