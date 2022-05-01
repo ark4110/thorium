@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "subject/system.h"
+#include "../subject/system.h"
 
 namespace texture_coordinates
 {

@@ -1,6 +1,5 @@
 #include "normalization.h"
 #include <algorithm>
-#include <strings.h>
 #include <cstdio>
 #include "../math/triangle.h"
 #include "../math/operations.h"

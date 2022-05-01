@@ -20,13 +20,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="csv_export.cpp" />
+    <ClCompile Include="normalization.cpp" />
     <ClCompile Include="obj_export.cpp" />
     <ClCompile Include="obj_import.cpp" />
+    <ClCompile Include="text_coords.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="csv_export.h" />
+    <ClInclude Include="normalization.h" />
     <ClInclude Include="obj_export.h" />
     <ClInclude Include="obj_import.h" />
+    <ClInclude Include="text_coords.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{01B5D59C-AD62-424B-8B03-727FB9118B82}</ProjectGuid>
@@ -98,6 +102,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -130,6 +135,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

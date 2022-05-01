@@ -3,6 +3,7 @@
 #include <cfloat>
 #include <vector>
 #include <algorithm>
+#include <string>
 #include <map>
 #include "ext/tinycolormap/include/tinycolormap.hpp"
 

@@ -152,7 +152,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="args.cpp" />
     <ClCompile Include="controller.cpp" />
+    <ClCompile Include="params.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ballistics\ballistics.vcxproj">
@@ -197,6 +199,10 @@
     <ProjectReference Include="..\thermal_solution\thermal_solution.vcxproj">
       <Project>{f0a247a1-a9ed-4ac4-a7fa-a1fe0154bab6}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="args.h" />
+    <ClInclude Include="params.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

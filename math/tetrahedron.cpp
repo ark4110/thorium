@@ -151,6 +151,13 @@ namespace math
     std::swap(face[0], face[1]);
   }
 
+#ifdef _MSC_VER 
+  int ffs(unsigned long v)
+  {
+      return _BitScanForward(&v, 0xffffffff);
+  }
+#endif
+
   bool tetrahedron_is_outside(const int* face, const int(&basis)[4], const math::vec3* vertices)
   {
     int bits = 1 + 2 + 4 + 8;
