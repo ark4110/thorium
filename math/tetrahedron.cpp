@@ -154,7 +154,9 @@ namespace math
 #ifdef _MSC_VER 
   int ffs(unsigned long v)
   {
-      return _BitScanForward(&v, 0xffffffff);
+      unsigned long i;
+      _BitScanForward(&i, v);
+      return i + 1;
   }
 #endif
 
