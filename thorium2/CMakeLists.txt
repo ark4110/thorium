@@ -1,0 +1,60 @@
+cmake_minimum_required(VERSION 3.20)
+project(thorium2 VERSION 2.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+option(THORIUM2_TESTS "Build tests" ON)
+option(THORIUM2_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+option(THORIUM2_OPENMP "Use OpenMP for ray tracing" ON)
+
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+if(THORIUM2_OPENMP)
+  find_package(OpenMP)
+endif()
+
+add_library(thorium2_warnings INTERFACE)
+if(MSVC)
+  target_compile_options(thorium2_warnings INTERFACE /W4 /permissive-)
+else()
+  target_compile_options(thorium2_warnings INTERFACE -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wno-sign-conversion)
+endif()
+
+if(THORIUM2_SANITIZE AND NOT MSVC)
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
+file(GLOB THORIUM2_CORE_SOURCES CONFIGURE_DEPENDS src/thorium2/*.cpp)
+add_library(thorium2_core ${THORIUM2_CORE_SOURCES})
+target_include_directories(thorium2_core PUBLIC src)
+target_link_libraries(thorium2_core PUBLIC Eigen3::Eigen PRIVATE thorium2_warnings)
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(thorium2_core PUBLIC OpenMP::OpenMP_CXX)
+  target_compile_definitions(thorium2_core PUBLIC THORIUM2_HAVE_OPENMP=1)
+elseif(NOT MSVC)
+  target_compile_options(thorium2_core PRIVATE -Wno-unknown-pragmas)
+endif()
+
+add_executable(thorium2 app/main.cpp)
+target_link_libraries(thorium2 PRIVATE thorium2_core thorium2_warnings)
+
+if(THORIUM2_TESTS)
+  enable_testing()
+  find_package(GTest REQUIRED)
+  file(GLOB THORIUM2_TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
+  add_executable(thorium2_tests ${THORIUM2_TEST_SOURCES})
+  target_link_libraries(thorium2_tests PRIVATE thorium2_core thorium2_warnings GTest::gtest GTest::gtest_main)
+  target_compile_definitions(thorium2_tests PRIVATE
+    THORIUM2_TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/tests/data"
+    THORIUM2_CLI="$<TARGET_FILE:thorium2>")
+  add_dependencies(thorium2_tests thorium2)
+  include(GoogleTest)
+  gtest_discover_tests(thorium2_tests DISCOVERY_TIMEOUT 60)
+endif()
